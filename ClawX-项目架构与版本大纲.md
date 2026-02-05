@@ -63,7 +63,7 @@
 - ✅ **版本绑定** - 每个 ClawX 版本绑定特定 openclaw 版本
 - ✅ **CLI 兼容** - 命令行保持 `openclaw` 命令，不引入 `clawx` CLI
 
-openclaw project Local: /Users/guoyuliang/Project/openclaw remote: https://github.com/openclaw/openclaw
+openclaw project remote: https://github.com/openclaw/openclaw
 ### 1.4 CLI 兼容性设计
 
 ClawX 是 OpenClaw 的**图形化增强层**，而非替代品。用户可以同时使用 GUI 和 CLI：
@@ -576,13 +576,13 @@ clawx/
 │   │   │   ├── index.tsx
 │   │   │   ├── GeneralSettings.tsx
 │   │   │   ├── ProviderSettings.tsx
+│   │   │   ├── ChannelsSettings.tsx  # 通道连接配置 (从安装向导移出)
 │   │   │   └── AdvancedSettings.tsx
-│   │   └── Setup/              # 安装向导
+│   │   └── Setup/              # 安装向导 (简化版，不含通道连接)
 │   │       ├── index.tsx
 │   │       ├── WelcomeStep.tsx
 │   │       ├── RuntimeStep.tsx
 │   │       ├── ProviderStep.tsx
-│   │       ├── ChannelStep.tsx
 │   │       └── SkillStep.tsx
 │   │
 │   ├── components/             # 通用组件
@@ -812,17 +812,15 @@ const steps: SetupStep[] = [
     description: '配置您的 AI 服务提供商',
     component: ProviderStep,
   },
+  // NOTE: Channel step removed - 通道连接移至 Settings > Channels 页面
+  // 用户可在完成初始设置后自行配置消息通道
+  // NOTE: Skills selection step removed - 自动安装必要组件
+  // 用户无需手动选择，核心组件自动安装
   {
-    id: 'channel',
-    title: '连接消息应用',
-    description: '绑定 WhatsApp、Telegram 等',
-    component: ChannelStep,
-  },
-  {
-    id: 'skills',
-    title: '选择技能包',
-    description: '挑选预装技能，稍后可调整',
-    component: SkillStep,
+    id: 'installing',
+    title: '安装组件',
+    description: '正在安装必要的 AI 组件',
+    component: InstallingStep,
   },
   {
     id: 'complete',
@@ -4042,13 +4040,15 @@ ClawX 版本: X.Y.Z[-prerelease]
 | Node.js 自动检测/安装 | P0 | ⬜ |
 | openclaw npm 安装 | P0 | ⬜ |
 | Provider 配置 (API Key) | P0 | ⬜ |
-| 首个通道连接 (WhatsApp QR) | P1 | ⬜ |
 | 错误处理与提示 | P1 | ⬜ |
 
+> **注意**: 通道连接功能 (WhatsApp/Telegram 等) 已从安装向导移至 Settings > Channels 页面。
+> 用户可在完成初始设置后，根据需要自行配置消息通道，降低首次使用门槛。
+
 **交付物**:
-- 完整安装向导流程
+- 简化版安装向导流程 (不含通道连接)
 - 支持 macOS (Apple Silicon + Intel)
-- 可配置 Anthropic/OpenAI
+- 可配置 Anthropic/OpenAI/OpenRouter
 
 ---
 

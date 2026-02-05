@@ -1,0 +1,155 @@
+appId: app.clawx.desktop
+productName: ClawX
+copyright: Copyright © 2026 ClawX
+compression: maximum
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - dist
+  - dist-electron
+  - package.json
+
+extraResources:
+  - from: resources/
+    to: resources/
+    filter:
+      - "**/*"
+      - "!icons/*.md"
+      - "!icons/*.svg"
+  # OpenClaw submodule - include only necessary files for runtime
+  - from: openclaw/
+    to: openclaw/
+    filter:
+      - "openclaw.mjs"
+      - "package.json"
+      - "dist/**/*"
+      - "skills/**/*"
+      - "extensions/**/*"
+      - "scripts/run-node.mjs"
+      - "!**/*.test.ts"
+      - "!**/*.test.js"
+      - "!**/test/**"
+      - "!**/.git"
+      - "!**/.github"
+      - "!**/docs/**"
+
+asar: true
+asarUnpack:
+  - "**/*.node"
+
+# Auto-update configuration
+publish:
+  - provider: github
+    owner: clawx
+    repo: clawx
+    releaseType: release
+
+# macOS Configuration
+mac:
+  category: public.app-category.productivity
+  icon: resources/icons/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - universal
+    - target: zip
+      arch:
+        - universal
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: entitlements.mac.plist
+  entitlementsInherit: entitlements.mac.plist
+  notarize: false  # Set to true when you have Apple credentials
+  extendInfo:
+    NSMicrophoneUsageDescription: ClawX requires microphone access for voice features
+    NSCameraUsageDescription: ClawX requires camera access for video features
+
+dmg:
+  background: resources/dmg-background.png
+  icon: resources/icons/icon.icns
+  iconSize: 100
+  contents:
+    - type: file
+      x: 130
+      y: 220
+    - type: link
+      path: /Applications
+      x: 410
+      y: 220
+
+# Windows Configuration
+win:
+  icon: resources/icons/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
+  publisherName: ClawX Inc.
+  # For code signing, uncomment and configure:
+  # certificateFile: path/to/certificate.pfx
+  # certificatePassword: ${env.WIN_CSC_KEY_PASSWORD}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  differentialPackage: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ClawX
+  uninstallDisplayName: ClawX
+  license: LICENSE
+  installerIcon: resources/icons/icon.ico
+  uninstallerIcon: resources/icons/icon.ico
+
+# Linux Configuration
+linux:
+  icon: resources/icons
+  target:
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+    - target: rpm
+      arch:
+        - x64
+  category: Utility
+  maintainer: ClawX Team <team@clawx.app>
+  vendor: ClawX
+  synopsis: AI Assistant powered by OpenClaw
+  description: |
+    ClawX is a graphical AI assistant application that integrates with
+    OpenClaw Gateway to provide intelligent automation and assistance
+    across multiple messaging platforms.
+  desktop:
+    Name: ClawX
+    Comment: AI Assistant powered by OpenClaw
+    Categories: Utility;Network;
+    Keywords: ai;assistant;automation;chat;
+
+appImage:
+  license: LICENSE
+
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+  afterInstall: scripts/linux/after-install.sh
+  afterRemove: scripts/linux/after-remove.sh

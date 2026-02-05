@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="clawGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="200" fill="url(#bgGrad)"/>
+  
+  <!-- Claw shape -->
+  <g transform="translate(512, 512)" fill="url(#clawGrad)">
+    <!-- Center circle -->
+    <circle cx="0" cy="0" r="100"/>
+    
+    <!-- Claw fingers -->
+    <path d="M -50 -80 Q -80 -200 -150 -280 Q -180 -320 -150 -350 Q -120 -380 -80 -350 Q -20 -300 40 -150 Z" />
+    <path d="M 50 -80 Q 80 -200 150 -280 Q 180 -320 150 -350 Q 120 -380 80 -350 Q 20 -300 -40 -150 Z" />
+    <path d="M -100 20 Q -220 0 -320 -40 Q -370 -60 -390 -20 Q -410 20 -370 50 Q -300 100 -150 80 Z" />
+    <path d="M 100 20 Q 220 0 320 -40 Q 370 -60 390 -20 Q 410 20 370 50 Q 300 100 150 80 Z" />
+    <path d="M 0 120 Q 0 250 0 350 Q 0 400 40 420 Q 80 400 80 350 L 80 250 Q 60 150 0 120 Z" />
+    <path d="M 0 120 Q 0 250 0 350 Q 0 400 -40 420 Q -80 400 -80 350 L -80 250 Q -60 150 0 120 Z" />
+  </g>
+  
+  <!-- X mark -->
+  <g transform="translate(750, 750)" fill="#ffffff" opacity="0.9">
+    <rect x="-60" y="-15" width="120" height="30" rx="15" transform="rotate(45)"/>
+    <rect x="-60" y="-15" width="120" height="30" rx="15" transform="rotate(-45)"/>
+  </g>
+</svg>
