@@ -2,7 +2,7 @@
  * Channels Page
  * Manage messaging channel connections with configuration UI
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Radio,
@@ -71,7 +71,7 @@ export function Channels() {
   }, [fetchChannels]);
 
   // Fetch configured channel types from config file
-  const fetchConfiguredTypes = async () => {
+  const fetchConfiguredTypes = useCallback(async () => {
     try {
       const result = await window.electron.ipcRenderer.invoke('channel:listConfigured') as {
         success: boolean;
@@ -83,11 +83,12 @@ export function Channels() {
     } catch {
       // ignore
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchConfiguredTypes();
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchConfiguredTypes();
+  }, [fetchConfiguredTypes]);
 
   // Get channel types to display
   const displayedChannelTypes = showAllChannels ? getAllChannels() : getPrimaryChannels();

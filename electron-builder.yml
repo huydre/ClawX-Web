@@ -21,23 +21,12 @@ extraResources:
       - "!icons/*.md"
       - "!icons/*.svg"
       - "!bin/**"
-  # OpenClaw submodule - include only necessary files for runtime
-  - from: openclaw/
+  # OpenClaw package (node_modules copied separately by afterPack hook
+  # because electron-builder respects .gitignore which excludes node_modules/)
+  - from: build/openclaw/
     to: openclaw/
-    filter:
-      - "openclaw.mjs"
-      - "package.json"
-      - "dist/**/*"
-      - "skills/**/*"
-      - "extensions/**/*"
-      - "scripts/run-node.mjs"
-      - "!**/node_modules/**"
-      - "!**/*.test.ts"
-      - "!**/*.test.js"
-      - "!**/test/**"
-      - "!**/.git"
-      - "!**/.github"
-      - "!**/docs/**"
+
+afterPack: ./scripts/after-pack.cjs
 
 asar: true
 asarUnpack:
@@ -59,23 +48,19 @@ mac:
   icon: resources/icons/icon.icns
   target:
     - target: dmg
-      arch:
-        - universal
     - target: zip
-      arch:
-        - universal
   darkModeSupport: true
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: entitlements.mac.plist
   entitlementsInherit: entitlements.mac.plist
-  notarize: false  # Set to true when you have Apple credentials
+  notarize: true
   extendInfo:
     NSMicrophoneUsageDescription: ClawX requires microphone access for voice features
     NSCameraUsageDescription: ClawX requires camera access for video features
 
 dmg:
-  background: resources/dmg-background.png
+  # background: resources/dmg-background.png
   icon: resources/icons/icon.icns
   iconSize: 100
   contents:
@@ -89,6 +74,9 @@ dmg:
 
 # Windows Configuration
 win:
+  forceCodeSigning: false
+  verifyUpdateCodeSignature: false
+  signAndEditExecutable: false
   extraResources:
     - from: resources/bin/win32-${arch}
       to: bin
@@ -97,11 +85,6 @@ win:
     - target: nsis
       arch:
         - x64
-        - arm64
-  publisherName: ClawX Inc.
-  # For code signing, uncomment and configure:
-  # certificateFile: path/to/certificate.pfx
-  # certificatePassword: ${env.WIN_CSC_KEY_PASSWORD}
 
 nsis:
   oneClick: false
@@ -141,10 +124,11 @@ linux:
     OpenClaw Gateway to provide intelligent automation and assistance
     across multiple messaging platforms.
   desktop:
-    Name: ClawX
-    Comment: AI Assistant powered by OpenClaw
-    Categories: Utility;Network;
-    Keywords: ai;assistant;automation;chat;
+    entry:
+      Name: ClawX
+      Comment: AI Assistant powered by OpenClaw
+      Categories: Utility;Network;
+      Keywords: ai;assistant;automation;chat;
 
 appImage:
   license: LICENSE

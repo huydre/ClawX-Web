@@ -2,7 +2,7 @@
  * Setup Wizard Page
  * First-time setup experience for new users
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -119,19 +119,40 @@ const providers: Provider[] = [
 export function Setup() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
-  const [canProceed, setCanProceed] = useState(true);
   
   // Setup state
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
   // Installation state for the Installing step
   const [installedSkills, setInstalledSkills] = useState<string[]>([]);
+  // Runtime check status
+  const [runtimeChecksPassed, setRuntimeChecksPassed] = useState(false);
   
   const step = steps[currentStep];
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === steps.length - 1;
   
   const markSetupComplete = useSettingsStore((state) => state.markSetupComplete);
+  
+  // Derive canProceed based on current step - computed directly to avoid useEffect
+  const canProceed = useMemo(() => {
+    switch (currentStep) {
+      case STEP.WELCOME:
+        return true;
+      case STEP.RUNTIME:
+        return runtimeChecksPassed;
+      case STEP.PROVIDER:
+        return selectedProvider !== null && apiKey.length > 0;
+      case STEP.CHANNEL:
+        return true; // Always allow proceeding — channel step is optional
+      case STEP.INSTALLING:
+        return false; // Cannot manually proceed, auto-proceeds when done
+      case STEP.COMPLETE:
+        return true;
+      default:
+        return true;
+    }
+  }, [currentStep, selectedProvider, apiKey, runtimeChecksPassed]);
   
   const handleNext = async () => {
     if (isLastStep) {
@@ -161,31 +182,6 @@ export function Setup() {
       setCurrentStep((i) => i + 1);
     }, 1000);
   }, []);
-  
-  // Update canProceed based on current step
-  useEffect(() => {
-    switch (currentStep) {
-      case STEP.WELCOME:
-        setCanProceed(true);
-        break;
-      case STEP.RUNTIME:
-        // Will be managed by RuntimeContent
-        break;
-      case STEP.PROVIDER:
-        setCanProceed(selectedProvider !== null && apiKey.length > 0);
-        break;
-      case STEP.CHANNEL:
-        // Always allow proceeding — channel step is optional
-        setCanProceed(true);
-        break;
-      case STEP.INSTALLING:
-        setCanProceed(false); // Cannot manually proceed, auto-proceeds when done
-        break;
-      case STEP.COMPLETE:
-        setCanProceed(true);
-        break;
-    }
-  }, [currentStep, selectedProvider, apiKey]);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
@@ -240,7 +236,7 @@ export function Setup() {
           {/* Step-specific content */}
           <div className="rounded-xl bg-white/10 backdrop-blur p-8 mb-8">
             {currentStep === STEP.WELCOME && <WelcomeContent />}
-            {currentStep === STEP.RUNTIME && <RuntimeContent onStatusChange={setCanProceed} />}
+            {currentStep === STEP.RUNTIME && <RuntimeContent onStatusChange={setRuntimeChecksPassed} />}
             {currentStep === STEP.PROVIDER && (
               <ProviderContent
                 providers={providers}
@@ -353,6 +349,9 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
     openclaw: { status: 'checking' as 'checking' | 'success' | 'error', message: '' },
     gateway: { status: 'checking' as 'checking' | 'success' | 'error', message: '' },
   });
+  const [showLogs, setShowLogs] = useState(false);
+  const [logContent, setLogContent] = useState('');
+  const [openclawDir, setOpenclawDir] = useState('');
   
   const runChecks = useCallback(async () => {
     // Reset checks
@@ -362,59 +361,53 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
       gateway: { status: 'checking', message: '' },
     });
     
-    // Check Node.js
-    try {
-      // In Electron, we can assume Node.js is available
-      setChecks((prev) => ({
-        ...prev,
-        nodejs: { status: 'success', message: 'Node.js is available' },
-      }));
-    } catch {
-      setChecks((prev) => ({
-        ...prev,
-        nodejs: { status: 'error', message: 'Node.js not found' },
-      }));
-    }
+    // Check Node.js — always available in Electron
+    setChecks((prev) => ({
+      ...prev,
+      nodejs: { status: 'success', message: 'Node.js is available (Electron built-in)' },
+    }));
     
-    // Check OpenClaw submodule status
+    // Check OpenClaw package status
     try {
       const openclawStatus = await window.electron.ipcRenderer.invoke('openclaw:status') as {
-        submoduleExists: boolean;
-        isInstalled: boolean;
+        packageExists: boolean;
         isBuilt: boolean;
         dir: string;
+        version?: string;
       };
       
-      if (!openclawStatus.submoduleExists) {
+      setOpenclawDir(openclawStatus.dir);
+      
+      if (!openclawStatus.packageExists) {
         setChecks((prev) => ({
           ...prev,
           openclaw: { 
             status: 'error', 
-            message: 'OpenClaw submodule not found. Run: git submodule update --init' 
+            message: `OpenClaw package not found at: ${openclawStatus.dir}` 
           },
         }));
-      } else if (!openclawStatus.isInstalled) {
+      } else if (!openclawStatus.isBuilt) {
         setChecks((prev) => ({
           ...prev,
           openclaw: { 
             status: 'error', 
-            message: 'Dependencies not installed. Run: cd openclaw && pnpm install' 
+            message: 'OpenClaw package found but dist is missing' 
           },
         }));
       } else {
-        const modeLabel = openclawStatus.isBuilt ? 'production' : 'development';
+        const versionLabel = openclawStatus.version ? ` v${openclawStatus.version}` : '';
         setChecks((prev) => ({
           ...prev,
           openclaw: { 
             status: 'success', 
-            message: `OpenClaw package ready (${modeLabel} mode)` 
+            message: `OpenClaw package ready${versionLabel}` 
           },
         }));
       }
     } catch (error) {
       setChecks((prev) => ({
         ...prev,
-        openclaw: { status: 'error', message: `Failed to check: ${error}` },
+        openclaw: { status: 'error', message: `Check failed: ${error}` },
       }));
     }
     
@@ -433,7 +426,10 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
     } else {
       setChecks((prev) => ({
         ...prev,
-        gateway: { status: 'error', message: 'Not running' },
+        gateway: { 
+          status: 'error', 
+          message: gatewayStatus.error || 'Not running' 
+        },
       }));
     }
   }, [gatewayStatus]);
@@ -473,6 +469,28 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
     await startGateway();
   };
   
+  const handleShowLogs = async () => {
+    try {
+      const logs = await window.electron.ipcRenderer.invoke('log:readFile', 100) as string;
+      setLogContent(logs);
+      setShowLogs(true);
+    } catch {
+      setLogContent('(Failed to load logs)');
+      setShowLogs(true);
+    }
+  };
+
+  const handleOpenLogDir = async () => {
+    try {
+      const logDir = await window.electron.ipcRenderer.invoke('log:getDir') as string;
+      if (logDir) {
+        await window.electron.ipcRenderer.invoke('shell:showItemInFolder', logDir);
+      }
+    } catch {
+      // ignore
+    }
+  };
+  
   const renderStatus = (status: 'checking' | 'success' | 'error', message: string) => {
     if (status === 'checking') {
       return (
@@ -502,10 +520,15 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Checking Environment</h2>
-        <Button variant="ghost" size="sm" onClick={runChecks}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Re-check
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={handleShowLogs}>
+            View Logs
+          </Button>
+          <Button variant="ghost" size="sm" onClick={runChecks}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Re-check
+          </Button>
+        </div>
       </div>
       <div className="space-y-3">
         <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
@@ -513,7 +536,14 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
           {renderStatus(checks.nodejs.status, checks.nodejs.message)}
         </div>
         <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-          <span>OpenClaw Package</span>
+          <div>
+            <span>OpenClaw Package</span>
+            {openclawDir && (
+              <p className="text-xs text-slate-500 mt-0.5 font-mono truncate max-w-[300px]">
+                {openclawDir}
+              </p>
+            )}
+          </div>
           {renderStatus(checks.openclaw.status, checks.openclaw.message)}
         </div>
         <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
@@ -536,10 +566,31 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
             <div>
               <p className="font-medium text-red-400">Environment issue detected</p>
               <p className="text-sm text-slate-300 mt-1">
-                Please ensure Node.js is installed and OpenClaw is properly set up.
+                Please ensure OpenClaw is properly installed. Check the logs for details.
               </p>
             </div>
           </div>
+        </div>
+      )}
+      
+      {/* Log viewer panel */}
+      {showLogs && (
+        <div className="mt-4 p-4 rounded-lg bg-black/40 border border-slate-600">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-medium text-slate-200 text-sm">Application Logs</p>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleOpenLogDir}>
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open Log Folder
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowLogs(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+          <pre className="text-xs text-slate-300 bg-black/50 p-3 rounded max-h-60 overflow-auto whitespace-pre-wrap font-mono">
+            {logContent || '(No logs available yet)'}
+          </pre>
         </div>
       )}
     </div>

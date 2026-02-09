@@ -5,7 +5,8 @@
 import { app } from 'electron';
 import { join } from 'path';
 import { homedir } from 'os';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
+import { logger } from './logger';
 
 /**
  * Expand ~ to home directory
@@ -72,13 +73,16 @@ export function getPreloadPath(): string {
 }
 
 /**
- * Get OpenClaw submodule directory
+ * Get OpenClaw package directory
+ * - Production (packaged): from resources/openclaw (copied by electron-builder extraResources)
+ * - Development: from node_modules/openclaw
  */
 export function getOpenClawDir(): string {
   if (app.isPackaged) {
     return join(process.resourcesPath, 'openclaw');
   }
-  return join(__dirname, '../../openclaw');
+  // Development: use node_modules/openclaw
+  return join(__dirname, '../../node_modules/openclaw');
 }
 
 /**
@@ -89,44 +93,65 @@ export function getOpenClawEntryPath(): string {
 }
 
 /**
- * Check if OpenClaw submodule exists
+ * Check if OpenClaw package exists
  */
-export function isOpenClawSubmodulePresent(): boolean {
-  return existsSync(getOpenClawDir()) && existsSync(join(getOpenClawDir(), 'package.json'));
+export function isOpenClawPresent(): boolean {
+  const dir = getOpenClawDir();
+  const pkgJsonPath = join(dir, 'package.json');
+  const exists = existsSync(dir) && existsSync(pkgJsonPath);
+  logger.debug(`isOpenClawPresent: dir=${dir}, exists=${exists}`);
+  return exists;
 }
 
 /**
- * Check if OpenClaw is built (has dist folder with entry.js)
+ * Check if OpenClaw is built (has dist folder)
+ * For the npm package, this should always be true since npm publishes the built dist.
  */
 export function isOpenClawBuilt(): boolean {
-  return existsSync(join(getOpenClawDir(), 'dist', 'entry.js'));
-}
-
-/**
- * Check if OpenClaw has node_modules installed
- */
-export function isOpenClawInstalled(): boolean {
-  return existsSync(join(getOpenClawDir(), 'node_modules'));
+  const dir = getOpenClawDir();
+  // Check for dist/entry.js or just the dist directory with JS files
+  const entryPath = join(dir, 'dist', 'entry.js');
+  const distDir = join(dir, 'dist');
+  const hasEntry = existsSync(entryPath);
+  const hasDist = existsSync(distDir);
+  logger.debug(`isOpenClawBuilt: distDir=${distDir}, hasDist=${hasDist}, hasEntry=${hasEntry}`);
+  return hasDist;
 }
 
 /**
  * Get OpenClaw status for environment check
  */
 export interface OpenClawStatus {
-  submoduleExists: boolean;
-  isInstalled: boolean;
+  packageExists: boolean;
   isBuilt: boolean;
   entryPath: string;
   dir: string;
+  version?: string;
 }
 
 export function getOpenClawStatus(): OpenClawStatus {
   const dir = getOpenClawDir();
-  return {
-    submoduleExists: isOpenClawSubmodulePresent(),
-    isInstalled: isOpenClawInstalled(),
+  let version: string | undefined;
+
+  // Try to read version from package.json
+  try {
+    const pkgPath = join(dir, 'package.json');
+    if (existsSync(pkgPath)) {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+      version = pkg.version;
+    }
+  } catch {
+    // Ignore version read errors
+  }
+
+  const status: OpenClawStatus = {
+    packageExists: isOpenClawPresent(),
     isBuilt: isOpenClawBuilt(),
     entryPath: getOpenClawEntryPath(),
     dir,
+    version,
   };
+
+  logger.info('OpenClaw status:', status);
+  return status;
 }
