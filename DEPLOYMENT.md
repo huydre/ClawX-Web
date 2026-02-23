@@ -153,6 +153,64 @@ http://192.168.1.18
 
 ## Troubleshooting
 
+### Lỗi "origin not allowed" khi kết nối Gateway
+
+Nếu bạn thấy lỗi:
+```
+Gateway handshake failed: origin not allowed
+```
+
+**Nguyên nhân:** OpenClaw Gateway không cho phép kết nối từ IP 192.168.1.18
+
+**Giải pháp:**
+
+#### Option 1: Cấu hình Gateway allowedOrigins (Khuyến nghị)
+
+1. Tìm file config của OpenClaw Gateway:
+```bash
+# Trên máy chạy OpenClaw Gateway
+find ~/.openclaw -name "gateway.json" -o -name "config.json"
+```
+
+2. Sửa file `~/.openclaw/gateway.json` hoặc tạo mới nếu chưa có:
+```json
+{
+  "controlUi": {
+    "allowedOrigins": [
+      "http://localhost:2003",
+      "http://127.0.0.1:2003",
+      "http://192.168.1.18:2003",
+      "http://192.168.1.18"
+    ]
+  }
+}
+```
+
+3. Restart OpenClaw Gateway
+
+4. Restart ClawX Web:
+```bash
+pm2 restart clawx-web
+```
+
+#### Option 2: Chạy Gateway trên cùng máy Armbian
+
+Nếu Gateway đang chạy trên máy khác, cài đặt OpenClaw trên Armbian:
+```bash
+# Install OpenClaw trên Armbian
+npm install -g @openclaw/cli
+
+# Start Gateway
+openclaw gateway start
+```
+
+#### Option 3: Sử dụng script tự động
+
+```bash
+cd ~/ClawX-Web
+./fix-gateway-origin.sh
+```
+
 ### Kiểm tra logs
 
 ```bash
