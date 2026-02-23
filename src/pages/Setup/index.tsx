@@ -395,46 +395,58 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
     }));
 
     // Check OpenClaw package status
-    try {
-      const openclawStatus = await window.electron.ipcRenderer.invoke('openclaw:status') as {
-        packageExists: boolean;
-        isBuilt: boolean;
-        dir: string;
-        version?: string;
-      };
+    // In web mode, OpenClaw Gateway runs independently, so skip package check
+    if (window.electron?.ipcRenderer) {
+      try {
+        const openclawStatus = await window.electron.ipcRenderer.invoke('openclaw:status') as {
+          packageExists: boolean;
+          isBuilt: boolean;
+          dir: string;
+          version?: string;
+        };
 
-      setOpenclawDir(openclawStatus.dir);
+        setOpenclawDir(openclawStatus.dir);
 
-      if (!openclawStatus.packageExists) {
+        if (!openclawStatus.packageExists) {
+          setChecks((prev) => ({
+            ...prev,
+            openclaw: {
+              status: 'error',
+              message: `OpenClaw package not found at: ${openclawStatus.dir}`
+            },
+          }));
+        } else if (!openclawStatus.isBuilt) {
+          setChecks((prev) => ({
+            ...prev,
+            openclaw: {
+              status: 'error',
+              message: 'OpenClaw package found but dist is missing'
+            },
+          }));
+        } else {
+          const versionLabel = openclawStatus.version ? ` v${openclawStatus.version}` : '';
+          setChecks((prev) => ({
+            ...prev,
+            openclaw: {
+              status: 'success',
+              message: `OpenClaw package ready${versionLabel}`
+            },
+          }));
+        }
+      } catch (error) {
         setChecks((prev) => ({
           ...prev,
-          openclaw: {
-            status: 'error',
-            message: `OpenClaw package not found at: ${openclawStatus.dir}`
-          },
-        }));
-      } else if (!openclawStatus.isBuilt) {
-        setChecks((prev) => ({
-          ...prev,
-          openclaw: {
-            status: 'error',
-            message: 'OpenClaw package found but dist is missing'
-          },
-        }));
-      } else {
-        const versionLabel = openclawStatus.version ? ` v${openclawStatus.version}` : '';
-        setChecks((prev) => ({
-          ...prev,
-          openclaw: {
-            status: 'success',
-            message: `OpenClaw package ready${versionLabel}`
-          },
+          openclaw: { status: 'error', message: `Check failed: ${error}` },
         }));
       }
-    } catch (error) {
+    } else {
+      // Web mode: OpenClaw Gateway runs independently
       setChecks((prev) => ({
         ...prev,
-        openclaw: { status: 'error', message: `Check failed: ${error}` },
+        openclaw: {
+          status: 'success',
+          message: 'OpenClaw Gateway (external service)'
+        },
       }));
     }
 
@@ -478,7 +490,7 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
 
   // Update gateway check when gateway status changes
   useEffect(() => {
-    if (gatewayStatus.state === 'running') {
+    if (gatewayStatus.state === 'running' || gatewayStatus.state === 'connected') {
       setChecks((prev) => ({
         ...prev,
         gateway: { status: 'success', message: t('runtime.status.gatewayRunning', { port: gatewayStatus.port }) },
@@ -505,7 +517,7 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
     }
 
     // If gateway is already in a terminal state, no timeout needed
-    if (gatewayStatus.state === 'running' || gatewayStatus.state === 'error') {
+    if (gatewayStatus.state === 'running' || gatewayStatus.state === 'connected' || gatewayStatus.state === 'error') {
       return;
     }
 
