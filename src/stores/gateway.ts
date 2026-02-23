@@ -4,6 +4,8 @@
  */
 import { create } from 'zustand';
 import type { GatewayStatus } from '../types/gateway';
+import { api } from '@/lib/api';
+import { ws } from '@/lib/websocket';
 
 let gatewayInitPromise: Promise<void> | null = null;
 
@@ -48,86 +50,47 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
     gatewayInitPromise = (async () => {
       try {
-        // Get initial status first
-        const status = await window.electron.ipcRenderer.invoke('gateway:status') as GatewayStatus;
-        set({ status, isInitialized: true });
-
-        // Listen for status changes
-        window.electron.ipcRenderer.on('gateway:status-changed', (newStatus) => {
-          set({ status: newStatus as GatewayStatus });
+        // Get initial status
+        const status = await api.getGatewayStatus();
+        set({
+          status: {
+            state: status.state as any,
+            port: 18789
+          },
+          isInitialized: true
         });
 
-        // Listen for errors
-        window.electron.ipcRenderer.on('gateway:error', (error) => {
-          set({ lastError: String(error) });
+        // Connect WebSocket for real-time updates
+        ws.connect();
+
+        // Listen for state changes
+        ws.on('stateChange', (data) => {
+          set({
+            status: {
+              ...get().status,
+              state: data.state as any
+            }
+          });
         });
 
-        // Some Gateway builds stream chat events via generic "agent" notifications.
-        // Normalize and forward them to the chat store.
-        // The Gateway may put event fields (state, message, etc.) either inside
-        // params.data or directly on params — we must handle both layouts.
-        window.electron.ipcRenderer.on('gateway:notification', (notification) => {
-          const payload = notification as { method?: string; params?: Record<string, unknown> } | undefined;
-          if (!payload || payload.method !== 'agent' || !payload.params || typeof payload.params !== 'object') {
-            return;
-          }
+        // Listen for notifications
+        ws.on('notification', (data) => {
+          const { method, params } = data;
 
-          const p = payload.params;
-          const data = (p.data && typeof p.data === 'object') ? (p.data as Record<string, unknown>) : {};
-          const normalizedEvent: Record<string, unknown> = {
-            // Spread data sub-object first (nested layout)
-            ...data,
-            // Then override with top-level params fields (flat layout takes precedence)
-            runId: p.runId ?? data.runId,
-            sessionKey: p.sessionKey ?? data.sessionKey,
-            stream: p.stream ?? data.stream,
-            seq: p.seq ?? data.seq,
-            // Critical: also pick up state and message from params (flat layout)
-            state: p.state ?? data.state,
-            message: p.message ?? data.message,
-          };
+          if (method === 'agent') {
+            // Forward agent notifications to chat store
+            const normalizedEvent: Record<string, unknown> = {
+              ...(params?.data || {}),
+              ...params,
+            };
 
-          import('./chat')
-            .then(({ useChatStore }) => {
-              useChatStore.getState().handleChatEvent(normalizedEvent);
-            })
-            .catch((err) => {
-              console.warn('Failed to forward gateway notification event:', err);
-            });
-        });
-
-        // Listen for chat events from the gateway and forward to chat store.
-        // The data arrives as { message: payload } from handleProtocolEvent.
-        // The payload may be a full event wrapper ({ state, runId, message })
-        // or the raw chat message itself. We need to handle both.
-        window.electron.ipcRenderer.on('gateway:chat-message', (data) => {
-          try {
-            // Dynamic import to avoid circular dependency
-            import('./chat').then(({ useChatStore }) => {
-              const chatData = data as Record<string, unknown>;
-              // Unwrap the { message: payload } wrapper from handleProtocolEvent
-              const payload = ('message' in chatData && typeof chatData.message === 'object')
-                ? chatData.message as Record<string, unknown>
-                : chatData;
-
-              // If payload has a 'state' field, it's already a proper event wrapper
-              if (payload.state) {
-                useChatStore.getState().handleChatEvent(payload);
-                return;
-              }
-
-              // Otherwise, payload is the raw message — wrap it as a 'final' event
-              // so handleChatEvent can process it (this happens when the Gateway
-              // sends protocol events with the message directly as payload).
-              const syntheticEvent: Record<string, unknown> = {
-                state: 'final',
-                message: payload,
-                runId: chatData.runId ?? payload.runId,
-              };
-              useChatStore.getState().handleChatEvent(syntheticEvent);
-            });
-          } catch (err) {
-            console.warn('Failed to forward chat event:', err);
+            import('./chat')
+              .then(({ useChatStore }) => {
+                useChatStore.getState().handleChatEvent(normalizedEvent);
+              })
+              .catch((err) => {
+                console.warn('Failed to forward gateway notification event:', err);
+              });
           }
         });
 
@@ -145,14 +108,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   start: async () => {
     try {
       set({ status: { ...get().status, state: 'starting' }, lastError: null });
-      const result = await window.electron.ipcRenderer.invoke('gateway:start') as { success: boolean; error?: string };
-
-      if (!result.success) {
-        set({
-          status: { ...get().status, state: 'error', error: result.error },
-          lastError: result.error || 'Failed to start Gateway'
-        });
-      }
+      await api.startGateway();
     } catch (error) {
       set({
         status: { ...get().status, state: 'error', error: String(error) },
@@ -163,7 +119,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
   stop: async () => {
     try {
-      await window.electron.ipcRenderer.invoke('gateway:stop');
+      await api.stopGateway();
       set({ status: { ...get().status, state: 'stopped' }, lastError: null });
     } catch (error) {
       console.error('Failed to stop Gateway:', error);
@@ -174,14 +130,8 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   restart: async () => {
     try {
       set({ status: { ...get().status, state: 'starting' }, lastError: null });
-      const result = await window.electron.ipcRenderer.invoke('gateway:restart') as { success: boolean; error?: string };
-
-      if (!result.success) {
-        set({
-          status: { ...get().status, state: 'error', error: result.error },
-          lastError: result.error || 'Failed to restart Gateway'
-        });
-      }
+      await api.stopGateway();
+      await api.startGateway();
     } catch (error) {
       set({
         status: { ...get().status, state: 'error', error: String(error) },
@@ -192,17 +142,10 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
   checkHealth: async () => {
     try {
-      const result = await window.electron.ipcRenderer.invoke('gateway:health') as {
-        success: boolean;
-        ok: boolean;
-        error?: string;
-        uptime?: number
-      };
-
+      const status = await api.getGatewayStatus();
       const health: GatewayHealth = {
-        ok: result.ok,
-        error: result.error,
-        uptime: result.uptime,
+        ok: status.connected,
+        error: status.connected ? undefined : 'Gateway not connected',
       };
 
       set({ health });
@@ -215,16 +158,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   },
 
   rpc: async <T>(method: string, params?: unknown, timeoutMs?: number): Promise<T> => {
-    const result = await window.electron.ipcRenderer.invoke('gateway:rpc', method, params, timeoutMs) as {
-      success: boolean;
-      result?: T;
-      error?: string;
-    };
-
-    if (!result.success) {
-      throw new Error(result.error || `RPC call failed: ${method}`);
-    }
-
+    const result = await api.gatewayRpc(method, params, timeoutMs);
     return result.result as T;
   },
 

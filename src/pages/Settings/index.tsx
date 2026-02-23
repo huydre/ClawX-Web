@@ -30,6 +30,7 @@ import { ProvidersSettings } from '@/components/settings/ProvidersSettings';
 import { UpdateSettings } from '@/components/settings/UpdateSettings';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
+import { platform } from '@/lib/platform';
 type ControlUiInfo = {
   url: string;
   token: string;
@@ -61,11 +62,11 @@ export function Settings() {
   const [openclawCliError, setOpenclawCliError] = useState<string | null>(null);
   const [installingCli, setInstallingCli] = useState(false);
 
-  const isMac = window.electron.platform === 'darwin';
-  const isWindows = window.electron.platform === 'win32';
-  const isLinux = window.electron.platform === 'linux';
-  const isDev = window.electron.isDev;
-  const showCliTools = isMac || isWindows || isLinux;
+  const isMac = platform.os === 'darwin';
+  const isWindows = platform.os === 'win32';
+  const isLinux = platform.os === 'linux';
+  const isDev = platform.isDev;
+  const showCliTools = platform.isElectron && (isMac || isWindows || isLinux);
   const [showLogs, setShowLogs] = useState(false);
   const [logContent, setLogContent] = useState('');
 
