@@ -47,11 +47,20 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
     try {
       const providers = await api.getProviders() as ProviderWithKeyInfo[];
-      const defaultResult = await api.getDefaultProvider();
+
+      // Try to get default provider, but don't fail if it doesn't exist
+      let defaultProviderId: string | null = null;
+      try {
+        const defaultResult = await api.getDefaultProvider();
+        defaultProviderId = defaultResult.id;
+      } catch (error) {
+        // No default provider set yet, that's okay
+        console.debug('No default provider set');
+      }
 
       set({
         providers,
-        defaultProviderId: defaultResult.id,
+        defaultProviderId,
         loading: false
       });
     } catch (error) {

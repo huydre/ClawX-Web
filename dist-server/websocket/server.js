@@ -15,7 +15,11 @@ function createWebSocketServer(server) {
         // Authenticate
         const token = req.headers.authorization?.replace('Bearer ', '');
         const settings = await (0, storage_1.getSettings)();
-        if (token !== settings.serverToken) {
+        // Skip auth for localhost in development
+        const isLocalhost = req.socket.remoteAddress === '127.0.0.1' ||
+            req.socket.remoteAddress === '::1' ||
+            req.socket.remoteAddress === '::ffff:127.0.0.1';
+        if (!isLocalhost && token !== settings.serverToken) {
             logger_1.logger.warn('WebSocket authentication failed', { ip: req.socket.remoteAddress });
             ws.close(1008, 'Authentication failed');
             return;
@@ -24,6 +28,7 @@ function createWebSocketServer(server) {
         // Forward gateway notifications to client
         const onNotification = (method, params) => {
             if (ws.readyState === ws_1.WebSocket.OPEN) {
+                logger_1.logger.info('Forwarding notification to browser', { method, params });
                 ws.send(JSON.stringify({
                     type: 'notification',
                     method,

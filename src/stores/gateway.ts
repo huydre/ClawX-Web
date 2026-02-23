@@ -91,12 +91,16 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
         ws.on('notification', (data) => {
           const { method, params } = data;
 
-          if (method === 'agent') {
-            // Forward agent notifications to chat store
+          console.log('[Gateway] Received notification:', { method, params });
+
+          if (method === 'agent' || method === 'chat') {
+            // Forward agent and chat notifications to chat store
             const normalizedEvent: Record<string, unknown> = {
               ...(params?.data || {}),
               ...params,
             };
+
+            console.log('[Gateway] Forwarding to chat store:', normalizedEvent);
 
             import('./chat')
               .then(({ useChatStore }) => {
@@ -105,6 +109,8 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
               .catch((err) => {
                 console.warn('Failed to forward gateway notification event:', err);
               });
+          } else {
+            console.log('[Gateway] Ignoring notification with method:', method);
           }
         });
 

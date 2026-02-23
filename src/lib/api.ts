@@ -155,6 +155,63 @@ class ApiClient {
   getFileUrl(filename: string): string {
     return `${API_BASE}/files/${filename}`;
   }
+
+  // Cron API (via Gateway RPC)
+  async getCronJobs() {
+    const result = await this.gatewayRpc('cron.list');
+    return result.result || [];
+  }
+
+  async createCronJob(input: any) {
+    const result = await this.gatewayRpc('cron.create', input);
+    return result.result;
+  }
+
+  async updateCronJob(id: string, input: any) {
+    const result = await this.gatewayRpc('cron.update', { id, ...input });
+    return result.result;
+  }
+
+  async deleteCronJob(id: string) {
+    const result = await this.gatewayRpc('cron.delete', { id });
+    return result.result;
+  }
+
+  async toggleCronJob(id: string, enabled: boolean) {
+    const result = await this.gatewayRpc('cron.toggle', { id, enabled });
+    return result.result;
+  }
+
+  async triggerCronJob(id: string) {
+    const result = await this.gatewayRpc('cron.trigger', { id });
+    return result.result;
+  }
+
+  // ClawHub API
+  async clawhubSearch(query: string, limit?: number) {
+    return this.request<{ success: boolean; results: any[] }>('/clawhub/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, limit }),
+    });
+  }
+
+  async clawhubInstall(slug: string, version?: string, force?: boolean) {
+    return this.request<{ success: boolean }>('/clawhub/install', {
+      method: 'POST',
+      body: JSON.stringify({ slug, version, force }),
+    });
+  }
+
+  async clawhubUninstall(slug: string) {
+    return this.request<{ success: boolean }>('/clawhub/uninstall', {
+      method: 'POST',
+      body: JSON.stringify({ slug }),
+    });
+  }
+
+  async clawhubList() {
+    return this.request<{ success: boolean; results: any[] }>('/clawhub/list');
+  }
 }
 
 export const api = new ApiClient();

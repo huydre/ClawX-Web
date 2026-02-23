@@ -44,11 +44,12 @@ import {
 } from '@/types/channel';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { platform } from '@/lib/platform';
 
 export function Channels() {
   const { t } = useTranslation('channels');
   const { channels, loading, error, fetchChannels, deleteChannel } = useChannelsStore();
-  const gatewayStatus = useGatewayStore((state) => state.status);
+  const isGatewayRunning = useGatewayStore((state) => state.isRunning());
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedChannelType, setSelectedChannelType] = useState<ChannelType | null>(null);
@@ -59,8 +60,9 @@ export function Channels() {
     fetchChannels();
   }, [fetchChannels]);
 
-  // Fetch configured channel types from config file
+  // Fetch configured channel types from config file (Electron only)
   const fetchConfiguredTypes = useCallback(async () => {
+    if (!platform.isElectron) return;
     try {
       const result = await window.electron.ipcRenderer.invoke('channel:listConfigured') as {
         success: boolean;
@@ -80,6 +82,7 @@ export function Channels() {
   }, [fetchConfiguredTypes]);
 
   useEffect(() => {
+    if (!platform.isElectron) return;
     const unsubscribe = window.electron.ipcRenderer.on('gateway:channel-status', () => {
       fetchChannels();
       fetchConfiguredTypes();
@@ -120,10 +123,12 @@ export function Channels() {
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('refresh')}
           </Button>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('addChannel')}
-          </Button>
+          {platform.isElectron && (
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addChannel')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -171,7 +176,7 @@ export function Channels() {
       </div>
 
       {/* Gateway Warning */}
-      {gatewayStatus.state !== 'running' && (
+      {!isGatewayRunning && (
         <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10">
           <CardContent className="py-4 flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-yellow-500" />

@@ -4,6 +4,8 @@
  */
 import { create } from 'zustand';
 import type { Channel, ChannelType } from '../types/channel';
+import { platform } from '@/lib/platform';
+import { api } from '@/lib/api';
 
 interface AddChannelParams {
   type: ChannelType;
@@ -36,11 +38,16 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
   fetchChannels: async () => {
     set({ loading: true, error: null });
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'channels.status',
-        { probe: true }
-      ) as {
+      // Use API in web mode, IPC in Electron mode
+      const result = platform.isElectron
+        ? await window.electron.ipcRenderer.invoke(
+            'gateway:rpc',
+            'channels.status',
+            { probe: true }
+          )
+        : await api.gatewayRpc('channels.status', { probe: true });
+
+      const typedResult = result as {
         success: boolean;
         result?: {
           channelOrder?: string[];
@@ -62,8 +69,8 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
         error?: string;
       };
 
-      if (result.success && result.result) {
-        const data = result.result;
+      if (typedResult.success && typedResult.result) {
+        const data = typedResult.result;
         const channels: Channel[] = [];
 
         // Parse the complex channels.status response into simple Channel objects
@@ -139,17 +146,22 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
 
   addChannel: async (params) => {
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'channels.add',
-        params
-      ) as { success: boolean; result?: Channel; error?: string };
+      // Use API in web mode, IPC in Electron mode
+      const result = platform.isElectron
+        ? await window.electron.ipcRenderer.invoke(
+            'gateway:rpc',
+            'channels.add',
+            params
+          )
+        : await api.gatewayRpc('channels.add', params);
 
-      if (result.success && result.result) {
+      const typedResult = result as { success: boolean; result?: Channel; error?: string };
+
+      if (typedResult.success && typedResult.result) {
         set((state) => ({
-          channels: [...state.channels, result.result!],
+          channels: [...state.channels, typedResult.result!],
         }));
-        return result.result;
+        return typedResult.result;
       } else {
         // If gateway is not available, create a local channel for now
         const newChannel: Channel = {
@@ -183,18 +195,25 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
     const channelType = channelId.split('-')[0];
 
     try {
-      // Delete the channel configuration from openclaw.json
-      await window.electron.ipcRenderer.invoke('channel:deleteConfig', channelType);
+      // Delete the channel configuration (Electron only)
+      if (platform.isElectron) {
+        await window.electron.ipcRenderer.invoke('channel:deleteConfig', channelType);
+      }
     } catch (error) {
       console.error('Failed to delete channel config:', error);
     }
 
     try {
-      await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'channels.delete',
-        { channelId: channelType }
-      );
+      // Use API in web mode, IPC in Electron mode
+      if (platform.isElectron) {
+        await window.electron.ipcRenderer.invoke(
+          'gateway:rpc',
+          'channels.delete',
+          { channelId: channelType }
+        );
+      } else {
+        await api.gatewayRpc('channels.delete', { channelId: channelType });
+      }
     } catch (error) {
       // Continue with local deletion even if gateway fails
       console.error('Failed to delete channel from gateway:', error);
@@ -211,16 +230,21 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
     updateChannel(channelId, { status: 'connecting', error: undefined });
 
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'channels.connect',
-        { channelId }
-      ) as { success: boolean; error?: string };
+      // Use API in web mode, IPC in Electron mode
+      const result = platform.isElectron
+        ? await window.electron.ipcRenderer.invoke(
+            'gateway:rpc',
+            'channels.connect',
+            { channelId }
+          )
+        : await api.gatewayRpc('channels.connect', { channelId });
 
-      if (result.success) {
+      const typedResult = result as { success: boolean; error?: string };
+
+      if (typedResult.success) {
         updateChannel(channelId, { status: 'connected' });
       } else {
-        updateChannel(channelId, { status: 'error', error: result.error });
+        updateChannel(channelId, { status: 'error', error: typedResult.error });
       }
     } catch (error) {
       updateChannel(channelId, { status: 'error', error: String(error) });
@@ -231,11 +255,16 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
     const { updateChannel } = get();
 
     try {
-      await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'channels.disconnect',
-        { channelId }
-      );
+      // Use API in web mode, IPC in Electron mode
+      if (platform.isElectron) {
+        await window.electron.ipcRenderer.invoke(
+          'gateway:rpc',
+          'channels.disconnect',
+          { channelId }
+        );
+      } else {
+        await api.gatewayRpc('channels.disconnect', { channelId });
+      }
     } catch (error) {
       console.error('Failed to disconnect channel:', error);
     }
@@ -244,17 +273,22 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
   },
 
   requestQrCode: async (channelType) => {
-    const result = await window.electron.ipcRenderer.invoke(
-      'gateway:rpc',
-      'channels.requestQr',
-      { type: channelType }
-    ) as { success: boolean; result?: { qrCode: string; sessionId: string }; error?: string };
+    // Use API in web mode, IPC in Electron mode
+    const result = platform.isElectron
+      ? await window.electron.ipcRenderer.invoke(
+          'gateway:rpc',
+          'channels.requestQr',
+          { type: channelType }
+        )
+      : await api.gatewayRpc('channels.requestQr', { type: channelType });
 
-    if (result.success && result.result) {
-      return result.result;
+    const typedResult = result as { success: boolean; result?: { qrCode: string; sessionId: string }; error?: string };
+
+    if (typedResult.success && typedResult.result) {
+      return typedResult.result;
     }
 
-    throw new Error(result.error || 'Failed to request QR code');
+    throw new Error(typedResult.error || 'Failed to request QR code');
   },
 
   setChannels: (channels) => set({ channels }),

@@ -16,6 +16,17 @@ async function start() {
         const server = app_1.app.listen(PORT, HOST, () => {
             logger_1.logger.info(`Server running on http://${HOST}:${PORT}`);
         });
+        // Handle server errors
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                logger_1.logger.error(`Port ${PORT} is already in use. Please stop the existing server first.`);
+                process.exit(1);
+            }
+            else {
+                logger_1.logger.error('Server error:', error);
+                process.exit(1);
+            }
+        });
         // Create WebSocket server
         (0, server_1.createWebSocketServer)(server);
         // Auto-start gateway connection
