@@ -15,9 +15,7 @@ app.use(helmet({
     crossOriginOpenerPolicy: false,
     crossOriginResourcePolicy: false,
     originAgentCluster: false,
-    strictTransportSecurity: {
-        maxAge: 0, // Disable HSTS for HTTP deployment
-    },
+    hsts: false, // Disable HSTS for HTTP deployment
 }));
 app.use(cors({
     origin: [
