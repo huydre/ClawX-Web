@@ -5,7 +5,7 @@ import { initStorage } from './services/storage';
 import { gatewayManager } from './services/gateway-manager';
 
 const PORT = parseInt(process.env.PORT || '2003', 10);
-const HOST = '127.0.0.1';
+const HOST = process.env.HOST || '0.0.0.0';
 
 async function start() {
   try {
