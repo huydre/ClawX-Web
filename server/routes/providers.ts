@@ -23,6 +23,21 @@ router.get('/', async (_req, res) => {
   }
 });
 
+// GET /api/providers/default - Must come before /:id route
+router.get('/default', async (_req, res) => {
+  try {
+    const defaultId = await getDefaultProvider();
+    if (!defaultId) {
+      // No default provider set yet - return 200 with null instead of 404
+      return res.json({ id: null });
+    }
+    res.json({ id: defaultId });
+  } catch (error) {
+    logger.error('Get default provider error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 // GET /api/providers/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -84,17 +99,6 @@ router.post('/default', async (req, res) => {
   } catch (error) {
     logger.error('Set default provider error:', error);
     res.status(500).json({ success: false, error: String(error) });
-  }
-});
-
-// GET /api/providers/default
-router.get('/default', async (_req, res) => {
-  try {
-    const defaultId = await getDefaultProvider();
-    res.json({ id: defaultId });
-  } catch (error) {
-    logger.error('Get default provider error:', error);
-    res.status(500).json({ error: String(error) });
   }
 });
 

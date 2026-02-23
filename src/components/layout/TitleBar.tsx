@@ -2,14 +2,30 @@
  * TitleBar Component
  * macOS: empty drag region (native traffic lights handled by hiddenInset).
  * Windows/Linux: icon + "ClawX" on left, minimize/maximize/close on right.
+ * Web: just show app name, no window controls
  */
 import { useState, useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
 import logoSvg from '@/assets/logo.svg';
+import { platform } from '@/lib/platform';
 
 const isMac = window.electron?.platform === 'darwin';
 
 export function TitleBar() {
+  // Web mode: simple header without window controls
+  if (platform.isWeb) {
+    return (
+      <div className="flex h-10 shrink-0 items-center border-b bg-background">
+        <div className="flex items-center gap-2 pl-3">
+          <img src={logoSvg} alt="ClawX" className="h-5 w-auto" />
+          <span className="text-xs font-medium text-muted-foreground select-none">
+            ClawX
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   if (isMac) {
     // macOS: just a drag region, traffic lights are native
     return <div className="drag-region h-10 shrink-0 border-b bg-background" />;

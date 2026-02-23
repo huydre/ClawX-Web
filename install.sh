@@ -13,7 +13,12 @@ fi
 
 # Get current user
 CURRENT_USER=$(whoami)
-INSTALL_DIR="$HOME/clawx-web"
+# Set installation directory based on user
+if [ "$CURRENT_USER" = "root" ]; then
+    INSTALL_DIR="/root/clawx-web"
+else
+    INSTALL_DIR="$HOME/clawx-web"
+fi
 
 echo "Installing ClawX Web for user: $CURRENT_USER"
 echo "Installation directory: $INSTALL_DIR"
@@ -63,17 +68,25 @@ echo ""
 
 # Install systemd service
 echo "Installing systemd service..."
-SERVICE_FILE="/etc/systemd/system/clawx-web@.service"
-
-if [ -w "/etc/systemd/system" ]; then
-    sudo cp systemd/clawx-web.service "$SERVICE_FILE"
+if [ "$CURRENT_USER" = "root" ]; then
+    # Use root-specific service file
+    SERVICE_FILE="/etc/systemd/system/clawx-web-root.service"
+    SERVICE_NAME="clawx-web-root.service"
+    sudo cp systemd/clawx-web-root.service "$SERVICE_FILE"
 else
-    echo "Copying service file (requires sudo)..."
-    sudo cp systemd/clawx-web.service "$SERVICE_FILE"
+    # Use user-specific service file with %i substitution
+    SERVICE_FILE="/etc/systemd/system/clawx-web@.service"
+    SERVICE_NAME="clawx-web@$CURRENT_USER.service"
+    if [ -w "/etc/systemd/system" ]; then
+        sudo cp systemd/clawx-web.service "$SERVICE_FILE"
+    else
+        echo "Copying service file (requires sudo)..."
+        sudo cp systemd/clawx-web.service "$SERVICE_FILE"
+    fi
+    # Update service file with correct paths
+    sudo sed -i "s|/home/%i/clawx-web|$INSTALL_DIR|g" "$SERVICE_FILE"
 fi
 
-# Update service file with correct paths
-sudo sed -i "s|/home/%i/clawx-web|$INSTALL_DIR|g" "$SERVICE_FILE"
 
 echo "✓ Systemd service installed"
 echo ""
@@ -81,8 +94,8 @@ echo ""
 # Enable and start service
 echo "Enabling and starting service..."
 sudo systemctl daemon-reload
-sudo systemctl enable "clawx-web@$CURRENT_USER.service"
-sudo systemctl start "clawx-web@$CURRENT_USER.service"
+sudo systemctl enable "$SERVICE_NAME"
+sudo systemctl start "$SERVICE_NAME"
 
 echo "✓ Service enabled and started"
 echo ""
@@ -91,19 +104,19 @@ echo ""
 sleep 2
 
 # Check service status
-if sudo systemctl is-active --quiet "clawx-web@$CURRENT_USER.service"; then
+if sudo systemctl is-active --quiet "$SERVICE_NAME"; then
     echo "✓ ClawX Web is running!"
     echo ""
     echo "Access the web interface at: http://127.0.0.1:2003"
     echo ""
     echo "Useful commands:"
-    echo "  - Check status: sudo systemctl status clawx-web@$CURRENT_USER.service"
-    echo "  - View logs: sudo journalctl -u clawx-web@$CURRENT_USER.service -f"
-    echo "  - Restart: sudo systemctl restart clawx-web@$CURRENT_USER.service"
-    echo "  - Stop: sudo systemctl stop clawx-web@$CURRENT_USER.service"
+    echo "  - Check status: sudo systemctl status $SERVICE_NAME"
+    echo "  - View logs: sudo journalctl -u $SERVICE_NAME -f"
+    echo "  - Restart: sudo systemctl restart $SERVICE_NAME"
+    echo "  - Stop: sudo systemctl stop $SERVICE_NAME"
     echo ""
 else
     echo "⚠ Service failed to start. Check logs with:"
-    echo "  sudo journalctl -u clawx-web@$CURRENT_USER.service -n 50"
+    echo "  sudo journalctl -u $SERVICE_NAME -n 50"
     exit 1
 fi

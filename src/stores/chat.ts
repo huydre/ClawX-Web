@@ -6,15 +6,69 @@
 import { create } from 'zustand';
 import { platform } from '@/lib/platform';
 
+// Helper function to wait for gateway to be connected (web mode only)
+async function waitForGatewayConnected(timeoutMs = 15000): Promise<boolean> {
+  if (platform.isElectron) return true; // Electron mode doesn't need to wait
+
+  const { useGatewayStore } = await import('./gateway');
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeoutMs) {
+    const isRunning = useGatewayStore.getState().isRunning();
+    const state = useGatewayStore.getState().status.state;
+
+    // Only proceed if gateway is in a stable connected state
+    if (isRunning && (state === 'connected' || state === 'running')) {
+      return true;
+    }
+
+    // Wait 500ms before checking again
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  return false;
+}
+
 // Helper function to call gateway RPC (works in both Electron and Web mode)
-async function gatewayRpc(method: string, params?: any): Promise<{ success: boolean; result?: any; error?: string }> {
+async function gatewayRpc(method: string, params?: any, retries = 2): Promise<{ success: boolean; result?: any; error?: string }> {
   if (platform.isElectron) {
     return await window.electron.ipcRenderer.invoke('gateway:rpc', method, params);
   } else {
-    // Web mode: use gateway store
+    // Web mode: wait for gateway to be connected, then use gateway store with retry logic
     const { useGatewayStore } = await import('./gateway');
-    const result = await useGatewayStore.getState().rpc(method, params);
-    return { success: true, result };
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        // Wait for gateway to be connected before making RPC call
+        const isConnected = await waitForGatewayConnected();
+        if (!isConnected) {
+          throw new Error('Gateway not connected');
+        }
+
+        // Use shorter timeout (10s) to fail fast and retry
+        const result = await useGatewayStore.getState().rpc(method, params, 10000);
+        return { success: true, result };
+      } catch (error) {
+        const errorMsg = String(error);
+
+        // If this is the last attempt, return the error
+        if (attempt === retries) {
+          return { success: false, error: errorMsg };
+        }
+
+        // If it's a timeout or connection error, wait and retry
+        if (errorMsg.includes('timeout') || errorMsg.includes('not connected')) {
+          console.log(`[gatewayRpc] Attempt ${attempt + 1} failed: ${errorMsg}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        // For other errors, don't retry
+        return { success: false, error: errorMsg };
+      }
+    }
+
+    return { success: false, error: 'Max retries exceeded' };
   }
 }
 

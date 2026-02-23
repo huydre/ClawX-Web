@@ -3,30 +3,6 @@ import WebSocket from 'ws';
 import { logger } from '../utils/logger';
 import { getSetting } from './storage';
 
-interface JsonRpcRequest {
-  jsonrpc: '2.0';
-  method: string;
-  params?: any;
-  id: string | number;
-}
-
-interface JsonRpcResponse {
-  jsonrpc: '2.0';
-  result?: any;
-  error?: {
-    code: number;
-    message: string;
-    data?: any;
-  };
-  id: string | number;
-}
-
-interface JsonRpcNotification {
-  jsonrpc: '2.0';
-  method: string;
-  params?: any;
-}
-
 type GatewayState = 'stopped' | 'starting' | 'connected' | 'error';
 
 class GatewayManager extends EventEmitter {
@@ -94,12 +70,12 @@ class GatewayManager extends EventEmitter {
       throw new Error('Gateway not connected');
     }
 
-    const id = ++this.requestId;
-    const request: JsonRpcRequest = {
-      jsonrpc: '2.0',
+    const id = `rpc-${++this.requestId}`;
+    const request = {
+      type: 'req',
+      id,
       method,
       params,
-      id,
     };
 
     return new Promise((resolve, reject) => {
@@ -129,11 +105,9 @@ class GatewayManager extends EventEmitter {
 
       logger.info('Connecting to gateway', { url });
 
-      this.ws = new WebSocket(url, {
-        headers: {
-          Authorization: `Bearer ${gatewayToken}`,
-        },
-      });
+      // Try connecting without Authorization header first
+      // OpenClaw Gateway might not require authentication for localhost connections
+      this.ws = new WebSocket(url);
 
       this.ws.on('open', () => {
         logger.info('Gateway connected');
@@ -146,12 +120,8 @@ class GatewayManager extends EventEmitter {
         // Start ping interval to keep connection alive
         this.pingInterval = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
-            // Send both WebSocket ping and RPC ping
+            // Send WebSocket ping to keep connection alive
             this.ws.ping();
-            // Send a lightweight RPC call to keep the connection active
-            this.rpc('ping').catch(() => {
-              // Ignore ping errors
-            });
           }
         }, 8000); // Ping every 8 seconds (before 10s timeout)
       });
@@ -159,6 +129,49 @@ class GatewayManager extends EventEmitter {
       this.ws.on('message', (data: WebSocket.Data) => {
         try {
           const message = JSON.parse(data.toString());
+
+          // Handle connect.challenge event - send proper connect request
+          if (message.type === 'event' && message.event === 'connect.challenge') {
+            logger.info('Received connect challenge', { nonce: message.payload?.nonce });
+
+            // Send connect request with proper protocol
+            const connectReq = {
+              type: 'req',
+              id: 'connect-1',
+              method: 'connect',
+              params: {
+                minProtocol: 3,
+                maxProtocol: 3,
+                client: {
+                  id: 'webchat',
+                  version: '0.1.15',
+                  platform: 'web',
+                  mode: 'webchat'
+                },
+                role: 'operator',
+                scopes: ['operator.read', 'operator.write', 'operator.admin'],
+                auth: { token: gatewayToken },
+                locale: 'en-US',
+                userAgent: 'clawx-web/0.1.15'
+              }
+            };
+
+            this.ws!.send(JSON.stringify(connectReq));
+            logger.info('Sent connect request');
+            return;
+          }
+
+          // Handle connect response
+          if (message.type === 'res' && message.id === 'connect-1') {
+            if (message.ok) {
+              logger.info('Gateway handshake completed successfully');
+            } else {
+              logger.error('Gateway handshake failed', { error: message.error });
+              this.setState('error');
+            }
+            return;
+          }
+
           this.handleMessage(message);
         } catch (error) {
           logger.error('Failed to parse gateway message', { error, data: data.toString() });
@@ -166,12 +179,12 @@ class GatewayManager extends EventEmitter {
       });
 
       this.ws.on('error', (error) => {
-        logger.error('Gateway WebSocket error', { error: error.message });
+        logger.error('Gateway WebSocket error', { error: error.message, stack: error.stack });
         this.setState('error');
       });
 
-      this.ws.on('close', () => {
-        logger.warn('Gateway disconnected');
+      this.ws.on('close', (code, reason) => {
+        logger.warn('Gateway disconnected', { code, reason: reason.toString() });
         this.ws = null;
 
         // Clear ping interval
@@ -192,27 +205,28 @@ class GatewayManager extends EventEmitter {
     }
   }
 
-  private handleMessage(message: JsonRpcResponse | JsonRpcNotification): void {
-    // Handle RPC response
-    if ('id' in message && message.id !== undefined) {
+  private handleMessage(message: any): void {
+    // Handle OpenClaw protocol response (type: 'res')
+    if (message.type === 'res' && message.id !== undefined) {
       const pending = this.pendingRequests.get(message.id);
       if (pending) {
         clearTimeout(pending.timeout);
         this.pendingRequests.delete(message.id);
 
-        if (message.error) {
-          pending.reject(new Error(message.error.message));
+        if (message.ok) {
+          pending.resolve(message.payload);
         } else {
-          pending.resolve(message.result);
+          const errorMsg = message.error?.message || 'Unknown error';
+          pending.reject(new Error(errorMsg));
         }
       }
       return;
     }
 
-    // Handle notification
-    if ('method' in message) {
-      logger.debug('Gateway notification', { method: message.method, params: message.params });
-      this.emit('notification', message.method, message.params);
+    // Handle OpenClaw protocol event (type: 'event')
+    if (message.type === 'event' && message.event) {
+      logger.info('Gateway event received', { event: message.event, payload: message.payload });
+      this.emit('notification', message.event, message.payload);
     }
   }
 

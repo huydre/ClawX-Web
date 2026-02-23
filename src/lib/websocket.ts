@@ -106,6 +106,8 @@ class WebSocketClient {
   private handleMessage(message: any) {
     const { type, ...data } = message;
 
+    console.log('[WebSocket] Received message:', { type, data });
+
     const handlers = this.handlers.get(type);
     if (handlers) {
       handlers.forEach((handler) => handler(data));

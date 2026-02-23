@@ -37,6 +37,7 @@ export function createWebSocketServer(server: any): WebSocketServer {
     // Forward gateway notifications to client
     const onNotification = (method: string, params: any) => {
       if (ws.readyState === WebSocket.OPEN) {
+        logger.info('Forwarding notification to browser', { method, params });
         ws.send(JSON.stringify({
           type: 'notification',
           method,

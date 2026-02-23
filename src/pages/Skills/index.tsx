@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Skill, MarketplaceSkill } from '@/types/skill';
 import { useTranslation } from 'react-i18next';
+import { platform } from '@/lib/platform';
 
 
 
@@ -176,10 +177,12 @@ function SkillDetailDialog({ skill, onClose, onToggle }: SkillDetailDialogProps)
                       <Globe className="h-3 w-3" />
                       ClawHub
                     </Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleOpenEditor}>
-                      <FileCode className="h-3 w-3" />
-                      {t('detail.openManual')}
-                    </Button>
+                    {platform.isElectron && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleOpenEditor}>
+                        <FileCode className="h-3 w-3" />
+                        {t('detail.openManual')}
+                      </Button>
+                    )}
                   </>
                 )}
               </div>

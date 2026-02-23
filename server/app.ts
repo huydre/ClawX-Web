@@ -8,6 +8,7 @@ import providersRouter from './routes/providers';
 import gatewayRouter from './routes/gateway';
 import settingsRouter from './routes/settings';
 import filesRouter from './routes/files';
+import clawhubRouter from './routes/clawhub';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/providers', providersRouter);
 app.use('/api/gateway', gatewayRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/files', filesRouter);
+app.use('/api/clawhub', clawhubRouter);
 
 // Serve static files
 app.use(express.static('dist'));
