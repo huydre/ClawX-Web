@@ -18,6 +18,17 @@ async function start() {
       logger.info(`Server running on http://${HOST}:${PORT}`);
     });
 
+    // Handle server errors
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        logger.error(`Port ${PORT} is already in use. Please stop the existing server first.`);
+        process.exit(1);
+      } else {
+        logger.error('Server error:', error);
+        process.exit(1);
+      }
+    });
+
     // Create WebSocket server
     createWebSocketServer(server);
 
