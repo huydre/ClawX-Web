@@ -13,7 +13,11 @@ import clawhubRouter from './routes/clawhub';
 const app = express();
 
 // Security
-app.use(helmet());
+app.use(helmet({
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+  originAgentCluster: false,
+}));
 app.use(cors({
   origin: [
     'http://localhost:2003',
