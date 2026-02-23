@@ -18,8 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 export function Chat() {
   const { t } = useTranslation('chat');
-  const gatewayStatus = useGatewayStore((s) => s.status);
-  const isGatewayRunning = gatewayStatus.state === 'running';
+  const isGatewayRunning = useGatewayStore((s) => s.isRunning());
 
   const messages = useChatStore((s) => s.messages);
   const loading = useChatStore((s) => s.loading);

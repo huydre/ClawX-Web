@@ -535,7 +535,7 @@ export function Skills() {
     installing
   } = useSkillsStore();
   const { t } = useTranslation('skills');
-  const gatewayStatus = useGatewayStore((state) => state.status);
+  const isGatewayRunning = useGatewayStore((state) => state.isRunning());
   const [searchQuery, setSearchQuery] = useState('');
   const [marketplaceQuery, setMarketplaceQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
@@ -543,7 +543,6 @@ export function Skills() {
   const [selectedSource, setSelectedSource] = useState<'all' | 'built-in' | 'marketplace'>('all');
   const marketplaceDiscoveryAttemptedRef = useRef(false);
 
-  const isGatewayRunning = gatewayStatus.state === 'running';
   const [showGatewayWarning, setShowGatewayWarning] = useState(false);
 
   // Debounce the gateway warning to avoid flickering during brief restarts (like skill toggles)

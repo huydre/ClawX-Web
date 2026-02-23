@@ -1595,8 +1595,8 @@ function CompleteContent({ selectedProvider, installedSkills }: CompleteContentP
         </div>
         <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
           <span>{t('complete.gateway')}</span>
-          <span className={gatewayStatus.state === 'running' ? 'text-green-400' : 'text-yellow-400'}>
-            {gatewayStatus.state === 'running' ? `✓ ${t('complete.running')}` : gatewayStatus.state}
+          <span className={(gatewayStatus.state === 'running' || gatewayStatus.state === 'connected') ? 'text-green-400' : 'text-yellow-400'}>
+            {(gatewayStatus.state === 'running' || gatewayStatus.state === 'connected') ? `✓ ${t('complete.running')}` : gatewayStatus.state}
           </span>
         </div>
       </div>

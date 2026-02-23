@@ -30,6 +30,7 @@ interface GatewayState {
   rpc: <T>(method: string, params?: unknown, timeoutMs?: number) => Promise<T>;
   setStatus: (status: GatewayStatus) => void;
   clearError: () => void;
+  isRunning: () => boolean;
 }
 
 export const useGatewayStore = create<GatewayState>((set, get) => ({
@@ -165,4 +166,9 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   setStatus: (status) => set({ status }),
 
   clearError: () => set({ lastError: null }),
+
+  isRunning: () => {
+    const state = get().status.state;
+    return state === 'running' || state === 'connected';
+  },
 }));
