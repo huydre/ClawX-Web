@@ -182,6 +182,8 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
   isRunning: () => {
     const state = get().status.state;
-    return state === 'running' || state === 'connected';
+    // Consider gateway as running if it's connected, running, or temporarily disconnected (error state)
+    // because it will auto-reconnect. This prevents UI flashing "Gateway Not Running" during reconnects.
+    return state === 'running' || state === 'connected' || state === 'error' || state === 'starting';
   },
 }));
