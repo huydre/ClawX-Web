@@ -8,6 +8,7 @@ User=%i
 WorkingDirectory=/home/%i/clawx-web
 Environment="NODE_ENV=production"
 Environment="PORT=2003"
+Environment="HOST=0.0.0.0"
 ExecStart=/usr/bin/node /home/%i/clawx-web/dist-server/index.js
 Restart=always
 RestartSec=10

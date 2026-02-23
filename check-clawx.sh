@@ -1,0 +1,20 @@
+#!/bin/bash
+echo "=== ClawX Web Diagnostic ==="
+echo ""
+echo "1. Service Status:"
+sudo systemctl status clawx-web-root.service --no-pager -l
+echo ""
+echo "2. Service Logs (last 30 lines):"
+sudo journalctl -u clawx-web-root.service -n 30 --no-pager
+echo ""
+echo "3. Port Binding:"
+sudo netstat -tlnp | grep 2003 || echo "Port 2003 not listening"
+echo ""
+echo "4. Process Check:"
+ps aux | grep "node.*dist-server" | grep -v grep || echo "No node process found"
+echo ""
+echo "5. Firewall Status:"
+sudo ufw status 2>/dev/null || echo "UFW not active or not installed"
+echo ""
+echo "6. Network Interfaces:"
+ip addr show | grep "inet " | grep -v "127.0.0.1"
