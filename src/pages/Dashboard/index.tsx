@@ -30,7 +30,7 @@ export function Dashboard() {
   const isGatewayRunning = useGatewayStore((state) => state.isRunning());
   const { channels, fetchChannels } = useChannelsStore();
   const { skills, fetchSkills } = useSkillsStore();
-  const devModeUnlocked = useSettingsStore((state) => state.devModeUnlocked());
+  const devModeUnlocked = useSettingsStore((state) => state.devModeUnlocked);
 
   const [uptime, setUptime] = useState(0);
 
