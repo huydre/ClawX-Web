@@ -18,6 +18,7 @@ import { Settings } from './pages/Settings';
 import { Setup } from './pages/Setup';
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
+import './lib/platform'; // Initialize platform compatibility layer
 
 
 /**

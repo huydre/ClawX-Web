@@ -84,7 +84,8 @@ export function ProvidersSettings() {
       setShowAddDialog(false);
       toast.success(t('aiProviders.toast.added'));
     } catch (error) {
-      toast.error(`${t('aiProviders.toast.failedAdd')}: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t('aiProviders.toast.failedAdd')}: ${errorMessage}`);
     }
   };
 
@@ -93,7 +94,8 @@ export function ProvidersSettings() {
       await deleteProvider(providerId);
       toast.success(t('aiProviders.toast.deleted'));
     } catch (error) {
-      toast.error(`${t('aiProviders.toast.failedDelete')}: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t('aiProviders.toast.failedDelete')}: ${errorMessage}`);
     }
   };
 
@@ -102,7 +104,8 @@ export function ProvidersSettings() {
       await setDefaultProvider(providerId);
       toast.success(t('aiProviders.toast.defaultUpdated'));
     } catch (error) {
-      toast.error(`${t('aiProviders.toast.failedDefault')}: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t('aiProviders.toast.failedDefault')}: ${errorMessage}`);
     }
   };
 
@@ -268,7 +271,8 @@ function ProviderCard({
       setNewKey('');
       toast.success(t('aiProviders.toast.updated'));
     } catch (error) {
-      toast.error(`${t('aiProviders.toast.failedUpdate')}: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t('aiProviders.toast.failedUpdate')}: ${errorMessage}`);
     } finally {
       setSaving(false);
       setValidating(false);

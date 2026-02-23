@@ -1,0 +1,25 @@
+[Unit]
+Description=ClawX Web Server
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/clawx-web
+Environment="NODE_ENV=production"
+Environment="PORT=2003"
+ExecStart=/usr/bin/node /home/%i/clawx-web/dist-server/index.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/%i/.clawx
+
+[Install]
+WantedBy=multi-user.target

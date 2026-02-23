@@ -596,7 +596,8 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
       await new Promise((resolve) => setTimeout(resolve, 800));
       onChannelAdded();
     } catch (error) {
-      toast.error(t('toast.configFailed', { error }));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(t('toast.configFailed', { error: errorMessage }));
       setConnecting(false);
     }
   };
