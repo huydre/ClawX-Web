@@ -51,8 +51,21 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
     gatewayInitPromise = (async () => {
       try {
-        // Get initial status
-        const status = await api.getGatewayStatus();
+        // Get initial status with retry logic (backend might not be ready yet)
+        let status;
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            status = await api.getGatewayStatus();
+            break;
+          } catch (error) {
+            retries--;
+            if (retries === 0) throw error;
+            // Wait 1 second before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
         set({
           status: {
             state: status.state as any,
