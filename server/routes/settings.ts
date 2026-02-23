@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getSettings, getSetting, setSetting } from '../services/storage';
-import { logger } from '../utils/logger';
+import { getSettings, getSetting, setSetting } from '../services/storage.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 

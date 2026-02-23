@@ -7,8 +7,8 @@ import {
   deleteProvider,
   setDefaultProvider,
   getDefaultProvider,
-} from '../services/storage';
-import { logger } from '../utils/logger';
+} from '../services/storage.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 

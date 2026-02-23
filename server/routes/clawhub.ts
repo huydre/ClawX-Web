@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { spawn } from 'child_process';
 import { z } from 'zod';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 import path from 'path';
 import { homedir } from 'os';
 

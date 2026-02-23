@@ -1,48 +1,46 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const app_1 = require("./app");
-const logger_1 = require("./utils/logger");
-const server_1 = require("./websocket/server");
-const storage_1 = require("./services/storage");
-const gateway_manager_1 = require("./services/gateway-manager");
+import { app } from './app.js';
+import { logger } from './utils/logger.js';
+import { createWebSocketServer } from './websocket/server.js';
+import { initStorage } from './services/storage.js';
+import { gatewayManager } from './services/gateway-manager.js';
 const PORT = parseInt(process.env.PORT || '2003', 10);
-const HOST = '127.0.0.1';
+const HOST = process.env.HOST || '0.0.0.0';
 async function start() {
     try {
         // Initialize storage
-        await (0, storage_1.initStorage)();
-        logger_1.logger.info('Storage initialized');
+        await initStorage();
+        logger.info('Storage initialized');
         // Start HTTP server
-        const server = app_1.app.listen(PORT, HOST, () => {
-            logger_1.logger.info(`Server running on http://${HOST}:${PORT}`);
+        const server = app.listen(PORT, HOST, () => {
+            logger.info(`Server running on http://${HOST}:${PORT}`);
         });
         // Handle server errors
         server.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {
-                logger_1.logger.error(`Port ${PORT} is already in use. Please stop the existing server first.`);
+                logger.error(`Port ${PORT} is already in use. Please stop the existing server first.`);
                 process.exit(1);
             }
             else {
-                logger_1.logger.error('Server error:', error);
+                logger.error('Server error:', error);
                 process.exit(1);
             }
         });
         // Create WebSocket server
-        (0, server_1.createWebSocketServer)(server);
+        createWebSocketServer(server);
         // Auto-start gateway connection
         try {
-            await gateway_manager_1.gatewayManager.start();
-            logger_1.logger.info('Gateway manager started');
+            await gatewayManager.start();
+            logger.info('Gateway manager started');
         }
         catch (error) {
-            logger_1.logger.warn('Failed to auto-start gateway', { error });
+            logger.warn('Failed to auto-start gateway', { error });
         }
         // Graceful shutdown
         const shutdown = async () => {
-            logger_1.logger.info('Shutting down gracefully');
-            await gateway_manager_1.gatewayManager.stop();
+            logger.info('Shutting down gracefully');
+            await gatewayManager.stop();
             server.close(() => {
-                logger_1.logger.info('Server closed');
+                logger.info('Server closed');
                 process.exit(0);
             });
         };
@@ -50,7 +48,7 @@ async function start() {
         process.on('SIGINT', shutdown);
     }
     catch (error) {
-        logger_1.logger.error('Failed to start server:', error);
+        logger.error('Failed to start server:', error);
         process.exit(1);
     }
 }

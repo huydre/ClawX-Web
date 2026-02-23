@@ -1,14 +1,8 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.gatewayManager = void 0;
-const events_1 = require("events");
-const ws_1 = __importDefault(require("ws"));
-const logger_1 = require("../utils/logger");
-const storage_1 = require("./storage");
-class GatewayManager extends events_1.EventEmitter {
+import { EventEmitter } from 'events';
+import WebSocket from 'ws';
+import { logger } from '../utils/logger.js';
+import { getSetting } from './storage.js';
+class GatewayManager extends EventEmitter {
     ws = null;
     state = 'stopped';
     reconnectTimer = null;
@@ -22,11 +16,11 @@ class GatewayManager extends events_1.EventEmitter {
         return this.state;
     }
     isConnected() {
-        return this.state === 'connected' && this.ws?.readyState === ws_1.default.OPEN;
+        return this.state === 'connected' && this.ws?.readyState === WebSocket.OPEN;
     }
     async start() {
         if (this.state === 'starting' || this.state === 'connected') {
-            logger_1.logger.warn('Gateway already starting or connected');
+            logger.warn('Gateway already starting or connected');
             return;
         }
         this.setState('starting');
@@ -72,7 +66,7 @@ class GatewayManager extends events_1.EventEmitter {
             this.pendingRequests.set(id, { resolve, reject, timeout });
             try {
                 this.ws.send(JSON.stringify(request));
-                logger_1.logger.debug('RPC request sent', { method, params, id });
+                logger.debug('RPC request sent', { method, params, id });
             }
             catch (error) {
                 clearTimeout(timeout);
@@ -83,15 +77,15 @@ class GatewayManager extends events_1.EventEmitter {
     }
     async connect() {
         try {
-            const gatewayPort = await (0, storage_1.getSetting)('gatewayPort');
-            const gatewayToken = await (0, storage_1.getSetting)('gatewayToken');
+            const gatewayPort = await getSetting('gatewayPort');
+            const gatewayToken = await getSetting('gatewayToken');
             const url = `ws://127.0.0.1:${gatewayPort}`;
-            logger_1.logger.info('Connecting to gateway', { url });
+            logger.info('Connecting to gateway', { url });
             // Try connecting without Authorization header first
             // OpenClaw Gateway might not require authentication for localhost connections
-            this.ws = new ws_1.default(url);
+            this.ws = new WebSocket(url);
             this.ws.on('open', () => {
-                logger_1.logger.info('Gateway connected');
+                logger.info('Gateway connected');
                 this.setState('connected');
                 if (this.reconnectTimer) {
                     clearTimeout(this.reconnectTimer);
@@ -99,7 +93,7 @@ class GatewayManager extends events_1.EventEmitter {
                 }
                 // Start ping interval to keep connection alive
                 this.pingInterval = setInterval(() => {
-                    if (this.ws?.readyState === ws_1.default.OPEN) {
+                    if (this.ws?.readyState === WebSocket.OPEN) {
                         // Send WebSocket ping to keep connection alive
                         this.ws.ping();
                     }
@@ -110,7 +104,7 @@ class GatewayManager extends events_1.EventEmitter {
                     const message = JSON.parse(data.toString());
                     // Handle connect.challenge event - send proper connect request
                     if (message.type === 'event' && message.event === 'connect.challenge') {
-                        logger_1.logger.info('Received connect challenge', { nonce: message.payload?.nonce });
+                        logger.info('Received connect challenge', { nonce: message.payload?.nonce });
                         // Send connect request with proper protocol
                         const connectReq = {
                             type: 'req',
@@ -133,16 +127,16 @@ class GatewayManager extends events_1.EventEmitter {
                             }
                         };
                         this.ws.send(JSON.stringify(connectReq));
-                        logger_1.logger.info('Sent connect request');
+                        logger.info('Sent connect request');
                         return;
                     }
                     // Handle connect response
                     if (message.type === 'res' && message.id === 'connect-1') {
                         if (message.ok) {
-                            logger_1.logger.info('Gateway handshake completed successfully');
+                            logger.info('Gateway handshake completed successfully');
                         }
                         else {
-                            logger_1.logger.error('Gateway handshake failed', { error: message.error });
+                            logger.error('Gateway handshake failed', { error: message.error });
                             this.setState('error');
                         }
                         return;
@@ -150,15 +144,15 @@ class GatewayManager extends events_1.EventEmitter {
                     this.handleMessage(message);
                 }
                 catch (error) {
-                    logger_1.logger.error('Failed to parse gateway message', { error, data: data.toString() });
+                    logger.error('Failed to parse gateway message', { error, data: data.toString() });
                 }
             });
             this.ws.on('error', (error) => {
-                logger_1.logger.error('Gateway WebSocket error', { error: error.message, stack: error.stack });
+                logger.error('Gateway WebSocket error', { error: error.message, stack: error.stack });
                 this.setState('error');
             });
             this.ws.on('close', (code, reason) => {
-                logger_1.logger.warn('Gateway disconnected', { code, reason: reason.toString() });
+                logger.warn('Gateway disconnected', { code, reason: reason.toString() });
                 this.ws = null;
                 // Clear ping interval
                 if (this.pingInterval) {
@@ -172,7 +166,7 @@ class GatewayManager extends events_1.EventEmitter {
             });
         }
         catch (error) {
-            logger_1.logger.error('Failed to connect to gateway', { error });
+            logger.error('Failed to connect to gateway', { error });
             this.setState('error');
             this.scheduleReconnect();
         }
@@ -196,7 +190,7 @@ class GatewayManager extends events_1.EventEmitter {
         }
         // Handle OpenClaw protocol event (type: 'event')
         if (message.type === 'event' && message.event) {
-            logger_1.logger.info('Gateway event received', { event: message.event, payload: message.payload });
+            logger.info('Gateway event received', { event: message.event, payload: message.payload });
             this.emit('notification', message.event, message.payload);
         }
     }
@@ -205,7 +199,7 @@ class GatewayManager extends events_1.EventEmitter {
             return;
         }
         const delay = 5000; // 5 seconds
-        logger_1.logger.info('Scheduling gateway reconnect', { delay });
+        logger.info('Scheduling gateway reconnect', { delay });
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
             if (this.state !== 'stopped') {
@@ -217,10 +211,10 @@ class GatewayManager extends events_1.EventEmitter {
         if (this.state !== state) {
             const oldState = this.state;
             this.state = state;
-            logger_1.logger.info('Gateway state changed', { from: oldState, to: state });
+            logger.info('Gateway state changed', { from: oldState, to: state });
             this.emit('stateChange', state, oldState);
         }
     }
 }
 // Singleton instance
-exports.gatewayManager = new GatewayManager();
+export const gatewayManager = new GatewayManager();

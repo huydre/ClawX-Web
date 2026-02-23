@@ -1,8 +1,8 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
-import { logger } from '../utils/logger';
-import { gatewayManager } from '../services/gateway-manager';
-import { getSettings } from '../services/storage';
+import { logger } from '../utils/logger.js';
+import { gatewayManager } from '../services/gateway-manager.js';
+import { getSettings } from '../services/storage.js';
 
 interface AuthenticatedWebSocket extends WebSocket {
   isAuthenticated?: boolean;

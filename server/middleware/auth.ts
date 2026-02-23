@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { getSettings } from '../services/storage';
-import { logger } from '../utils/logger';
+import { getSettings } from '../services/storage.js';
+import { logger } from '../utils/logger.js';
 
 export async function authMiddleware(
   req: Request,
