@@ -16,11 +16,16 @@ class WebSocketClient {
     }
 
     const token = api.getToken();
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${window.location.host}/ws`;
+
+    // In development, connect directly to backend server
+    // In production, use same host as frontend
+    const isDev = import.meta.env.DEV;
+    const wsUrl = isDev
+      ? 'ws://localhost:2003/ws'
+      : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
     try {
-      this.ws = new WebSocket(url);
+      this.ws = new WebSocket(wsUrl);
 
       if (token) {
         // Note: WebSocket doesn't support custom headers in browser
@@ -28,7 +33,7 @@ class WebSocketClient {
       }
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected to', wsUrl);
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;

@@ -1,5 +1,7 @@
 // API client for ClawX Web
-const API_BASE = '/api';
+// In development, connect directly to backend server
+// In production, use relative path (same host as frontend)
+const API_BASE = import.meta.env.DEV ? 'http://localhost:2003/api' : '/api';
 
 class ApiClient {
   private token: string | null = null;
