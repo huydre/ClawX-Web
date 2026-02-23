@@ -309,7 +309,7 @@ export function Settings() {
             <div className="flex items-center gap-2">
               <Badge
                 variant={
-                  gatewayStatus.state === 'running'
+                  gatewayStatus.state === 'running' || gatewayStatus.state === 'connected'
                     ? 'success'
                     : gatewayStatus.state === 'error'
                       ? 'destructive'

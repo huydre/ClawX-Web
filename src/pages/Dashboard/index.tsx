@@ -27,11 +27,11 @@ import { useTranslation } from 'react-i18next';
 export function Dashboard() {
   const { t } = useTranslation('dashboard');
   const gatewayStatus = useGatewayStore((state) => state.status);
+  const isGatewayRunning = useGatewayStore((state) => state.isRunning());
   const { channels, fetchChannels } = useChannelsStore();
   const { skills, fetchSkills } = useSkillsStore();
-  const devModeUnlocked = useSettingsStore((state) => state.devModeUnlocked);
+  const devModeUnlocked = useSettingsStore((state) => state.devModeUnlocked());
 
-  const isGatewayRunning = gatewayStatus.state === 'running';
   const [uptime, setUptime] = useState(0);
 
   // Fetch data only when gateway is running
@@ -96,7 +96,7 @@ export function Dashboard() {
             <div className="flex items-center gap-2">
               <StatusBadge status={gatewayStatus.state} />
             </div>
-            {gatewayStatus.state === 'running' && (
+            {isGatewayRunning && (
               <p className="mt-1 text-xs text-muted-foreground">
                 {t('port', { port: gatewayStatus.port })} | {t('pid', { pid: gatewayStatus.pid || 'N/A' })}
               </p>
@@ -143,7 +143,7 @@ export function Dashboard() {
               {uptime > 0 ? formatUptime(uptime) : '—'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {gatewayStatus.state === 'running' ? t('sinceRestart') : t('gatewayNotRunning')}
+              {isGatewayRunning ? t('sinceRestart') : t('gatewayNotRunning')}
             </p>
           </CardContent>
         </Card>

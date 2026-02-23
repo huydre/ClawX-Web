@@ -508,11 +508,9 @@ export function Cron() {
   const { t } = useTranslation('cron');
   const { jobs, loading, error, fetchJobs, createJob, updateJob, toggleJob, deleteJob, triggerJob } = useCronStore();
   const { fetchChannels } = useChannelsStore();
-  const gatewayStatus = useGatewayStore((state) => state.status);
+  const isGatewayRunning = useGatewayStore((state) => state.isRunning());
   const [showDialog, setShowDialog] = useState(false);
   const [editingJob, setEditingJob] = useState<CronJob | undefined>();
-
-  const isGatewayRunning = gatewayStatus.state === 'running';
 
   // Fetch jobs and channels on mount
   useEffect(() => {
