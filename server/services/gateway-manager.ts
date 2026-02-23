@@ -33,6 +33,7 @@ class GatewayManager extends EventEmitter {
   private ws: WebSocket | null = null;
   private state: GatewayState = 'stopped';
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private pingInterval: NodeJS.Timeout | null = null;
   private pendingRequests = new Map<string | number, {
     resolve: (value: any) => void;
     reject: (error: Error) => void;
@@ -66,6 +67,11 @@ class GatewayManager extends EventEmitter {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
 
     // Reject all pending requests
@@ -136,6 +142,13 @@ class GatewayManager extends EventEmitter {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
+
+        // Start ping interval to keep connection alive
+        this.pingInterval = setInterval(() => {
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.ping();
+          }
+        }, 5000); // Ping every 5 seconds
       });
 
       this.ws.on('message', (data: WebSocket.Data) => {
@@ -155,6 +168,12 @@ class GatewayManager extends EventEmitter {
       this.ws.on('close', () => {
         logger.warn('Gateway disconnected');
         this.ws = null;
+
+        // Clear ping interval
+        if (this.pingInterval) {
+          clearInterval(this.pingInterval);
+          this.pingInterval = null;
+        }
 
         if (this.state !== 'stopped') {
           this.setState('error');
