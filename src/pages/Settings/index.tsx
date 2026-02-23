@@ -322,10 +322,12 @@ export function Settings() {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 {t('common:actions.restart')}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleShowLogs}>
-                <FileText className="h-4 w-4 mr-2" />
-                {t('gateway.logs')}
-              </Button>
+              {platform.isElectron && (
+                <Button variant="outline" size="sm" onClick={handleShowLogs}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t('gateway.logs')}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -334,10 +336,12 @@ export function Settings() {
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium text-sm">{t('gateway.appLogs')}</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleOpenLogDir}>
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    {t('gateway.openFolder')}
-                  </Button>
+                  {platform.isElectron && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleOpenLogDir}>
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      {t('gateway.openFolder')}
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowLogs(false)}>
                     {t('common:actions.close')}
                   </Button>
@@ -366,50 +370,52 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {/* Updates */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            {t('updates.title')}
-          </CardTitle>
-          <CardDescription>{t('updates.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <UpdateSettings />
+      {/* Updates - Only available in Electron mode */}
+      {platform.isElectron && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              {t('updates.title')}
+            </CardTitle>
+            <CardDescription>{t('updates.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <UpdateSettings />
 
-          <Separator />
+            <Separator />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('updates.autoCheck')}</Label>
-              <p className="text-sm text-muted-foreground">
-                {t('updates.autoCheckDesc')}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>{t('updates.autoCheck')}</Label>
+                <p className="text-sm text-muted-foreground">
+                  {t('updates.autoCheckDesc')}
+                </p>
+              </div>
+              <Switch
+                checked={autoCheckUpdate}
+                onCheckedChange={setAutoCheckUpdate}
+              />
             </div>
-            <Switch
-              checked={autoCheckUpdate}
-              onCheckedChange={setAutoCheckUpdate}
-            />
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('updates.autoDownload')}</Label>
-              <p className="text-sm text-muted-foreground">
-                {t('updates.autoDownloadDesc')}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>{t('updates.autoDownload')}</Label>
+                <p className="text-sm text-muted-foreground">
+                  {t('updates.autoDownloadDesc')}
+                </p>
+              </div>
+              <Switch
+                checked={autoDownloadUpdate}
+                onCheckedChange={(value) => {
+                  setAutoDownloadUpdate(value);
+                  updateSetAutoDownload(value);
+                }}
+              />
             </div>
-            <Switch
-              checked={autoDownloadUpdate}
-              onCheckedChange={(value) => {
-                setAutoDownloadUpdate(value);
-                updateSetAutoDownload(value);
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Advanced */}
       <Card>
@@ -433,8 +439,8 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {/* Developer */}
-      {devModeUnlocked && (
+      {/* Developer - Only available in Electron mode */}
+      {devModeUnlocked && platform.isElectron && (
         <Card>
           <CardHeader>
             <CardTitle>{t('developer.title')}</CardTitle>
