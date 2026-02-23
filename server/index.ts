@@ -1,8 +1,8 @@
-import { app } from './app';
-import { logger } from './utils/logger';
-import { createWebSocketServer } from './websocket/server';
-import { initStorage } from './services/storage';
-import { gatewayManager } from './services/gateway-manager';
+import { app } from './app.js';
+import { logger } from './utils/logger.js';
+import { createWebSocketServer } from './websocket/server.js';
+import { initStorage } from './services/storage.js';
+import { gatewayManager } from './services/gateway-manager.js';
 
 const PORT = parseInt(process.env.PORT || '2003', 10);
 const HOST = process.env.HOST || '0.0.0.0';

@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
-import { requestLogger } from './middleware/logger';
-import { errorHandler } from './middleware/errorHandler';
-import providersRouter from './routes/providers';
-import gatewayRouter from './routes/gateway';
-import settingsRouter from './routes/settings';
-import filesRouter from './routes/files';
-import clawhubRouter from './routes/clawhub';
+import { requestLogger } from './middleware/logger.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import providersRouter from './routes/providers.js';
+import gatewayRouter from './routes/gateway.js';
+import settingsRouter from './routes/settings.js';
+import filesRouter from './routes/files.js';
+import clawhubRouter from './routes/clawhub.js';
 
 const app = express();
 

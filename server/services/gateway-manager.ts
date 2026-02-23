@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
-import { logger } from '../utils/logger';
-import { getSetting } from './storage';
+import { logger } from '../utils/logger.js';
+import { getSetting } from './storage.js';
 
 type GatewayState = 'stopped' | 'starting' | 'connected' | 'error';
 

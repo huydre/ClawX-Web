@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 import os from 'os';
 
 const router = Router();

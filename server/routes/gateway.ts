@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { logger } from '../utils/logger';
-import { gatewayManager } from '../services/gateway-manager';
+import { logger } from '../utils/logger.js';
+import { gatewayManager } from '../services/gateway-manager.js';
 
 const router = Router();
 

@@ -1,18 +1,13 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const child_process_1 = require("child_process");
-const zod_1 = require("zod");
-const logger_1 = require("../utils/logger");
-const path_1 = __importDefault(require("path"));
-const os_1 = require("os");
-const router = (0, express_1.Router)();
+import { Router } from 'express';
+import { spawn } from 'child_process';
+import { z } from 'zod';
+import { logger } from '../utils/logger.js';
+import path from 'path';
+import { homedir } from 'os';
+const router = Router();
 // Get ClawHub CLI path
 const getClawHubCliPath = () => {
-    return path_1.default.join(__dirname, '../../node_modules/.bin/clawhub');
+    return path.join(__dirname, '../../node_modules/.bin/clawhub');
 };
 // Strip ANSI codes from output
 const stripAnsi = (str) => {
@@ -23,9 +18,9 @@ const stripAnsi = (str) => {
 const runClawHubCommand = (args) => {
     return new Promise((resolve, reject) => {
         const cliPath = getClawHubCliPath();
-        const workDir = path_1.default.join((0, os_1.homedir)(), '.openclaw');
-        logger_1.logger.info('Running ClawHub command', { args, workDir });
-        const child = (0, child_process_1.spawn)(cliPath, args, {
+        const workDir = path.join(homedir(), '.openclaw');
+        logger.info('Running ClawHub command', { args, workDir });
+        const child = spawn(cliPath, args, {
             cwd: workDir,
             env: {
                 ...process.env,
@@ -42,12 +37,12 @@ const runClawHubCommand = (args) => {
             stderr += data.toString();
         });
         child.on('error', (error) => {
-            logger_1.logger.error('ClawHub process error', { error });
+            logger.error('ClawHub process error', { error });
             reject(error);
         });
         child.on('close', (code) => {
             if (code !== 0 && code !== null) {
-                logger_1.logger.error('ClawHub command failed', { code, stderr });
+                logger.error('ClawHub command failed', { code, stderr });
                 reject(new Error(`Command failed: ${stderr || stdout}`));
             }
             else {
@@ -86,9 +81,9 @@ const parseSkillList = (output) => {
     }).filter((s) => s !== null);
 };
 // POST /api/clawhub/search
-const searchSchema = zod_1.z.object({
-    query: zod_1.z.string(),
-    limit: zod_1.z.number().optional(),
+const searchSchema = z.object({
+    query: z.string(),
+    limit: z.number().optional(),
 });
 router.post('/search', async (req, res) => {
     try {
@@ -110,15 +105,15 @@ router.post('/search', async (req, res) => {
         res.json({ success: true, results });
     }
     catch (error) {
-        logger_1.logger.error('ClawHub search error', { error });
+        logger.error('ClawHub search error', { error });
         res.status(500).json({ success: false, error: String(error) });
     }
 });
 // POST /api/clawhub/install
-const installSchema = zod_1.z.object({
-    slug: zod_1.z.string(),
-    version: zod_1.z.string().optional(),
-    force: zod_1.z.boolean().optional(),
+const installSchema = z.object({
+    slug: z.string(),
+    version: z.string().optional(),
+    force: z.boolean().optional(),
 });
 router.post('/install', async (req, res) => {
     try {
@@ -132,25 +127,25 @@ router.post('/install', async (req, res) => {
         res.json({ success: true });
     }
     catch (error) {
-        logger_1.logger.error('ClawHub install error', { error });
+        logger.error('ClawHub install error', { error });
         res.status(500).json({ success: false, error: String(error) });
     }
 });
 // POST /api/clawhub/uninstall
-const uninstallSchema = zod_1.z.object({
-    slug: zod_1.z.string(),
+const uninstallSchema = z.object({
+    slug: z.string(),
 });
 router.post('/uninstall', async (req, res) => {
     try {
         const { slug } = uninstallSchema.parse(req.body);
         // Delete skill directory and update lock file
         const fs = await import('fs/promises');
-        const skillDir = path_1.default.join((0, os_1.homedir)(), '.openclaw', 'skills', slug);
+        const skillDir = path.join(homedir(), '.openclaw', 'skills', slug);
         if (await fs.stat(skillDir).catch(() => null)) {
             await fs.rm(skillDir, { recursive: true, force: true });
         }
         // Remove from lock.json
-        const lockFile = path_1.default.join((0, os_1.homedir)(), '.openclaw', '.clawhub', 'lock.json');
+        const lockFile = path.join(homedir(), '.openclaw', '.clawhub', 'lock.json');
         try {
             const lockData = JSON.parse(await fs.readFile(lockFile, 'utf8'));
             if (lockData.skills && lockData.skills[slug]) {
@@ -159,12 +154,12 @@ router.post('/uninstall', async (req, res) => {
             }
         }
         catch (err) {
-            logger_1.logger.warn('Failed to update lock file', { err });
+            logger.warn('Failed to update lock file', { err });
         }
         res.json({ success: true });
     }
     catch (error) {
-        logger_1.logger.error('ClawHub uninstall error', { error });
+        logger.error('ClawHub uninstall error', { error });
         res.status(500).json({ success: false, error: String(error) });
     }
 });
@@ -176,8 +171,8 @@ router.get('/list', async (_req, res) => {
         res.json({ success: true, results });
     }
     catch (error) {
-        logger_1.logger.error('ClawHub list error', { error });
+        logger.error('ClawHub list error', { error });
         res.status(500).json({ success: false, error: String(error) });
     }
 });
-exports.default = router;
+export default router;
