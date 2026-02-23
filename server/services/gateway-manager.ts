@@ -146,9 +146,14 @@ class GatewayManager extends EventEmitter {
         // Start ping interval to keep connection alive
         this.pingInterval = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
+            // Send both WebSocket ping and RPC ping
             this.ws.ping();
+            // Send a lightweight RPC call to keep the connection active
+            this.rpc('ping').catch(() => {
+              // Ignore ping errors
+            });
           }
-        }, 5000); // Ping every 5 seconds
+        }, 8000); // Ping every 8 seconds (before 10s timeout)
       });
 
       this.ws.on('message', (data: WebSocket.Data) => {

@@ -1,9 +1,22 @@
 /**
  * Chat State Store
  * Manages chat messages, sessions, streaming, and thinking state.
- * Communicates with OpenClaw Gateway via gateway:rpc IPC.
+ * Communicates with OpenClaw Gateway via gateway:rpc IPC or gateway store RPC.
  */
 import { create } from 'zustand';
+import { platform } from '@/lib/platform';
+
+// Helper function to call gateway RPC (works in both Electron and Web mode)
+async function gatewayRpc(method: string, params?: any): Promise<{ success: boolean; result?: any; error?: string }> {
+  if (platform.isElectron) {
+    return await window.electron.ipcRenderer.invoke('gateway:rpc', method, params);
+  } else {
+    // Web mode: use gateway store
+    const { useGatewayStore } = await import('./gateway');
+    const result = await useGatewayStore.getState().rpc(method, params);
+    return { success: true, result };
+  }
+}
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -553,6 +566,11 @@ async function loadMissingPreviews(messages: RawMessage[]): Promise<boolean> {
   if (needPreview.length === 0) return false;
 
   try {
+    if (!platform.isElectron) {
+      // Web mode: thumbnails not supported yet
+      return false;
+    }
+
     const thumbnails = await window.electron.ipcRenderer.invoke(
       'media:getThumbnails',
       needPreview,
@@ -883,11 +901,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   loadSessions: async () => {
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'sessions.list',
-        { limit: 50 }
-      ) as { success: boolean; result?: Record<string, unknown>; error?: string };
+      const result = await gatewayRpc('sessions.list', { limit: 50 });
 
       if (result.success && result.result) {
         const data = result.result;
@@ -999,11 +1013,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!quiet) set({ loading: true, error: null });
 
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'chat.history',
-        { sessionKey: currentSessionKey, limit: 200 }
-      ) as { success: boolean; result?: Record<string, unknown>; error?: string };
+      const result = await gatewayRpc('chat.history', { sessionKey: currentSessionKey, limit: 200 });
 
       if (result.success && result.result) {
         const data = result.result;
@@ -1111,34 +1121,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
       let result: { success: boolean; result?: { runId?: string }; error?: string };
 
       if (hasMedia) {
-        // Use dedicated chat:sendWithMedia handler — main process reads staged files
-        // from disk and builds base64 attachments, avoiding large IPC transfers
-        result = await window.electron.ipcRenderer.invoke(
-          'chat:sendWithMedia',
-          {
-            sessionKey: currentSessionKey,
-            message: trimmed || 'Process the attached file(s).',
-            deliver: false,
-            idempotencyKey,
-            media: attachments.map((a) => ({
-              filePath: a.stagedPath,
-              mimeType: a.mimeType,
-              fileName: a.fileName,
-            })),
-          },
-        ) as { success: boolean; result?: { runId?: string }; error?: string };
+        if (platform.isElectron) {
+          // Electron: Use dedicated chat:sendWithMedia handler
+          result = await window.electron.ipcRenderer.invoke(
+            'chat:sendWithMedia',
+            {
+              sessionKey: currentSessionKey,
+              message: trimmed || 'Process the attached file(s).',
+              deliver: false,
+              idempotencyKey,
+              media: attachments.map((a) => ({
+                filePath: a.stagedPath,
+                mimeType: a.mimeType,
+                fileName: a.fileName,
+              })),
+            },
+          ) as { success: boolean; result?: { runId?: string }; error?: string };
+        } else {
+          // Web mode: Media attachments not yet supported
+          set({ error: 'File attachments are not yet supported in web mode', sending: false });
+          return;
+        }
       } else {
         // No media — use standard lightweight RPC
-        result = await window.electron.ipcRenderer.invoke(
-          'gateway:rpc',
-          'chat.send',
-          {
-            sessionKey: currentSessionKey,
-            message: trimmed,
-            deliver: false,
-            idempotencyKey,
-          },
-        ) as { success: boolean; result?: { runId?: string }; error?: string };
+        result = await gatewayRpc('chat.send', {
+          sessionKey: currentSessionKey,
+          message: trimmed,
+          deliver: false,
+          idempotencyKey,
+        });
       }
 
       console.log(`[sendMessage] RPC result: success=${result.success}, error=${result.error || 'none'}, runId=${result.result?.runId || 'none'}`);
@@ -1188,11 +1199,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ streamingTools: [] });
 
     try {
-      await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'chat.abort',
-        { sessionKey: currentSessionKey },
-      );
+      await gatewayRpc('chat.abort', { sessionKey: currentSessionKey });
     } catch (err) {
       set({ error: String(err) });
     }
