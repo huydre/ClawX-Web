@@ -21,7 +21,12 @@ export function createWebSocketServer(server: any): WebSocketServer {
     const token = req.headers.authorization?.replace('Bearer ', '');
     const settings = await getSettings();
 
-    if (token !== settings.serverToken) {
+    // Skip auth for localhost in development
+    const isLocalhost = req.socket.remoteAddress === '127.0.0.1' ||
+                       req.socket.remoteAddress === '::1' ||
+                       req.socket.remoteAddress === '::ffff:127.0.0.1';
+
+    if (!isLocalhost && token !== settings.serverToken) {
       logger.warn('WebSocket authentication failed', { ip: req.socket.remoteAddress });
       ws.close(1008, 'Authentication failed');
       return;
