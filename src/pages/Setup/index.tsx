@@ -31,6 +31,7 @@ import { useSettingsStore } from '@/stores/settings';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { toast } from 'sonner';
+import { platform } from '@/lib/platform';
 import {
   CHANNEL_META,
   getPrimaryChannels,
@@ -396,7 +397,7 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
 
     // Check OpenClaw package status
     // In web mode, OpenClaw Gateway runs independently, so skip package check
-    if (window.electron?.ipcRenderer) {
+    if (platform.isElectron) {
       try {
         const openclawStatus = await window.electron.ipcRenderer.invoke('openclaw:status') as {
           packageExists: boolean;
