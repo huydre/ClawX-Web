@@ -18,7 +18,7 @@
     "private": true,
     "scripts": {
         "dev": "vite",
-        "dev:server": "nodemon --watch server --exec tsx server/index.ts",
+        "dev:server": "nodemon",
         "build": "vite build",
         "build:server": "tsc --project tsconfig.server.json",
         "start": "node dist-server/index.js",
