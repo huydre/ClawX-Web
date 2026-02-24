@@ -32,6 +32,11 @@ interface TunnelState {
     tunnelName: string;
     domain?: string;
   }) => Promise<void>;
+  autoSetupTunnel: (config: {
+    apiToken: string;
+    baseDomain?: string;
+    localUrl?: string;
+  }) => Promise<void>;
   startNamedTunnel: () => Promise<void>;
   stopNamedTunnel: () => Promise<void>;
   teardownTunnel: () => Promise<void>;
@@ -158,6 +163,42 @@ export const useTunnelStore = create<TunnelState>()(
             loading: false,
           });
           toast.error(`Failed to setup tunnel: ${errorMsg}`);
+          throw error;
+        }
+      },
+
+      autoSetupTunnel: async (config) => {
+        set({ loading: true, error: null });
+
+        try {
+          const result = await api.autoSetupTunnel(config);
+
+          if (result.success) {
+            toast.success(`Tunnel created: ${result.publicUrl}`);
+
+            // Update state with new tunnel info
+            set({
+              configured: true,
+              enabled: true,
+              running: true,
+              mode: 'named',
+              publicUrl: result.publicUrl,
+              state: 'connected',
+              loading: false,
+            });
+
+            // Refresh status
+            await get().fetchStatus();
+          } else {
+            throw new Error('Failed to auto-setup tunnel');
+          }
+        } catch (error) {
+          const errorMsg = String(error);
+          set({
+            error: errorMsg,
+            loading: false,
+          });
+          toast.error(`Failed to auto-setup tunnel: ${errorMsg}`);
           throw error;
         }
       },

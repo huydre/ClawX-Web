@@ -25,6 +25,12 @@ const setupSchema = z.object({
   domain: z.string().optional(),
 });
 
+const autoSetupSchema = z.object({
+  apiToken: z.string().min(40),
+  baseDomain: z.string().default('veoforge.ggff.net'),
+  localUrl: z.string().url().optional(),
+});
+
 const validateTokenSchema = z.object({
   apiToken: z.string().min(40),
 });
@@ -92,6 +98,93 @@ router.post('/quick/stop', async (_req, res) => {
 // ============================================================================
 // Named Tunnel Routes (Requires Cloudflare API)
 // ============================================================================
+
+// POST /api/tunnel/auto-setup - Auto setup with random subdomain
+router.post('/auto-setup', async (req, res) => {
+  try {
+    const { apiToken, baseDomain, localUrl } = autoSetupSchema.parse(req.body);
+
+    logger.info('Auto-setting up tunnel with random subdomain', { baseDomain });
+
+    // Generate random subdomain (8 characters)
+    const randomSubdomain = Math.random().toString(36).substring(2, 10);
+    const fullDomain = `${randomSubdomain}.${baseDomain}`;
+    const tunnelName = `clawx-${randomSubdomain}`;
+
+    logger.info('Generated random subdomain', { fullDomain, tunnelName });
+
+    // Initialize Cloudflare API
+    const cfApi = new CloudflareAPI(apiToken);
+
+    // Validate token
+    const isValid = await cfApi.validateToken();
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid Cloudflare API token',
+      });
+    }
+
+    // Get account ID
+    const accountId = await cfApi.getAccountId();
+
+    // Create tunnel
+    const tunnel = await cfApi.createTunnel(accountId, tunnelName);
+
+    // Get tunnel token
+    const tunnelToken = await cfApi.getTunnelToken(accountId, tunnel.id);
+
+    // Extract root domain for DNS
+    const parts = baseDomain.split('.');
+    const rootDomain = parts.slice(-2).join('.');
+    const baseSubdomain = parts.slice(0, -2).join('.');
+    const finalSubdomain = baseSubdomain ? `${randomSubdomain}.${baseSubdomain}` : randomSubdomain;
+
+    // Create DNS record
+    const zoneId = await cfApi.getZoneId(rootDomain);
+    await cfApi.createDnsRecord(zoneId, finalSubdomain, tunnel.id);
+
+    const publicUrl = `https://${fullDomain}`;
+
+    // Save configuration
+    await saveCloudflareSettings({
+      tunnelEnabled: true,
+      tunnelMode: 'named',
+      tunnelId: tunnel.id,
+      tunnelName: tunnel.name,
+      tunnelToken,
+      accountId,
+      domain: fullDomain,
+      publicUrl,
+    });
+
+    logger.info('Auto tunnel setup complete', {
+      tunnelId: tunnel.id,
+      tunnelName: tunnel.name,
+      publicUrl,
+    });
+
+    // Start tunnel immediately
+    await tunnelManager.start({
+      mode: 'named',
+      token: tunnelToken,
+      localUrl: localUrl || 'http://localhost:2003',
+    });
+
+    res.json({
+      success: true,
+      tunnelId: tunnel.id,
+      publicUrl,
+      subdomain: randomSubdomain,
+    });
+  } catch (error) {
+    logger.error('Auto tunnel setup error:', error);
+    res.status(500).json({
+      success: false,
+      error: String(error),
+    });
+  }
+});
 
 // POST /api/tunnel/setup
 router.post('/setup', async (req, res) => {
