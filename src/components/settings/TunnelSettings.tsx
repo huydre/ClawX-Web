@@ -153,13 +153,13 @@ export function TunnelSettings() {
 
         {/* Auto Setup */}
         <TabsContent value="auto">
-          {configured ? (
+          {configured && mode === 'named' ? (
             <NamedTunnelControlPanel
-              enabled={enabled && mode === 'named'}
-              running={running && mode === 'named'}
-              state={mode === 'named' ? state : 'stopped'}
-              publicUrl={mode === 'named' ? publicUrl : undefined}
-              uptime={mode === 'named' ? uptime : undefined}
+              enabled={enabled}
+              running={running}
+              state={state}
+              publicUrl={publicUrl}
+              uptime={uptime}
               loading={loading}
               showTeardownConfirm={showTeardownConfirm}
               onStart={startNamedTunnel}

@@ -215,12 +215,12 @@ class TunnelManager extends EventEmitter {
         args.push('tunnel', '--url', localUrl);
         logger.info('Starting quick tunnel', { localUrl });
       } else if (this.config.mode === 'named') {
-        // Named tunnel mode: cloudflared tunnel run --token <token>
+        // Named tunnel mode: cloudflared tunnel run --token <token> --url <localUrl>
         if (!this.config.token) {
           throw new Error('Token is required for named tunnel');
         }
-        args.push('tunnel', 'run', '--token', this.config.token);
-        logger.info('Starting named tunnel');
+        args.push('tunnel', 'run', '--token', this.config.token, '--url', localUrl);
+        logger.info('Starting named tunnel', { localUrl });
       }
 
       // Spawn the process
