@@ -119,7 +119,6 @@ export function TunnelSettings() {
                     onClick={async () => {
                       try {
                         await stopNamedTunnel();
-                        await teardownTunnel();
                       } catch (error) {
                         console.error('Failed to stop tunnel:', error);
                       }
