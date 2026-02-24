@@ -94,6 +94,37 @@ export function TunnelSettings() {
 
   return (
     <div className="space-y-4">
+      {/* Current Status Card */}
+      {(running || configured) && (
+        <Card className={running ? "border-green-500/50 bg-green-500/5" : "border-gray-500/50 bg-gray-500/5"}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-3 items-center">
+                <div className={`h-3 w-3 rounded-full ${running ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                <div>
+                  <p className="font-medium">
+                    {running ? 'Tunnel Active' : 'Tunnel Configured'}
+                  </p>
+                  {publicUrl && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {publicUrl}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge status={state === 'connected' ? 'connected' : state === 'starting' ? 'starting' : state === 'error' ? 'error' : 'stopped'} />
+                {running && uptime !== undefined && (
+                  <span className="text-sm text-muted-foreground">
+                    {formatUptime(uptime)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Info Card */}
       <Card className="border-blue-500/50 bg-blue-500/5">
         <CardContent className="pt-6">
