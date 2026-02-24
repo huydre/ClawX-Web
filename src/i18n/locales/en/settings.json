@@ -132,5 +132,57 @@
         "version": "Version {{version}}",
         "docs": "Website",
         "github": "GitHub"
+    },
+    "tunnel": {
+        "title": "Cloudflare Tunnel",
+        "description": "Expose your local ClawX instance to the internet securely",
+        "info": {
+            "title": "What is Cloudflare Tunnel?",
+            "description": "Cloudflare Tunnel creates a secure connection between your local ClawX instance and the internet without opening ports. Perfect for remote access and webhook integrations.",
+            "learnMore": "Learn more about Cloudflare Tunnel"
+        },
+        "error": "Tunnel Error",
+        "publicUrl": "Public URL",
+        "copyUrl": "Copy URL",
+        "uptime": "Uptime",
+        "urlCopied": "URL copied to clipboard",
+        "copyFailed": "Failed to copy URL",
+        "quick": {
+            "title": "Quick Tunnel",
+            "description": "Start a temporary tunnel with a random URL (no configuration needed)",
+            "enable": "Enable Quick Tunnel",
+            "enableDesc": "Start a temporary tunnel instantly"
+        },
+        "named": {
+            "title": "Named Tunnel",
+            "description": "Configure a persistent tunnel with your own domain",
+            "setup": "Setup Named Tunnel",
+            "setupDesc": "Configure a persistent tunnel with custom domain",
+            "configured": "Tunnel is configured and ready",
+            "enable": "Enable Named Tunnel",
+            "enableDesc": "Start your configured tunnel",
+            "apiToken": "Cloudflare API Token",
+            "apiTokenPlaceholder": "Enter your Cloudflare API token",
+            "apiTokenHelp": "Create a token at dash.cloudflare.com with Cloudflare Tunnel permissions",
+            "tunnelName": "Tunnel Name",
+            "tunnelNamePlaceholder": "my-clawx-tunnel",
+            "tunnelNameHelp": "A unique name for your tunnel",
+            "domain": "Custom Domain (Optional)",
+            "domainPlaceholder": "clawx.example.com",
+            "domainHelp": "Use a custom domain from your Cloudflare account",
+            "validate": "Validate",
+            "tokenRequired": "API token is required",
+            "tokenValid": "API token is valid",
+            "tokenInvalid": "Invalid API token",
+            "fillRequired": "Please fill all required fields",
+            "setting": "Setting up...",
+            "setupButton": "Setup Tunnel",
+            "dangerZone": "Danger Zone",
+            "dangerZoneDesc": "Remove tunnel configuration permanently",
+            "teardown": "Remove Tunnel Configuration",
+            "confirmTeardown": "Are you sure?",
+            "confirmTeardownDesc": "This will permanently remove your tunnel configuration. You'll need to set it up again to use it.",
+            "confirmButton": "Yes, Remove Configuration"
+        }
     }
 }

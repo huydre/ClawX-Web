@@ -132,5 +132,57 @@
         "version": "版本 {{version}}",
         "docs": "官网",
         "github": "GitHub"
+    },
+    "tunnel": {
+        "title": "Cloudflare 隧道",
+        "description": "安全地将本地 ClawX 实例暴露到互联网",
+        "info": {
+            "title": "什么是 Cloudflare 隧道？",
+            "description": "Cloudflare 隧道在您的本地 ClawX 实例和互联网之间创建安全连接，无需开放端口。非常适合远程访问和 Webhook 集成。",
+            "learnMore": "了解更多关于 Cloudflare 隧道"
+        },
+        "error": "隧道错误",
+        "publicUrl": "公共 URL",
+        "copyUrl": "复制 URL",
+        "uptime": "运行时间",
+        "urlCopied": "URL 已复制到剪贴板",
+        "copyFailed": "复制 URL 失败",
+        "quick": {
+            "title": "快速隧道",
+            "description": "使用随机 URL 启动临时隧道（无需配置）",
+            "enable": "启用快速隧道",
+            "enableDesc": "立即启动临时隧道"
+        },
+        "named": {
+            "title": "命名隧道",
+            "description": "使用您自己的域名配置持久隧道",
+            "setup": "设置命名隧道",
+            "setupDesc": "配置带有自定义域名的持久隧道",
+            "configured": "隧道已配置并准备就绪",
+            "enable": "启用命名隧道",
+            "enableDesc": "启动您配置的隧道",
+            "apiToken": "Cloudflare API 令牌",
+            "apiTokenPlaceholder": "输入您的 Cloudflare API 令牌",
+            "apiTokenHelp": "在 dash.cloudflare.com 创建具有 Cloudflare 隧道权限的令牌",
+            "tunnelName": "隧道名称",
+            "tunnelNamePlaceholder": "my-clawx-tunnel",
+            "tunnelNameHelp": "隧道的唯一名称",
+            "domain": "自定义域名（可选）",
+            "domainPlaceholder": "clawx.example.com",
+            "domainHelp": "使用您 Cloudflare 账户中的自定义域名",
+            "validate": "验证",
+            "tokenRequired": "需要 API 令牌",
+            "tokenValid": "API 令牌有效",
+            "tokenInvalid": "无效的 API 令牌",
+            "fillRequired": "请填写所有必填字段",
+            "setting": "设置中...",
+            "setupButton": "设置隧道",
+            "dangerZone": "危险区域",
+            "dangerZoneDesc": "永久删除隧道配置",
+            "teardown": "删除隧道配置",
+            "confirmTeardown": "您确定吗？",
+            "confirmTeardownDesc": "这将永久删除您的隧道配置。您需要重新设置才能再次使用。",
+            "confirmButton": "是的，删除配置"
+        }
     }
 }

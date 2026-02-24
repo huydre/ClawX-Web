@@ -14,6 +14,7 @@ import {
   Download,
   Copy,
   FileText,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +29,7 @@ import { useGatewayStore } from '@/stores/gateway';
 import { useUpdateStore } from '@/stores/update';
 import { ProvidersSettings } from '@/components/settings/ProvidersSettings';
 import { UpdateSettings } from '@/components/settings/UpdateSettings';
+import { TunnelSettings } from '@/components/settings/TunnelSettings';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { platform } from '@/lib/platform';
@@ -367,6 +369,20 @@ export function Settings() {
               onCheckedChange={setGatewayAutoStart}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Cloudflare Tunnel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            {t('tunnel.title')}
+          </CardTitle>
+          <CardDescription>{t('tunnel.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TunnelSettings />
         </CardContent>
       </Card>
 

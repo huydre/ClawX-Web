@@ -14,6 +14,17 @@ interface AppSettings {
   language: string;
 }
 
+interface CloudflareSettings {
+  enabled: boolean;
+  tunnelId?: string;
+  tunnelName?: string;
+  tunnelToken?: string;
+  accountId?: string;
+  domain?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface ProviderConfig {
   id: string;
   name: string;
@@ -30,6 +41,7 @@ interface Database {
   providers: Record<string, ProviderConfig>;
   apiKeys: Record<string, string>;
   defaultProvider: string | null;
+  cloudflare: CloudflareSettings;
 }
 
 // Default data
@@ -44,6 +56,9 @@ const defaultData: Database = {
   providers: {},
   apiKeys: {},
   defaultProvider: null,
+  cloudflare: {
+    enabled: false,
+  },
 };
 
 // Database setup
@@ -171,5 +186,36 @@ export async function setApiKey(providerId: string, apiKey: string): Promise<voi
 export async function deleteApiKey(providerId: string): Promise<void> {
   await db.read();
   delete db.data!.apiKeys[providerId];
+  await db.write();
+}
+
+// Cloudflare Settings
+export async function getCloudflareSettings(): Promise<CloudflareSettings> {
+  await db.read();
+  return { ...db.data!.cloudflare };
+}
+
+export async function saveCloudflareSettings(settings: Partial<CloudflareSettings>): Promise<void> {
+  await db.read();
+  const now = new Date().toISOString();
+
+  db.data!.cloudflare = {
+    ...db.data!.cloudflare,
+    ...settings,
+    updatedAt: now,
+  };
+
+  if (!db.data!.cloudflare.createdAt) {
+    db.data!.cloudflare.createdAt = now;
+  }
+
+  await db.write();
+}
+
+export async function clearCloudflareSettings(): Promise<void> {
+  await db.read();
+  db.data!.cloudflare = {
+    enabled: false,
+  };
   await db.write();
 }

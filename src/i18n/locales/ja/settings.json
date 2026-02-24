@@ -111,5 +111,57 @@
         "version": "バージョン {{version}}",
         "docs": "公式サイト",
         "github": "GitHub"
+    },
+    "tunnel": {
+        "title": "Cloudflare トンネル",
+        "description": "ローカル ClawX インスタンスを安全にインターネットに公開",
+        "info": {
+            "title": "Cloudflare トンネルとは？",
+            "description": "Cloudflare トンネルは、ポートを開放せずにローカル ClawX インスタンスとインターネット間に安全な接続を作成します。リモートアクセスと Webhook 統合に最適です。",
+            "learnMore": "Cloudflare トンネルについて詳しく"
+        },
+        "error": "トンネルエラー",
+        "publicUrl": "公開 URL",
+        "copyUrl": "URL をコピー",
+        "uptime": "稼働時間",
+        "urlCopied": "URL をクリップボードにコピーしました",
+        "copyFailed": "URL のコピーに失敗しました",
+        "quick": {
+            "title": "クイックトンネル",
+            "description": "ランダム URL で一時的なトンネルを開始（設定不要）",
+            "enable": "クイックトンネルを有効化",
+            "enableDesc": "一時的なトンネルを即座に開始"
+        },
+        "named": {
+            "title": "名前付きトンネル",
+            "description": "独自のドメインで永続的なトンネルを設定",
+            "setup": "名前付きトンネルをセットアップ",
+            "setupDesc": "カスタムドメインで永続的なトンネルを設定",
+            "configured": "トンネルが設定され、準備完了",
+            "enable": "名前付きトンネルを有効化",
+            "enableDesc": "設定したトンネルを開始",
+            "apiToken": "Cloudflare API トークン",
+            "apiTokenPlaceholder": "Cloudflare API トークンを入力",
+            "apiTokenHelp": "dash.cloudflare.com で Cloudflare トンネル権限を持つトークンを作成",
+            "tunnelName": "トンネル名",
+            "tunnelNamePlaceholder": "my-clawx-tunnel",
+            "tunnelNameHelp": "トンネルの一意な名前",
+            "domain": "カスタムドメイン（オプション）",
+            "domainPlaceholder": "clawx.example.com",
+            "domainHelp": "Cloudflare アカウントのカスタムドメインを使用",
+            "validate": "検証",
+            "tokenRequired": "API トークンが必要です",
+            "tokenValid": "API トークンは有効です",
+            "tokenInvalid": "無効な API トークン",
+            "fillRequired": "すべての必須フィールドを入力してください",
+            "setting": "設定中...",
+            "setupButton": "トンネルをセットアップ",
+            "dangerZone": "危険ゾーン",
+            "dangerZoneDesc": "トンネル設定を完全に削除",
+            "teardown": "トンネル設定を削除",
+            "confirmTeardown": "本当によろしいですか？",
+            "confirmTeardownDesc": "トンネル設定が完全に削除されます。再度使用するには再設定が必要です。",
+            "confirmButton": "はい、設定を削除"
+        }
     }
 }
