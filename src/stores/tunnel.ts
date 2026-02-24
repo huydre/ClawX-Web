@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { ws } from '@/lib/websocket';
 
 interface TunnelState {
   // State
@@ -320,3 +321,48 @@ export const useTunnelStore = create<TunnelState>()(
     }
   )
 );
+
+// Setup WebSocket listeners
+ws.on('tunnelStateChange', (data: any) => {
+  console.log('[Tunnel Store] Received tunnelStateChange:', data);
+
+  const { state, status } = data;
+
+  useTunnelStore.setState({
+    state: state,
+    running: state === 'connected',
+    mode: status.mode,
+    publicUrl: status.publicUrl,
+    uptime: status.uptime,
+    error: status.error || null,
+  });
+});
+
+ws.on('tunnelConnected', (data: any) => {
+  console.log('[Tunnel Store] Received tunnelConnected:', data);
+
+  const { status } = data;
+
+  useTunnelStore.setState({
+    state: 'connected',
+    running: true,
+    mode: status.mode,
+    publicUrl: status.publicUrl,
+    uptime: status.uptime,
+  });
+
+  if (status.publicUrl) {
+    toast.success(`Tunnel connected: ${status.publicUrl}`);
+  }
+});
+
+ws.on('tunnelDisconnected', () => {
+  console.log('[Tunnel Store] Received tunnelDisconnected');
+
+  useTunnelStore.setState({
+    state: 'stopped',
+    running: false,
+    publicUrl: undefined,
+    uptime: undefined,
+  });
+});

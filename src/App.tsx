@@ -18,6 +18,7 @@ import { Settings } from './pages/Settings';
 import { Setup } from './pages/Setup';
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
+import { ws } from './lib/websocket';
 import './lib/platform'; // Initialize platform compatibility layer
 
 
@@ -104,6 +105,14 @@ function App() {
   useEffect(() => {
     initGateway();
   }, [initGateway]);
+
+  // Initialize WebSocket connection on mount
+  useEffect(() => {
+    ws.connect();
+    return () => {
+      ws.disconnect();
+    };
+  }, []);
 
   // Redirect to setup wizard if not complete
   useEffect(() => {
