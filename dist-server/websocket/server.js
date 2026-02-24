@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { logger } from '../utils/logger.js';
 import { gatewayManager } from '../services/gateway-manager.js';
+import { tunnelManager } from '../services/tunnel-manager.js';
 import { getSettings } from '../services/storage.js';
 export function createWebSocketServer(server) {
     const wss = new WebSocketServer({
@@ -41,12 +42,48 @@ export function createWebSocketServer(server) {
                 }));
             }
         };
+        const onTunnelStateChange = (state) => {
+            if (ws.readyState === WebSocket.OPEN) {
+                const status = tunnelManager.getStatus();
+                logger.info('Sending tunnel state change to browser', { state, status });
+                ws.send(JSON.stringify({
+                    type: 'tunnelStateChange',
+                    state,
+                    status,
+                }));
+            }
+        };
+        const onTunnelConnected = (status) => {
+            if (ws.readyState === WebSocket.OPEN) {
+                logger.info('Sending tunnel connected to browser', { status });
+                ws.send(JSON.stringify({
+                    type: 'tunnelConnected',
+                    status,
+                }));
+            }
+        };
+        const onTunnelDisconnected = () => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'tunnelDisconnected',
+                }));
+            }
+        };
         gatewayManager.on('notification', onNotification);
         gatewayManager.on('stateChange', onStateChange);
+        tunnelManager.on('stateChange', onTunnelStateChange);
+        tunnelManager.on('connected', onTunnelConnected);
+        tunnelManager.on('disconnected', onTunnelDisconnected);
         // Send initial state
         ws.send(JSON.stringify({
             type: 'stateChange',
             state: gatewayManager.getState(),
+        }));
+        // Send initial tunnel state
+        ws.send(JSON.stringify({
+            type: 'tunnelStateChange',
+            state: tunnelManager.getState(),
+            status: tunnelManager.getStatus(),
         }));
         ws.on('message', (data) => {
             try {
@@ -63,6 +100,9 @@ export function createWebSocketServer(server) {
             logger.info('WebSocket client disconnected');
             gatewayManager.off('notification', onNotification);
             gatewayManager.off('stateChange', onStateChange);
+            tunnelManager.off('stateChange', onTunnelStateChange);
+            tunnelManager.off('connected', onTunnelConnected);
+            tunnelManager.off('disconnected', onTunnelDisconnected);
         });
         ws.on('error', (error) => {
             logger.error('WebSocket error', { error: error.message });

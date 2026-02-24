@@ -47,6 +47,7 @@ async function start() {
       // Check for environment variables first
       const envToken = process.env.CLOUDFLARE_API_TOKEN;
       const envDomain = process.env.CLOUDFLARE_TUNNEL_DOMAIN || 'veoforge.ggff.net';
+      const envSubdomain = process.env.CLOUDFLARE_TUNNEL_SUBDOMAIN;
 
       if (envToken && envToken.trim().length > 0) {
         logger.info('Found Cloudflare API token in environment, auto-setting up tunnel', { domain: envDomain });
@@ -60,12 +61,12 @@ async function start() {
         if (!isValid) {
           logger.warn('Invalid Cloudflare API token in environment');
         } else {
-          // Generate random subdomain
-          const randomSubdomain = Math.random().toString(36).substring(2, 10);
-          const fullDomain = `${randomSubdomain}.${envDomain}`;
-          const tunnelName = `clawx-${randomSubdomain}`;
+          // Use fixed subdomain if provided, otherwise generate random
+          const subdomain = envSubdomain || Math.random().toString(36).substring(2, 10);
+          const fullDomain = `${subdomain}.${envDomain}`;
+          const tunnelName = `clawx-${subdomain}`;
 
-          logger.info('Creating tunnel from environment config', { fullDomain, tunnelName });
+          logger.info('Creating tunnel from environment config', { fullDomain, tunnelName, fixed: !!envSubdomain });
 
           // Get account ID
           const accountId = await cfApi.getAccountId();
@@ -81,10 +82,10 @@ async function start() {
 
           let dnsSubdomain: string;
           if (envDomain === zoneName) {
-            dnsSubdomain = randomSubdomain;
+            dnsSubdomain = subdomain;
           } else {
             const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
-            dnsSubdomain = `${randomSubdomain}.${subdomainPrefix}`;
+            dnsSubdomain = `${subdomain}.${subdomainPrefix}`;
           }
 
           await cfApi.createDnsRecord(zoneId, dnsSubdomain, tunnel.id);
