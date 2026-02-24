@@ -11,12 +11,6 @@ const execAsync = promisify(exec);
 
 type BinaryState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
-interface DownloadProgress {
-  downloaded: number;
-  total: number;
-  percentage: number;
-}
-
 class CloudflaredBinaryManager extends EventEmitter {
   private state: BinaryState = 'not_installed';
   private binaryPath: string;
@@ -49,6 +43,38 @@ class CloudflaredBinaryManager extends EventEmitter {
 
   getBinaryPath(): string {
     return this.binaryPath;
+  }
+
+  private getDownloadUrl(): string {
+    const platform = process.platform;
+    const arch = process.arch;
+
+    let binaryName = 'cloudflared';
+
+    if (platform === 'darwin') {
+      // macOS
+      if (arch === 'arm64') {
+        binaryName = 'cloudflared-darwin-arm64.tgz';
+      } else {
+        binaryName = 'cloudflared-darwin-amd64.tgz';
+      }
+    } else if (platform === 'linux') {
+      // Linux
+      if (arch === 'arm64') {
+        binaryName = 'cloudflared-linux-arm64';
+      } else if (arch === 'x64') {
+        binaryName = 'cloudflared-linux-amd64';
+      } else {
+        throw new Error(`Unsupported Linux architecture: ${arch}`);
+      }
+    } else if (platform === 'win32') {
+      // Windows
+      binaryName = 'cloudflared-windows-amd64.exe';
+    } else {
+      throw new Error(`Unsupported platform: ${platform}`);
+    }
+
+    return `https://github.com/cloudflare/cloudflared/releases/latest/download/${binaryName}`;
   }
 
   getConfigDir(): string {
@@ -87,7 +113,7 @@ class CloudflaredBinaryManager extends EventEmitter {
   async downloadBinary(): Promise<void> {
     this.setState('downloading');
 
-    const downloadUrl = 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64';
+    const downloadUrl = this.getDownloadUrl();
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.downloadRetries; attempt++) {
@@ -142,63 +168,50 @@ class CloudflaredBinaryManager extends EventEmitter {
             return;
           }
 
-          const totalSize = parseInt(response.headers.get('content-length') || '0', 10);
-          let downloadedSize = 0;
+          // Check if it's a tar.gz file (macOS binaries)
+          const isTarGz = url.includes('.tgz') || url.includes('.tar.gz');
 
-          const fileStream = createWriteStream(this.binaryPath);
+          if (isTarGz) {
+            // For macOS: download tar.gz and extract
+            const tar = await import('tar');
+            const { pipeline } = await import('stream/promises');
+            const { Readable } = await import('stream');
+            const { createWriteStream, unlinkSync } = await import('fs');
+            const { join } = await import('path');
 
-          if (!response.body) {
-            clearTimeout(timeout);
-            reject(new Error('Response body is null'));
-            return;
-          }
+            const tarPath = join(this.binDir, 'cloudflared.tgz');
+            const fileStream = createWriteStream(tarPath);
 
-          // Track download progress
-          const reader = response.body.getReader();
-          const chunks: Uint8Array[] = [];
+            await pipeline(Readable.fromWeb(response.body as any), fileStream);
 
-          while (true) {
-            const { done, value } = await reader.read();
+            // Extract tar.gz
+            await tar.x({
+              file: tarPath,
+              cwd: this.binDir,
+            });
 
-            if (done) break;
+            // Remove tar file
+            unlinkSync(tarPath);
 
-            chunks.push(value);
-            downloadedSize += value.length;
+            // Make binary executable
+            chmodSync(this.binaryPath, 0o755);
+          } else {
+            // For Linux/Windows: direct binary download
+            const { pipeline } = await import('stream/promises');
+            const { Readable } = await import('stream');
 
-            if (totalSize > 0) {
-              const progress: DownloadProgress = {
-                downloaded: downloadedSize,
-                total: totalSize,
-                percentage: Math.round((downloadedSize / totalSize) * 100)
-              };
-              this.emit('downloadProgress', progress);
+            const fileStream = createWriteStream(this.binaryPath);
+            await pipeline(Readable.fromWeb(response.body as any), fileStream);
 
-              if (progress.percentage % 10 === 0) {
-                logger.debug('Download progress', progress);
-              }
+            // Make binary executable (Linux/macOS only)
+            if (process.platform !== 'win32') {
+              chmodSync(this.binaryPath, 0o755);
             }
           }
 
-          // Write all chunks to file
-          for (const chunk of chunks) {
-            fileStream.write(chunk);
-          }
-
-          fileStream.end();
-
-          fileStream.on('finish', () => {
-            clearTimeout(timeout);
-            logger.info('Binary download completed', {
-              size: downloadedSize,
-              path: this.binaryPath
-            });
-            resolve();
-          });
-
-          fileStream.on('error', (error) => {
-            clearTimeout(timeout);
-            reject(error);
-          });
+          clearTimeout(timeout);
+          logger.info('Binary download completed', { path: this.binaryPath });
+          resolve();
 
         } catch (error) {
           clearTimeout(timeout);

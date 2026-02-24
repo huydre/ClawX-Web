@@ -16,11 +16,14 @@ interface AppSettings {
 
 interface CloudflareSettings {
   enabled: boolean;
+  tunnelEnabled?: boolean;
+  tunnelMode?: 'quick' | 'named';
   tunnelId?: string;
   tunnelName?: string;
   tunnelToken?: string;
   accountId?: string;
   domain?: string;
+  publicUrl?: string;
   createdAt?: string;
   updatedAt?: string;
 }

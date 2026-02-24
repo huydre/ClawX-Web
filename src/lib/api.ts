@@ -251,6 +251,17 @@ class ApiClient {
     });
   }
 
+  async autoSetupTunnel(config: {
+    apiToken: string;
+    baseDomain?: string;
+    localUrl?: string;
+  }) {
+    return this.request<{ success: boolean; tunnelId: string; publicUrl: string; subdomain: string }>('/tunnel/auto-setup', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
   async startTunnel() {
     return this.request<{ success: boolean; publicUrl?: string }>('/tunnel/start', {
       method: 'POST',
