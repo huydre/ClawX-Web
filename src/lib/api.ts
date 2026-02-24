@@ -212,6 +212,69 @@ class ApiClient {
   async clawhubList() {
     return this.request<{ success: boolean; results: any[] }>('/clawhub/list');
   }
+
+  // Tunnel API
+  async getTunnelStatus() {
+    return this.request<{
+      configured: boolean;
+      enabled: boolean;
+      running: boolean;
+      mode?: 'quick' | 'named';
+      publicUrl?: string;
+      uptime?: number;
+      state: 'stopped' | 'starting' | 'connected' | 'error';
+      error?: string;
+    }>('/tunnel/status');
+  }
+
+  async startQuickTunnel(localUrl?: string) {
+    return this.request<{ success: boolean; publicUrl?: string }>('/tunnel/quick/start', {
+      method: 'POST',
+      body: JSON.stringify({ localUrl }),
+    });
+  }
+
+  async stopQuickTunnel() {
+    return this.request<{ success: boolean }>('/tunnel/quick/stop', {
+      method: 'POST',
+    });
+  }
+
+  async setupTunnel(config: {
+    apiToken: string;
+    tunnelName: string;
+    domain?: string;
+  }) {
+    return this.request<{ success: boolean; tunnelId: string; publicUrl?: string }>('/tunnel/setup', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async startTunnel() {
+    return this.request<{ success: boolean; publicUrl?: string }>('/tunnel/start', {
+      method: 'POST',
+    });
+  }
+
+  async stopTunnel() {
+    return this.request<{ success: boolean }>('/tunnel/stop', {
+      method: 'POST',
+    });
+  }
+
+  async teardownTunnel() {
+    return this.request<{ success: boolean }>('/tunnel/teardown', {
+      method: 'POST',
+    });
+  }
+
+  async validateTunnelToken(apiToken: string) {
+    return this.request<{ valid: boolean; accountId?: string }>('/tunnel/validate-token', {
+      method: 'POST',
+      body: JSON.stringify({ apiToken }),
+    });
+  }
 }
 
 export const api = new ApiClient();

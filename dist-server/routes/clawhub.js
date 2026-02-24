@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { logger } from '../utils/logger.js';
 import path from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const router = Router();
 // Get ClawHub CLI path
 const getClawHubCliPath = () => {

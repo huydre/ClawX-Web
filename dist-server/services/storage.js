@@ -16,6 +16,9 @@ const defaultData = {
     providers: {},
     apiKeys: {},
     defaultProvider: null,
+    cloudflare: {
+        enabled: false,
+    },
 };
 // Database setup
 const dataDir = join(homedir(), '.clawx');
@@ -109,5 +112,30 @@ export async function setApiKey(providerId, apiKey) {
 export async function deleteApiKey(providerId) {
     await db.read();
     delete db.data.apiKeys[providerId];
+    await db.write();
+}
+// Cloudflare Settings
+export async function getCloudflareSettings() {
+    await db.read();
+    return { ...db.data.cloudflare };
+}
+export async function saveCloudflareSettings(settings) {
+    await db.read();
+    const now = new Date().toISOString();
+    db.data.cloudflare = {
+        ...db.data.cloudflare,
+        ...settings,
+        updatedAt: now,
+    };
+    if (!db.data.cloudflare.createdAt) {
+        db.data.cloudflare.createdAt = now;
+    }
+    await db.write();
+}
+export async function clearCloudflareSettings() {
+    await db.read();
+    db.data.cloudflare = {
+        enabled: false,
+    };
     await db.write();
 }

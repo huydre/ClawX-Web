@@ -9,6 +9,7 @@ import gatewayRouter from './routes/gateway.js';
 import settingsRouter from './routes/settings.js';
 import filesRouter from './routes/files.js';
 import clawhubRouter from './routes/clawhub.js';
+import tunnelRouter from './routes/tunnel.js';
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/gateway', gatewayRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/clawhub', clawhubRouter);
+app.use('/api/tunnel', tunnelRouter);
 
 // Serve static files
 app.use(express.static('dist'));
