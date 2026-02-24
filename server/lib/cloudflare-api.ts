@@ -99,18 +99,27 @@ export class CloudflareAPI {
    */
   async getZoneId(domain: string): Promise<string> {
     try {
-      const response = await this.makeRequest<Array<{ id: string; name: string }>>(
-        'GET',
-        `/zones?name=${encodeURIComponent(domain)}`
-      );
+      // Try to find zone by checking domain and parent domains
+      const domainParts = domain.split('.');
 
-      if (!response || response.length === 0) {
-        throw new Error(`No zone found for domain: ${domain}`);
+      // Try from most specific to least specific
+      // e.g., for "veoforge.ggff.net", try: veoforge.ggff.net -> ggff.net -> net
+      for (let i = 0; i < domainParts.length - 1; i++) {
+        const testDomain = domainParts.slice(i).join('.');
+
+        const response = await this.makeRequest<Array<{ id: string; name: string }>>(
+          'GET',
+          `/zones?name=${encodeURIComponent(testDomain)}`
+        );
+
+        if (response && response.length > 0) {
+          const zoneId = response[0].id;
+          logger.info('Retrieved zone ID', { requestedDomain: domain, foundZone: testDomain, zoneId });
+          return zoneId;
+        }
       }
 
-      const zoneId = response[0].id;
-      logger.info('Retrieved zone ID', { domain, zoneId });
-      return zoneId;
+      throw new Error(`No zone found for domain: ${domain}`);
     } catch (error) {
       logger.error('Failed to get zone ID', { domain, error: (error as Error).message });
       throw new Error(`Failed to get zone ID for ${domain}: ${(error as Error).message}`);
