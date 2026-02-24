@@ -255,12 +255,20 @@ class TunnelManager extends EventEmitter {
         this.connections = 0;
 
         if (this.state !== 'stopped') {
-          this.errorMessage = `Process exited with code ${code}`;
-          this.setState('error');
-          this.emit('disconnected', { code, signal });
+          // Exit code 0 means normal shutdown, not an error
+          if (code === 0) {
+            logger.info('Cloudflared exited normally');
+            this.setState('stopped');
+            this.emit('disconnected', { code, signal });
+          } else {
+            // Non-zero exit code is an error
+            this.errorMessage = `Process exited with code ${code}`;
+            this.setState('error');
+            this.emit('disconnected', { code, signal });
 
-          // Schedule reconnect
-          this.scheduleReconnect();
+            // Schedule reconnect only on error
+            this.scheduleReconnect();
+          }
         }
       });
 
