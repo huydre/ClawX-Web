@@ -5,13 +5,19 @@
 import { useState, useEffect } from 'react';
 import {
   Copy,
+  Check,
   Loader2,
   AlertCircle,
   Info,
+  Eye,
+  EyeOff,
   ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useTunnelStore } from '@/stores/tunnel';
 import { toast } from 'sonner';
