@@ -5,20 +5,14 @@
 import { useState, useEffect } from 'react';
 import {
   Copy,
-  Check,
   Loader2,
   AlertCircle,
   Info,
-  Eye,
-  EyeOff,
   ExternalLink,
   Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useTunnelStore } from '@/stores/tunnel';
 import { toast } from 'sonner';
@@ -186,7 +180,6 @@ export function TunnelSettings() {
         <AutoSetupForm
           loading={loading}
           onAutoSetup={autoSetupTunnel}
-          onValidateToken={validateToken}
         />
       )}
     </div>
@@ -307,163 +300,49 @@ function QuickTunnelCard({
 interface AutoSetupFormProps {
   loading: boolean;
   onAutoSetup: (config: { apiToken: string; baseDomain?: string; localUrl?: string }) => Promise<void>;
-  onValidateToken: (apiToken: string) => Promise<{ valid: boolean; accountId?: string }>;
 }
 
-function AutoSetupForm({ loading, onAutoSetup, onValidateToken }: AutoSetupFormProps) {
-  const { t } = useTranslation('settings');
-  const [apiToken, setApiToken] = useState('');
-  const [baseDomain, setBaseDomain] = useState('veoforge.ggff.net');
-  const [showToken, setShowToken] = useState(false);
-  const [validating, setValidating] = useState(false);
-  const [validated, setValidated] = useState(false);
-
-  const handleValidate = async () => {
-    if (!apiToken.trim()) {
-      toast.error('API Token is required');
-      return;
-    }
-
-    setValidating(true);
-    try {
-      const result = await onValidateToken(apiToken);
-      if (result.valid) {
-        setValidated(true);
-        toast.success('API Token is valid');
-      } else {
-        setValidated(false);
-        toast.error('Invalid API Token');
-      }
-    } finally {
-      setValidating(false);
-    }
-  };
-
-  const handleAutoSetup = async () => {
-    if (!apiToken.trim()) {
-      toast.error('API Token is required');
-      return;
-    }
-
+function AutoSetupForm({ loading, onAutoSetup }: AutoSetupFormProps) {
+  const handleEnableTunnel = async () => {
+    // Token and domain are loaded from .env on server side
+    // Just trigger auto-setup with empty config
     await onAutoSetup({
-      apiToken: apiToken.trim(),
-      baseDomain: baseDomain.trim() || 'veoforge.ggff.net',
+      apiToken: '', // Server will use env token
+      baseDomain: 'veoforge.ggff.net',
       localUrl: 'http://localhost:2003',
     });
   };
 
-  const isFormValid = apiToken.trim() && validated;
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Auto Setup with Random Subdomain</CardTitle>
+        <CardTitle className="text-lg">Cloudflare Tunnel</CardTitle>
         <CardDescription>
-          Automatically create a tunnel with random subdomain on your domain (e.g., abc12345.veoforge.ggff.net)
+          Enable tunnel to expose your application to the internet with a random subdomain.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Info Alert */}
-        <div className="flex gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm space-y-1">
-            <p className="font-medium text-blue-500">Quick Setup</p>
-            <p className="text-muted-foreground">
-              This will automatically create a tunnel with a random 8-character subdomain on your domain.
-              No need to manually configure tunnel name or DNS records.
-            </p>
-          </div>
-        </div>
-
-        {/* API Token */}
-        <div className="space-y-2">
-          <Label htmlFor="autoApiToken">
-            Cloudflare API Token
-            <span className="text-destructive ml-1">*</span>
-          </Label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input
-                id="autoApiToken"
-                type={showToken ? 'text' : 'password'}
-                placeholder="Enter your Cloudflare API token"
-                value={apiToken}
-                onChange={(e) => {
-                  setApiToken(e.target.value);
-                  setValidated(false);
-                }}
-                className="pr-10 font-mono text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowToken(!showToken)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <Button
-              variant="outline"
-              onClick={handleValidate}
-              disabled={!apiToken.trim() || validating}
-            >
-              {validating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : validated ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                'Validate'
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Create token at{' '}
-            <a
-              href="https://dash.cloudflare.com/profile/api-tokens"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-1"
-            >
-              Cloudflare Dashboard
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </p>
-        </div>
-
-        {/* Base Domain */}
-        <div className="space-y-2">
-          <Label htmlFor="baseDomain">Base Domain</Label>
-          <Input
-            id="baseDomain"
-            placeholder="veoforge.ggff.net"
-            value={baseDomain}
-            onChange={(e) => setBaseDomain(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Random subdomain will be created on this domain (e.g., abc12345.veoforge.ggff.net)
-          </p>
-        </div>
-
-        <Separator />
-
-        {/* Setup Button */}
+      <CardContent>
         <Button
-          onClick={handleAutoSetup}
-          disabled={!isFormValid || loading}
+          onClick={handleEnableTunnel}
+          disabled={loading}
           className="w-full"
+          size="lg"
         >
           {loading ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
               Creating Tunnel...
             </>
           ) : (
             <>
-              <Settings2 className="h-4 w-4 mr-2" />
-              Auto Setup Tunnel
+              <Settings2 className="h-5 w-5 mr-2" />
+              Enable Tunnel
             </>
           )}
         </Button>
+        <p className="text-xs text-muted-foreground mt-3 text-center">
+          Tunnel will be created automatically using configuration from environment variables.
+        </p>
       </CardContent>
     </Card>
   );
