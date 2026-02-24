@@ -171,6 +171,19 @@ export const useTunnelStore = create<TunnelState>()(
         set({ loading: true, error: null });
 
         try {
+          // Stop any running tunnel first
+          const currentState = get();
+          if (currentState.running) {
+            toast.info('Stopping existing tunnel...');
+            if (currentState.mode === 'quick') {
+              await api.stopQuickTunnel();
+            } else if (currentState.mode === 'named') {
+              await api.stopTunnel();
+            }
+            // Wait a bit for tunnel to stop
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+
           const result = await api.autoSetupTunnel(config);
 
           if (result.success) {

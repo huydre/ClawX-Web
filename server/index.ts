@@ -43,22 +43,94 @@ async function start() {
 
     // Auto-start tunnel if enabled
     try {
-      const cloudflareSettings = await getCloudflareSettings();
-      if (cloudflareSettings?.tunnelEnabled && cloudflareSettings?.tunnelMode) {
-        logger.info('Auto-starting Cloudflare tunnel', { mode: cloudflareSettings.tunnelMode });
+      // Check for environment variables first
+      const envToken = process.env.CLOUDFLARE_API_TOKEN;
+      const envDomain = process.env.CLOUDFLARE_TUNNEL_DOMAIN || 'veoforge.ggff.net';
 
-        if (cloudflareSettings.tunnelMode === 'quick') {
-          await tunnelManager.start({
-            mode: 'quick',
-            localUrl: `http://localhost:${PORT}`,
+      if (envToken && envToken.trim().length > 0) {
+        logger.info('Found Cloudflare API token in environment, auto-setting up tunnel', { domain: envDomain });
+
+        // Import CloudflareAPI and auto-setup
+        const { CloudflareAPI } = await import('./lib/cloudflare-api.js');
+        const cfApi = new CloudflareAPI(envToken);
+
+        // Validate token
+        const isValid = await cfApi.validateToken();
+        if (!isValid) {
+          logger.warn('Invalid Cloudflare API token in environment');
+        } else {
+          // Generate random subdomain
+          const randomSubdomain = Math.random().toString(36).substring(2, 10);
+          const fullDomain = `${randomSubdomain}.${envDomain}`;
+          const tunnelName = `clawx-${randomSubdomain}`;
+
+          logger.info('Creating tunnel from environment config', { fullDomain, tunnelName });
+
+          // Get account ID
+          const accountId = await cfApi.getAccountId();
+
+          // Create tunnel
+          const tunnel = await cfApi.createTunnel(accountId, tunnelName);
+
+          // Get tunnel token
+          const tunnelToken = await cfApi.getTunnelToken(accountId, tunnel.id);
+
+          // Create DNS record
+          const { zoneId, zoneName } = await cfApi.getZoneId(envDomain);
+
+          let dnsSubdomain: string;
+          if (envDomain === zoneName) {
+            dnsSubdomain = randomSubdomain;
+          } else {
+            const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
+            dnsSubdomain = `${randomSubdomain}.${subdomainPrefix}`;
+          }
+
+          await cfApi.createDnsRecord(zoneId, dnsSubdomain, tunnel.id);
+
+          const publicUrl = `https://${fullDomain}`;
+
+          // Save configuration
+          const { saveCloudflareSettings } = await import('./services/storage.js');
+          await saveCloudflareSettings({
+            tunnelEnabled: true,
+            tunnelMode: 'named',
+            tunnelId: tunnel.id,
+            tunnelName: tunnel.name,
+            tunnelToken,
+            accountId,
+            domain: fullDomain,
+            publicUrl,
           });
-          logger.info('Quick tunnel started automatically');
-        } else if (cloudflareSettings.tunnelMode === 'named' && cloudflareSettings.tunnelToken) {
+
+          // Start tunnel
           await tunnelManager.start({
             mode: 'named',
-            token: cloudflareSettings.tunnelToken,
+            token: tunnelToken,
+            localUrl: `http://localhost:${PORT}`,
           });
-          logger.info('Named tunnel started automatically');
+
+          logger.info('Tunnel auto-setup complete from environment', { publicUrl });
+        }
+      } else {
+        // Fallback to saved settings
+        const cloudflareSettings = await getCloudflareSettings();
+        if (cloudflareSettings?.tunnelEnabled && cloudflareSettings?.tunnelMode) {
+          logger.info('Auto-starting Cloudflare tunnel from saved settings', { mode: cloudflareSettings.tunnelMode });
+
+          if (cloudflareSettings.tunnelMode === 'quick') {
+            await tunnelManager.start({
+              mode: 'quick',
+              localUrl: `http://localhost:${PORT}`,
+            });
+            logger.info('Quick tunnel started automatically');
+          } else if (cloudflareSettings.tunnelMode === 'named' && cloudflareSettings.tunnelToken) {
+            await tunnelManager.start({
+              mode: 'named',
+              token: cloudflareSettings.tunnelToken,
+            });
+            logger.info('Named tunnel started automatically');
+          }
         }
       }
     } catch (error) {

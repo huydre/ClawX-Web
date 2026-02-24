@@ -139,29 +139,29 @@ router.post('/auto-setup', async (req, res) => {
     const tunnelToken = await cfApi.getTunnelToken(accountId, tunnel.id);
 
     // Create DNS record
-    // getZoneId will automatically find the correct zone (e.g., ggff.net for veoforge.ggff.net)
+    // getZoneId will automatically find the correct zone (e.g., veoforge.ggff.net or ggff.net)
     logger.info('Getting zone ID for DNS record', { baseDomain });
-    const zoneId = await cfApi.getZoneId(baseDomain);
-    logger.info('Zone ID retrieved', { zoneId });
+    const { zoneId, zoneName } = await cfApi.getZoneId(baseDomain);
+    logger.info('Zone ID retrieved', { zoneId, zoneName });
 
-    // For subdomain, we need to create the full subdomain path
-    // e.g., if baseDomain is "veoforge.ggff.net" and random is "abc12345"
-    // we want to create "abc12345.veoforge" as subdomain for zone "ggff.net"
-    const parts = baseDomain.split('.');
+    // Calculate subdomain relative to the found zone
+    // e.g., if baseDomain is "veoforge.ggff.net" and zoneName is "veoforge.ggff.net"
+    // then subdomain is just "abc12345"
+    // e.g., if baseDomain is "veoforge.ggff.net" and zoneName is "ggff.net"
+    // then subdomain is "abc12345.veoforge"
     let dnsSubdomain: string;
 
-    if (parts.length > 2) {
-      // baseDomain is already a subdomain (e.g., veoforge.ggff.net)
-      // Create: randomSubdomain.baseSubdomain (e.g., abc12345.veoforge)
-      const baseSubdomain = parts.slice(0, -2).join('.');
-      dnsSubdomain = `${randomSubdomain}.${baseSubdomain}`;
-    } else {
-      // baseDomain is root domain (e.g., ggff.net)
-      // Create: randomSubdomain (e.g., abc12345)
+    if (baseDomain === zoneName) {
+      // baseDomain is the zone itself
       dnsSubdomain = randomSubdomain;
+    } else {
+      // baseDomain is a subdomain of the zone
+      // Remove zone name from baseDomain to get the subdomain prefix
+      const subdomainPrefix = baseDomain.replace(`.${zoneName}`, '');
+      dnsSubdomain = `${randomSubdomain}.${subdomainPrefix}`;
     }
 
-    logger.info('Creating DNS record', { zoneId, dnsSubdomain, tunnelId: tunnel.id });
+    logger.info('Creating DNS record', { zoneId, zoneName, dnsSubdomain, tunnelId: tunnel.id });
     await cfApi.createDnsRecord(zoneId, dnsSubdomain, tunnel.id);
     logger.info('DNS record created successfully');
 
@@ -260,7 +260,7 @@ router.post('/setup', async (req, res) => {
           const rootDomain = parts.slice(-2).join('.');
           const subdomain = parts.slice(0, -2).join('.') || '@';
 
-          const zoneId = await cfApi.getZoneId(rootDomain);
+          const { zoneId } = await cfApi.getZoneId(rootDomain);
           await cfApi.createDnsRecord(zoneId, subdomain, tunnel.id);
 
           publicUrl = `https://${domain}`;

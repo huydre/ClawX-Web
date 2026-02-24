@@ -97,15 +97,18 @@ export class CloudflareAPI {
   /**
    * Get the zone ID for a domain
    */
-  async getZoneId(domain: string): Promise<string> {
+  async getZoneId(domain: string): Promise<{ zoneId: string; zoneName: string }> {
     try {
       // Try to find zone by checking domain and parent domains
+      // Start from most specific (longest) to least specific (shortest)
       const domainParts = domain.split('.');
 
       // Try from most specific to least specific
       // e.g., for "veoforge.ggff.net", try: veoforge.ggff.net -> ggff.net -> net
       for (let i = 0; i < domainParts.length - 1; i++) {
         const testDomain = domainParts.slice(i).join('.');
+
+        logger.debug('Checking for zone', { testDomain });
 
         const response = await this.makeRequest<Array<{ id: string; name: string }>>(
           'GET',
@@ -114,8 +117,13 @@ export class CloudflareAPI {
 
         if (response && response.length > 0) {
           const zoneId = response[0].id;
-          logger.info('Retrieved zone ID', { requestedDomain: domain, foundZone: testDomain, zoneId });
-          return zoneId;
+          const zoneName = response[0].name;
+          logger.info('Retrieved zone ID', {
+            requestedDomain: domain,
+            foundZone: zoneName,
+            zoneId
+          });
+          return { zoneId, zoneName };
         }
       }
 

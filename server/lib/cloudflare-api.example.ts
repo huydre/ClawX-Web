@@ -71,7 +71,7 @@ async function exampleDnsManagement() {
     // Get account and zone IDs
     const accountId = await api.getAccountId();
     const domain = 'example.com';
-    const zoneId = await api.getZoneId(domain);
+    const { zoneId } = await api.getZoneId(domain);
 
     // Create a tunnel
     const tunnel = await api.createTunnel(accountId, 'my-app-tunnel');
