@@ -26,7 +26,7 @@ const setupSchema = z.object({
 });
 
 const autoSetupSchema = z.object({
-  apiToken: z.string().min(40),
+  apiToken: z.string().optional(),
   baseDomain: z.string().default('veoforge.ggff.net'),
   localUrl: z.string().url().optional(),
 });
@@ -102,10 +102,23 @@ router.post('/quick/stop', async (_req, res) => {
 // POST /api/tunnel/auto-setup - Auto setup with random subdomain
 router.post('/auto-setup', async (req, res) => {
   try {
-    const { apiToken, baseDomain, localUrl } = autoSetupSchema.parse(req.body);
+    const { apiToken: clientToken, baseDomain, localUrl } = autoSetupSchema.parse(req.body);
+
+    // Use token from env if not provided in request
+    const apiToken = clientToken && clientToken.trim().length > 0
+      ? clientToken
+      : process.env.CLOUDFLARE_API_TOKEN;
+
+    if (!apiToken || apiToken.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cloudflare API token not found. Please set CLOUDFLARE_API_TOKEN in .env file.',
+      });
+    }
 
     logger.info('Auto-setting up tunnel with random subdomain', {
       baseDomain,
+      tokenSource: clientToken ? 'client' : 'env',
       tokenLength: apiToken.length,
       tokenPrefix: apiToken.substring(0, 10) + '...'
     });
