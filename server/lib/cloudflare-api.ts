@@ -266,6 +266,12 @@ export class CloudflareAPI {
     try {
       logger.info('Creating DNS record', { zoneId, subdomain, tunnelId });
 
+      // Log token length for debugging (not the actual token)
+      logger.debug('API token info', {
+        tokenLength: this.apiToken.length,
+        tokenPrefix: this.apiToken.substring(0, 8) + '...'
+      });
+
       const response = await this.makeRequest<DnsRecord>(
         'POST',
         `/zones/${zoneId}/dns_records`,
