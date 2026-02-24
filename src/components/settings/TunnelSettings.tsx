@@ -4,25 +4,14 @@
  */
 import { useState, useEffect } from 'react';
 import {
-  Power,
-  Settings2,
   Copy,
-  Check,
   Loader2,
   AlertCircle,
   Info,
-  Trash2,
-  Eye,
-  EyeOff,
   ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useTunnelStore } from '@/stores/tunnel';
 import { toast } from 'sonner';
@@ -40,19 +29,12 @@ export function TunnelSettings() {
     state,
     loading,
     error,
-    startQuickTunnel,
-    stopQuickTunnel,
-    setupNamedTunnel,
     autoSetupTunnel,
-    startNamedTunnel,
     stopNamedTunnel,
     teardownTunnel,
     validateToken,
     fetchStatus,
   } = useTunnelStore();
-
-  const [activeTab, setActiveTab] = useState<'quick' | 'auto' | 'named'>('auto');
-  const [showTeardownConfirm, setShowTeardownConfirm] = useState(false);
 
   // Fetch status on mount and poll when enabled
   useEffect(() => {
@@ -99,25 +81,52 @@ export function TunnelSettings() {
         <Card className={running ? "border-green-500/50 bg-green-500/5" : "border-gray-500/50 bg-gray-500/5"}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              <div className="flex gap-3 items-center">
+              <div className="flex gap-3 items-center flex-1">
                 <div className={`h-3 w-3 rounded-full ${running ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">
                     {running ? 'Tunnel Active' : 'Tunnel Configured'}
                   </p>
                   {publicUrl && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {publicUrl}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-muted-foreground">
+                        {publicUrl}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={handleCopyUrl}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <StatusBadge status={state === 'connected' ? 'connected' : state === 'starting' ? 'starting' : state === 'error' ? 'error' : 'stopped'} />
+              <div className="flex items-center gap-3">
                 {running && uptime !== undefined && (
                   <span className="text-sm text-muted-foreground">
                     {formatUptime(uptime)}
                   </span>
+                )}
+                <StatusBadge status={state === 'connected' ? 'connected' : state === 'starting' ? 'starting' : state === 'error' ? 'error' : 'stopped'} />
+                {running && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await stopNamedTunnel();
+                        await teardownTunnel();
+                      } catch (error) {
+                        console.error('Failed to stop tunnel:', error);
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Stop Tunnel'}
+                  </Button>
                 )}
               </div>
             </div>
@@ -165,93 +174,14 @@ export function TunnelSettings() {
         </Card>
       )}
 
-      {/* Tunnel Mode Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'quick' | 'named')}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="auto">
-            <Settings2 className="h-4 w-4 mr-2" />
-            Auto Setup
-          </TabsTrigger>
-          <TabsTrigger value="quick">
-            <Power className="h-4 w-4 mr-2" />
-            {t('tunnel.quick.title')}
-          </TabsTrigger>
-          <TabsTrigger value="named">
-            <Settings2 className="h-4 w-4 mr-2" />
-            {t('tunnel.named.title')}
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Auto Setup */}
-        <TabsContent value="auto">
-          {configured && mode === 'named' ? (
-            <NamedTunnelControlPanel
-              enabled={enabled}
-              running={running}
-              state={state}
-              publicUrl={publicUrl}
-              uptime={uptime}
-              loading={loading}
-              showTeardownConfirm={showTeardownConfirm}
-              onStart={startNamedTunnel}
-              onStop={stopNamedTunnel}
-              onTeardown={teardownTunnel}
-              onCopyUrl={handleCopyUrl}
-              onShowTeardownConfirm={setShowTeardownConfirm}
-              formatUptime={formatUptime}
-            />
-          ) : (
-            <AutoSetupForm
-              loading={loading}
-              onAutoSetup={autoSetupTunnel}
-              onValidateToken={validateToken}
-            />
-          )}
-        </TabsContent>
-
-        {/* Quick Tunnel */}
-        <TabsContent value="quick">
-          <QuickTunnelCard
-            enabled={enabled && mode === 'quick'}
-            running={running && mode === 'quick'}
-            state={mode === 'quick' ? state : 'stopped'}
-            publicUrl={mode === 'quick' ? publicUrl : undefined}
-            uptime={mode === 'quick' ? uptime : undefined}
-            loading={loading}
-            onStart={startQuickTunnel}
-            onStop={stopQuickTunnel}
-            onCopyUrl={handleCopyUrl}
-            formatUptime={formatUptime}
-          />
-        </TabsContent>
-
-        {/* Named Tunnel */}
-        <TabsContent value="named">
-          {configured ? (
-            <NamedTunnelControlPanel
-              enabled={enabled && mode === 'named'}
-              running={running && mode === 'named'}
-              state={mode === 'named' ? state : 'stopped'}
-              publicUrl={mode === 'named' ? publicUrl : undefined}
-              uptime={mode === 'named' ? uptime : undefined}
-              loading={loading}
-              showTeardownConfirm={showTeardownConfirm}
-              onStart={startNamedTunnel}
-              onStop={stopNamedTunnel}
-              onTeardown={teardownTunnel}
-              onCopyUrl={handleCopyUrl}
-              onShowTeardownConfirm={setShowTeardownConfirm}
-              formatUptime={formatUptime}
-            />
-          ) : (
-            <NamedTunnelSetupForm
-              loading={loading}
-              onSetup={setupNamedTunnel}
-              onValidateToken={validateToken}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Auto Setup Form - Only show when not configured or not running */}
+      {!running && (
+        <AutoSetupForm
+          loading={loading}
+          onAutoSetup={autoSetupTunnel}
+          onValidateToken={validateToken}
+        />
+      )}
     </div>
   );
 }
