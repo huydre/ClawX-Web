@@ -104,7 +104,11 @@ router.post('/auto-setup', async (req, res) => {
   try {
     const { apiToken, baseDomain, localUrl } = autoSetupSchema.parse(req.body);
 
-    logger.info('Auto-setting up tunnel with random subdomain', { baseDomain });
+    logger.info('Auto-setting up tunnel with random subdomain', {
+      baseDomain,
+      tokenLength: apiToken.length,
+      tokenPrefix: apiToken.substring(0, 10) + '...'
+    });
 
     // Generate random subdomain (8 characters)
     const randomSubdomain = Math.random().toString(36).substring(2, 10);
@@ -136,7 +140,9 @@ router.post('/auto-setup', async (req, res) => {
 
     // Create DNS record
     // getZoneId will automatically find the correct zone (e.g., ggff.net for veoforge.ggff.net)
+    logger.info('Getting zone ID for DNS record', { baseDomain });
     const zoneId = await cfApi.getZoneId(baseDomain);
+    logger.info('Zone ID retrieved', { zoneId });
 
     // For subdomain, we need to create the full subdomain path
     // e.g., if baseDomain is "veoforge.ggff.net" and random is "abc12345"
@@ -155,7 +161,9 @@ router.post('/auto-setup', async (req, res) => {
       dnsSubdomain = randomSubdomain;
     }
 
+    logger.info('Creating DNS record', { zoneId, dnsSubdomain, tunnelId: tunnel.id });
     await cfApi.createDnsRecord(zoneId, dnsSubdomain, tunnel.id);
+    logger.info('DNS record created successfully');
 
     const publicUrl = `https://${fullDomain}`;
 
