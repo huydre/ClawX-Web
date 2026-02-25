@@ -1,7 +1,10 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
+import { homedir } from 'os';
+import { join } from 'path';
 import { logger } from '../utils/logger.js';
 import { getSetting } from './storage.js';
+import { loadOrCreateDeviceIdentity, signDevicePayload, publicKeyRawBase64UrlFromPem, buildDeviceAuthPayload, } from '../utils/device-identity.js';
 class GatewayManager extends EventEmitter {
     ws = null;
     state = 'stopped';
@@ -83,7 +86,11 @@ class GatewayManager extends EventEmitter {
             logger.info('Connecting to gateway', { url });
             // Try connecting without Authorization header first
             // OpenClaw Gateway might not require authentication for localhost connections
-            this.ws = new WebSocket(url);
+            this.ws = new WebSocket(url, {
+                headers: {
+                    'Origin': 'http://127.0.0.1:2003'
+                }
+            });
             this.ws.on('open', () => {
                 logger.info('Gateway connected');
                 this.setState('connected');
@@ -104,8 +111,33 @@ class GatewayManager extends EventEmitter {
                     const message = JSON.parse(data.toString());
                     // Handle connect.challenge event - send proper connect request
                     if (message.type === 'event' && message.event === 'connect.challenge') {
-                        logger.info('Received connect challenge', { nonce: message.payload?.nonce });
-                        // Send connect request with proper protocol
+                        const nonce = message.payload?.nonce;
+                        logger.info('Received connect challenge', { nonce });
+                        // Load device identity
+                        const deviceIdentityPath = join(homedir(), '.clawx-device-identity.json');
+                        const deviceIdentity = loadOrCreateDeviceIdentity(deviceIdentityPath);
+                        logger.info('Device identity loaded', { deviceId: deviceIdentity.deviceId });
+                        // Build device auth payload
+                        const clientId = 'webchat';
+                        const clientMode = 'webchat';
+                        const role = 'operator';
+                        const scopes = ['operator.read', 'operator.write', 'operator.admin'];
+                        const signedAtMs = Date.now();
+                        const payload = buildDeviceAuthPayload({
+                            deviceId: deviceIdentity.deviceId,
+                            clientId,
+                            clientMode,
+                            role,
+                            scopes,
+                            signedAtMs,
+                            token: gatewayToken,
+                            nonce,
+                            version: 'v2',
+                        });
+                        // Sign the payload
+                        const signature = signDevicePayload(deviceIdentity.privateKeyPem, payload);
+                        const publicKeyRaw = publicKeyRawBase64UrlFromPem(deviceIdentity.publicKeyPem);
+                        // Send connect request with device auth
                         const connectReq = {
                             type: 'req',
                             id: 'connect-1',
@@ -114,20 +146,26 @@ class GatewayManager extends EventEmitter {
                                 minProtocol: 3,
                                 maxProtocol: 3,
                                 client: {
-                                    id: 'webchat',
+                                    id: clientId,
                                     version: '0.1.15',
                                     platform: 'web',
-                                    mode: 'webchat'
+                                    mode: clientMode
                                 },
-                                role: 'operator',
-                                scopes: ['operator.read', 'operator.write', 'operator.admin'],
+                                role,
+                                scopes,
                                 auth: { token: gatewayToken },
+                                device: {
+                                    id: deviceIdentity.deviceId,
+                                    publicKey: publicKeyRaw,
+                                    signature,
+                                    signedAtMs,
+                                },
                                 locale: 'en-US',
                                 userAgent: 'clawx-web/0.1.15'
                             }
                         };
                         this.ws.send(JSON.stringify(connectReq));
-                        logger.info('Sent connect request');
+                        logger.info('Sent connect request with device auth', { deviceId: deviceIdentity.deviceId });
                         return;
                     }
                     // Handle connect response
@@ -141,6 +179,8 @@ class GatewayManager extends EventEmitter {
                         }
                         return;
                     }
+                    // Debug: Log ALL incoming messages
+                    logger.info('Gateway raw message', { message: JSON.stringify(message) });
                     this.handleMessage(message);
                 }
                 catch (error) {

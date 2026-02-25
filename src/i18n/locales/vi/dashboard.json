@@ -1,0 +1,28 @@
+{
+    "gateway": "Gateway",
+    "channels": "Kênh",
+    "skills": "Kỹ năng",
+    "uptime": "Thời gian hoạt động",
+    "port": "Cổng: {{port}}",
+    "pid": "PID: {{pid}}",
+    "connectedOf": "{{connected}} trong {{total}} đã kết nối",
+    "enabledOf": "{{enabled}} trong {{total}} đã bật",
+    "sinceRestart": "Từ lần khởi động cuối",
+    "gatewayNotRunning": "Gateway chưa chạy",
+    "quickActions": {
+        "title": "Thao tác nhanh",
+        "description": "Các tác vụ và phím tắt phổ biến",
+        "addChannel": "Thêm kênh",
+        "browseSkills": "Duyệt kỹ năng",
+        "openChat": "Mở chat",
+        "settings": "Cài đặt",
+        "devConsole": "Console dev"
+    },
+    "connectedChannels": "Kênh đã kết nối",
+    "noChannels": "Chưa có kênh nào",
+    "addFirst": "Thêm kênh đầu tiên",
+    "activeSkills": "Kỹ năng đang hoạt động",
+    "noSkills": "Chưa có kỹ năng nào",
+    "enableSome": "Bật một số kỹ năng",
+    "more": "+{{count}} thêm"
+}

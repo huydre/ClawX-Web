@@ -1,0 +1,119 @@
+{
+    "steps": {
+        "welcome": {
+            "title": "Chào mừng đến với ClawX",
+            "description": "Trợ lý AI của bạn đã sẵn sàng để được cấu hình"
+        },
+        "runtime": {
+            "title": "Kiểm tra môi trường",
+            "description": "Xác minh yêu cầu hệ thống"
+        },
+        "provider": {
+            "title": "Nhà cung cấp AI",
+            "description": "Cấu hình dịch vụ AI của bạn"
+        },
+        "channel": {
+            "title": "Kết nối một kênh",
+            "description": "Kết nối nền tảng nhắn tin (tùy chọn)"
+        },
+        "installing": {
+            "title": "Đang thiết lập",
+            "description": "Cài đặt các thành phần cần thiết"
+        },
+        "complete": {
+            "title": "Đã xong!",
+            "description": "ClawX đã sẵn sàng để sử dụng"
+        }
+    },
+    "welcome": {
+        "title": "Chào mừng đến với ClawX",
+        "description": "ClawX là giao diện đồ họa cho OpenClaw, giúp dễ dàng sử dụng trợ lý AI trên các nền tảng nhắn tin yêu thích của bạn.",
+        "features": {
+            "noCommand": "Không cần dòng lệnh",
+            "modernUI": "Giao diện hiện đại, đẹp mắt",
+            "bundles": "Gói kỹ năng được cài sẵn",
+            "crossPlatform": "Hỗ trợ đa nền tảng"
+        }
+    },
+    "runtime": {
+        "title": "Kiểm tra môi trường",
+        "viewLogs": "Xem nhật ký",
+        "recheck": "Kiểm tra lại",
+        "nodejs": "Node.js Runtime",
+        "openclaw": "Gói OpenClaw",
+        "gateway": "Gateway Service",
+        "startGateway": "Khởi động Gateway",
+        "status": {
+            "checking": "Đang kiểm tra...",
+            "success": "Node.js khả dụng",
+            "error": "Thất bại",
+            "gatewayRunning": "Đang chạy trên cổng {{port}}",
+            "packageReady": "Gói OpenClaw đã sẵn sàng"
+        },
+        "issue": {
+            "title": "Phát hiện vấn đề môi trường",
+            "desc": "Vui lòng đảm bảo OpenClaw được cài đặt đúng cách. Kiểm tra nhật ký để biết chi tiết."
+        },
+        "logs": {
+            "title": "Nhật ký ứng dụng",
+            "openFolder": "Mở thư mục nhật ký",
+            "close": "Đóng",
+            "noLogs": "(Chưa có nhật ký)"
+        }
+    },
+    "provider": {
+        "label": "Nhà cung cấp mô hình",
+        "selectPlaceholder": "Chọn nhà cung cấp...",
+        "baseUrl": "URL cơ sở",
+        "modelId": "ID mô hình",
+        "modelIdDesc": "Định danh mô hình từ nhà cung cấp của bạn (ví dụ: deepseek-ai/DeepSeek-V3)",
+        "apiKey": "Khóa API",
+        "save": "Lưu",
+        "validateSave": "Xác minh & Lưu",
+        "valid": "Đã cấu hình nhà cung cấp thành công",
+        "invalid": "Khóa API không hợp lệ",
+        "storedLocally": "Khóa API của bạn được lưu cục bộ trên máy."
+    },
+    "channel": {
+        "title": "Kết nối một kênh nhắn tin",
+        "subtitle": "Chọn nền tảng để kết nối trợ lý AI của bạn. Bạn có thể thêm nhiều kênh hơn sau trong Cài đặt.",
+        "configure": "Cấu hình {{name}}",
+        "howTo": "Cách kết nối:",
+        "viewDocs": "Xem tài liệu",
+        "validationError": "Xác minh thất bại",
+        "connected": "{{name}} đã kết nối",
+        "connectedDesc": "Kênh của bạn đã được cấu hình. Nó sẽ kết nối khi Gateway khởi động.",
+        "configureAnother": "Cấu hình kênh khác"
+    },
+    "installing": {
+        "title": "Cài đặt các thành phần cần thiết",
+        "subtitle": "Thiết lập các công cụ cần thiết để vận hành trợ lý AI của bạn",
+        "progress": "Tiến độ",
+        "status": {
+            "pending": "Chờ xử lý",
+            "installing": "Đang cài đặt...",
+            "installed": "Đã cài đặt",
+            "failed": "Thất bại"
+        },
+        "error": "Lỗi cài đặt:",
+        "restart": "Thử khởi động lại ứng dụng",
+        "wait": "Điều này có thể mất một chút thời gian...",
+        "skip": "Bỏ qua bước này"
+    },
+    "complete": {
+        "title": "Thiết lập hoàn tất!",
+        "subtitle": "ClawX đã được cấu hình và sẵn sàng sử dụng. Bây giờ bạn có thể bắt đầu trò chuyện với trợ lý AI.",
+        "provider": "Nhà cung cấp AI",
+        "components": "Thành phần",
+        "gateway": "Gateway",
+        "running": "Đang chạy",
+        "footer": "Bạn có thể tùy chỉnh kỹ năng và kết nối kênh trong Cài đặt"
+    },
+    "nav": {
+        "next": "Tiếp theo",
+        "back": "Quay lại",
+        "skipStep": "Bỏ qua bước này",
+        "skipSetup": "Bỏ qua thiết lập",
+        "getStarted": "Bắt đầu"
+    }
+}

@@ -34,6 +34,18 @@ async function start() {
     // Create WebSocket server
     createWebSocketServer(server);
 
+    // Set gateway token from environment BEFORE starting gateway
+    try {
+      const envGatewayToken = process.env.GATEWAY_TOKEN;
+      if (envGatewayToken && envGatewayToken.trim().length > 0) {
+        const { setSetting } = await import('./services/storage.js');
+        await setSetting('gatewayToken', envGatewayToken.trim());
+        logger.info('Gateway token set from environment');
+      }
+    } catch (error) {
+      logger.warn('Failed to load gateway token from environment', { error });
+    }
+
     // Auto-start gateway connection
     try {
       await gatewayManager.start();
@@ -71,13 +83,21 @@ async function start() {
           // Get account ID
           const accountId = await cfApi.getAccountId();
 
-          // Create tunnel
-          const tunnel = await cfApi.createTunnel(accountId, tunnelName);
+          // Check if tunnel already exists
+          let tunnel = await cfApi.findTunnelByName(accountId, tunnelName);
+
+          if (tunnel) {
+            logger.info('Found existing tunnel, reusing it', { tunnelId: tunnel.id, tunnelName });
+          } else {
+            // Create new tunnel
+            tunnel = await cfApi.createTunnel(accountId, tunnelName);
+            logger.info('Created new tunnel', { tunnelId: tunnel.id, tunnelName });
+          }
 
           // Get tunnel token
           const tunnelToken = await cfApi.getTunnelToken(accountId, tunnel.id);
 
-          // Create DNS record
+          // Create or update DNS record
           const { zoneId, zoneName } = await cfApi.getZoneId(envDomain);
 
           let dnsSubdomain: string;
@@ -88,7 +108,29 @@ async function start() {
             dnsSubdomain = `${subdomain}.${subdomainPrefix}`;
           }
 
-          await cfApi.createDnsRecord(zoneId, dnsSubdomain, tunnel.id);
+          // Check if DNS record already exists
+          const existingDnsRecord = await cfApi.findDnsRecord(zoneId, fullDomain);
+
+          if (existingDnsRecord) {
+            // Check if it points to the correct tunnel
+            const expectedContent = `${tunnel.id}.cfargotunnel.com`;
+            if (existingDnsRecord.content !== expectedContent) {
+              logger.info('Updating existing DNS record to point to tunnel', {
+                recordId: existingDnsRecord.id,
+                oldContent: existingDnsRecord.content,
+                newContent: expectedContent,
+              });
+              await cfApi.updateDnsRecord(zoneId, existingDnsRecord.id, tunnel.id);
+            } else {
+              logger.info('DNS record already exists and points to correct tunnel', {
+                recordId: existingDnsRecord.id,
+                name: fullDomain,
+              });
+            }
+          } else {
+            logger.info('Creating new DNS record', { subdomain: dnsSubdomain, tunnelId: tunnel.id });
+            await cfApi.createDnsRecord(zoneId, dnsSubdomain, tunnel.id);
+          }
 
           const publicUrl = `https://${fullDomain}`;
 

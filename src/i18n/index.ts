@@ -11,15 +11,15 @@ import enSkills from './locales/en/skills.json';
 import enCron from './locales/en/cron.json';
 import enSetup from './locales/en/setup.json';
 
-// ZH
-import zhCommon from './locales/zh/common.json';
-import zhSettings from './locales/zh/settings.json';
-import zhDashboard from './locales/zh/dashboard.json';
-import zhChat from './locales/zh/chat.json';
-import zhChannels from './locales/zh/channels.json';
-import zhSkills from './locales/zh/skills.json';
-import zhCron from './locales/zh/cron.json';
-import zhSetup from './locales/zh/setup.json';
+// VI
+import viCommon from './locales/vi/common.json';
+import viSettings from './locales/vi/settings.json';
+import viDashboard from './locales/vi/dashboard.json';
+import viChat from './locales/vi/chat.json';
+import viChannels from './locales/vi/channels.json';
+import viSkills from './locales/vi/skills.json';
+import viCron from './locales/vi/cron.json';
+import viSetup from './locales/vi/setup.json';
 
 // JA
 import jaCommon from './locales/ja/common.json';
@@ -33,7 +33,7 @@ import jaSetup from './locales/ja/setup.json';
 
 export const SUPPORTED_LANGUAGES = [
     { code: 'en', label: 'English' },
-    { code: 'zh', label: '中文' },
+    { code: 'vi', label: 'Tiếng Việt' },
     { code: 'ja', label: '日本語' },
 ] as const;
 
@@ -50,15 +50,15 @@ const resources = {
         cron: enCron,
         setup: enSetup,
     },
-    zh: {
-        common: zhCommon,
-        settings: zhSettings,
-        dashboard: zhDashboard,
-        chat: zhChat,
-        channels: zhChannels,
-        skills: zhSkills,
-        cron: zhCron,
-        setup: zhSetup,
+    vi: {
+        common: viCommon,
+        settings: viSettings,
+        dashboard: viDashboard,
+        chat: viChat,
+        channels: viChannels,
+        skills: viSkills,
+        cron: viCron,
+        setup: viSetup,
     },
     ja: {
         common: jaCommon,

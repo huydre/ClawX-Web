@@ -1,0 +1,19 @@
+{
+    "gatewayNotRunning": "Gateway chưa chạy",
+    "gatewayRequired": "OpenClaw Gateway cần được chạy để sử dụng chat. Nó sẽ tự động khởi động, hoặc bạn có thể khởi động từ Cài đặt.",
+    "welcome": {
+        "title": "ClawX Chat",
+        "subtitle": "Trợ lý AI của bạn đã sẵn sàng. Bắt đầu cuộc trò chuyện bên dưới.",
+        "askQuestions": "Đặt câu hỏi",
+        "askQuestionsDesc": "Nhận câu trả lời về mọi chủ đề",
+        "creativeTasks": "Nhiệm vụ sáng tạo",
+        "creativeTasksDesc": "Viết, brainstorming, ý tưởng"
+    },
+    "noLogs": "(Chưa có nhật ký)",
+    "toolbar": {
+        "newSession": "Phiên mới",
+        "refresh": "Làm mới chat",
+        "showThinking": "Hiển thị suy nghĩ",
+        "hideThinking": "Ẩn suy nghĩ"
+    }
+}
