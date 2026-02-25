@@ -1,0 +1,188 @@
+{
+    "title": "Cài đặt",
+    "subtitle": "Cấu hình trải nghiệm ClawX của bạn",
+    "appearance": {
+        "title": "Giao diện",
+        "description": "Tùy chỉnh giao diện và cảm nhận",
+        "theme": "Chủ đề",
+        "light": "Sáng",
+        "dark": "Tối",
+        "system": "Hệ thống",
+        "language": "Ngôn ngữ"
+    },
+    "aiProviders": {
+        "title": "Nhà cung cấp AI",
+        "description": "Cấu hình nhà cung cấp mô hình AI và khóa API",
+        "add": "Thêm nhà cung cấp",
+        "custom": "Tùy chỉnh",
+        "notRequired": "Không bắt buộc",
+        "empty": {
+            "title": "Chưa có nhà cung cấp nào",
+            "desc": "Thêm nhà cung cấp AI để bắt đầu sử dụng ClawX",
+            "cta": "Thêm nhà cung cấp đầu tiên"
+        },
+        "dialog": {
+            "title": "Thêm nhà cung cấp AI",
+            "desc": "Cấu hình nhà cung cấp mô hình AI mới",
+            "displayName": "Tên hiển thị",
+            "apiKey": "Khóa API",
+            "apiKeyStored": "Khóa API được lưu cục bộ trên máy của bạn.",
+            "baseUrl": "URL cơ sở",
+            "modelId": "ID mô hình",
+            "cancel": "Hủy",
+            "change": "Thay đổi nhà cung cấp",
+            "add": "Thêm nhà cung cấp",
+            "save": "Lưu",
+            "validate": "Xác thực"
+        },
+        "card": {
+            "default": "Mặc định",
+            "configured": "Đã cấu hình",
+            "noKey": "Chưa đặt khóa API",
+            "setDefault": "Đặt làm mặc định",
+            "editKey": "Sửa khóa API",
+            "delete": "Xóa nhà cung cấp"
+        },
+        "toast": {
+            "added": "Đã thêm nhà cung cấp thành công",
+            "failedAdd": "Không thể thêm nhà cung cấp",
+            "deleted": "Đã xóa nhà cung cấp",
+            "failedDelete": "Không thể xóa nhà cung cấp",
+            "defaultUpdated": "Đã cập nhật nhà cung cấp mặc định",
+            "failedDefault": "Không thể đặt mặc định",
+            "updated": "Đã cập nhật nhà cung cấp",
+            "failedUpdate": "Không thể cập nhật nhà cung cấp",
+            "invalidKey": "Khóa API không hợp lệ",
+            "modelRequired": "ID mô hình là bắt buộc"
+        }
+    },
+    "gateway": {
+        "title": "Gateway",
+        "description": "Cài đặt OpenClaw Gateway",
+        "status": "Trạng thái",
+        "port": "Cổng",
+        "logs": "Nhật ký",
+        "appLogs": "Nhật ký ứng dụng",
+        "openFolder": "Mở thư mục",
+        "autoStart": "Tự động khởi động Gateway",
+        "autoStartDesc": "Khởi động Gateway khi ClawX khởi động"
+    },
+    "updates": {
+        "title": "Cập nhật",
+        "description": "Giữ ClawX luôn mới nhất",
+        "autoCheck": "Tự động kiểm tra cập nhật",
+        "autoCheckDesc": "Kiểm tra cập nhật khi khởi động",
+        "autoDownload": "Tự động tải xuống cập nhật",
+        "autoDownloadDesc": "Tải xuống cập nhật trong nền",
+        "status": {
+            "checking": "Đang kiểm tra cập nhật...",
+            "downloading": "Đang tải xuống cập nhật...",
+            "available": "Có cập nhật mới: v{{version}}",
+            "downloaded": "Sẵn sàng cài đặt: v{{version}}",
+            "failed": "Kiểm tra cập nhật thất bại",
+            "latest": "Bạn đang dùng phiên bản mới nhất",
+            "check": "Kiểm tra cập nhật để nhận tính năng mới"
+        },
+        "action": {
+            "checking": "Đang kiểm tra...",
+            "downloading": "Đang tải xuống...",
+            "download": "Tải xuống cập nhật",
+            "install": "Cài đặt & Khởi động lại",
+            "retry": "Thử lại",
+            "check": "Kiểm tra cập nhật"
+        },
+        "currentVersion": "Phiên bản hiện tại",
+        "whatsNew": "Có gì mới:",
+        "errorDetails": "Chi tiết lỗi:",
+        "help": "Cập nhật được tải xuống trong nền và cài đặt khi bạn khởi động lại ứng dụng."
+    },
+    "advanced": {
+        "title": "Nâng cao",
+        "description": "Tùy chọn cho ngườí dùng chuyên nghiệp",
+        "devMode": "Chế độ nhà phát triển",
+        "devModeDesc": "Hiển thị công cụ và phím tắt dành cho nhà phát triển"
+    },
+    "developer": {
+        "title": "Nhà phát triển",
+        "description": "Tùy chọn nâng cao cho nhà phát triển",
+        "console": "OpenClaw Console",
+        "consoleDesc": "Truy cập giao diện quản lý OpenClaw gốc",
+        "openConsole": "Mở Developer Console",
+        "consoleNote": "Mở Control UI với gateway token được nhúng",
+        "gatewayToken": "Gateway Token",
+        "gatewayTokenDesc": "Dán cái này vào cài đặt Control UI nếu được yêu cầu",
+        "tokenUnavailable": "Token không khả dụng",
+        "tokenCopied": "Đã sao chép Gateway token",
+        "cli": "OpenClaw CLI",
+        "cliDesc": "Sao chép lệnh để chạy OpenClaw mà không cần sửa PATH.",
+        "cliPowershell": "Lệnh PowerShell.",
+        "cmdUnavailable": "Lệnh không khả dụng",
+        "cmdCopied": "Đã sao chép lệnh CLI",
+        "installCmd": "Cài đặt lệnh \"openclaw\"",
+        "installCmdDesc": "Cài đặt ~/.local/bin/openclaw (không cần admin)",
+        "installTitle": "Cài đặt lệnh OpenClaw",
+        "installMessage": "Cài đặt lệnh \"openclaw\"?",
+        "installDetail": "Thao tác này sẽ tạo ~/.local/bin/openclaw. Đảm bảo ~/.local/bin nằm trong PATH của bạn nếu muốn chạy nó toàn cục."
+    },
+    "about": {
+        "title": "Về chúng tôi",
+        "appName": "ClawX",
+        "tagline": "Trợ lý AI đồ họa",
+        "basedOn": "Dựa trên OpenClaw",
+        "version": "Phiên bản {{version}}",
+        "docs": "Website",
+        "github": "GitHub"
+    },
+    "tunnel": {
+        "title": "Cloudflare Tunnel",
+        "description": "Kết nối instance ClawX cục bộ của bạn với internet một cách an toàn",
+        "info": {
+            "title": "Cloudflare Tunnel là gì?",
+            "description": "Cloudflare Tunnel tạo kết nối an toàn giữa instance ClawX cục bộ của bạn và internet mà không cần mở cổng. Hoàn hảo cho truy cập từ xa và tích hợp webhook.",
+            "learnMore": "Tìm hiểu thêm về Cloudflare Tunnel"
+        },
+        "error": "Lỗi Tunnel",
+        "publicUrl": "URL công khai",
+        "copyUrl": "Sao chép URL",
+        "uptime": "Thờí gian hoạt động",
+        "urlCopied": "Đã sao chép URL vào clipboard",
+        "copyFailed": "Không thể sao chép URL",
+        "quick": {
+            "title": "Quick Tunnel",
+            "description": "Khởi động tunnel tạm thờí với URL ngẫu nhiên (không cần cấu hình)",
+            "enable": "Bật Quick Tunnel",
+            "enableDesc": "Khởi động tunnel tạm thờí ngay lập tức"
+        },
+        "named": {
+            "title": "Named Tunnel",
+            "description": "Cấu hình tunnel liên tục với domain của bạn",
+            "setup": "Thiết lập Named Tunnel",
+            "setupDesc": "Cấu hình tunnel liên tục với domain tùy chỉnh",
+            "configured": "Tunnel đã được cấu hình và sẵn sàng",
+            "enable": "Bật Named Tunnel",
+            "enableDesc": "Khởi động tunnel đã cấu hình",
+            "apiToken": "Cloudflare API Token",
+            "apiTokenPlaceholder": "Nhập Cloudflare API token",
+            "apiTokenHelp": "Tạo token tại dash.cloudflare.com với quyền Cloudflare Tunnel",
+            "tunnelName": "Tên Tunnel",
+            "tunnelNamePlaceholder": "my-clawx-tunnel",
+            "tunnelNameHelp": "Tên duy nhất cho tunnel của bạn",
+            "domain": "Domain tùy chỉnh (Tùy chọn)",
+            "domainPlaceholder": "clawx.example.com",
+            "domainHelp": "Sử dụng domain tùy chỉnh từ tài khoản Cloudflare",
+            "validate": "Xác thực",
+            "tokenRequired": "API token là bắt buộc",
+            "tokenValid": "API token hợp lệ",
+            "tokenInvalid": "API token không hợp lệ",
+            "fillRequired": "Vui lòng điền tất cả các trường bắt buộc",
+            "setting": "Đang thiết lập...",
+            "setupButton": "Thiết lập Tunnel",
+            "dangerZone": "Khu vực nguy hiểm",
+            "dangerZoneDesc": "Xóa cấu hình tunnel vĩnh viễn",
+            "teardown": "Xóa cấu hình Tunnel",
+            "confirmTeardown": "Bạn có chắc không?",
+            "confirmTeardownDesc": "Thao tác này sẽ xóa vĩnh viễn cấu hình tunnel. Bạn sẽ cần thiết lập lại để sử dụng.",
+            "confirmButton": "Vâng, xóa cấu hình"
+        }
+    }
+}

@@ -1,0 +1,70 @@
+{
+    "title": "Kỹ năng",
+    "subtitle": "Duyệt và quản lý khả năng AI",
+    "refresh": "Làm mới",
+    "openFolder": "Mở thư mục Kỹ năng",
+    "gatewayWarning": "Gateway chưa chạy. Không thể tải kỹ năng mà không có Gateway đang hoạt động.",
+    "tabs": {
+        "installed": "Đã cài đặt",
+        "marketplace": "Chợ"
+    },
+    "filter": {
+        "all": "Tất cả ({{count}})",
+        "builtIn": "Tích hợp sẵn ({{count}})",
+        "marketplace": "Chợ ({{count}})"
+    },
+    "search": "Tìm kỹ năng...",
+    "searchMarketplace": "Tìm trong chợ...",
+    "searchButton": "Tìm",
+    "noSkills": "Không tìm thấy kỹ năng nào",
+    "noSkillsSearch": "Thử từ khóa tìm kiếm khác",
+    "noSkillsAvailable": "Không có kỹ năng nào",
+    "detail": {
+        "info": "Thông tin",
+        "ấu hìnhconfig": "C",
+        "description": "Mô tả",
+        "version": "Phiên bản",
+        "author": "Tác giả",
+        "source": "Nguồn",
+        "coreSystem": "Hệ thống cốt lõi",
+        "bundled": "Đã đóng gói",
+        "userInstalled": "Người dùng cài đặt",
+        "enabled": "Đã bật",
+        "disabled": "Đã tắt",
+        "apiKey": "Khóa API",
+        "apiKeyPlaceholder": "Nhập API Key (tùy chọn)",
+        "apiKeyDesc": "Khóa API chính cho kỹ năng này. Để trống nếu không cần hoặc đã được cấu hình ở nơi khác.",
+        "envVars": "Biến môi trường",
+        "addVariable": "Thêm biến",
+        "noEnvVars": "Chưa cấu hình biến môi trường nào.",
+        "keyPlaceholder": "KEY (ví dụ: BASE_URL)",
+        "valuePlaceholder": "VALUE",
+        "envNote": "Lưu ý: Các hàng có key trống sẽ tự động bị xóa khi lưu.",
+        "saving": "Đang lưu...",
+        "saveConfig": "Lưu cấu hình",
+        "configSaved": "Đã lưu cấu hình",
+        "openManual": "Mở hướng dẫn",
+        "configurable": "Có thể cấu hình"
+    },
+    "toast": {
+        "enabled": "Đã bật kỹ năng",
+        "disabled": "Đã tắt kỹ năng",
+        "installed": "Đã cài đặt và bật kỹ năng",
+        "uninstalled": "Đã gỡ cài đặt kỹ năng thành công",
+        "openedEditor": "Đã mở trong editor",
+        "failedEditor": "Không thể mở editor",
+        "failedSave": "Không thể lưu cấu hình",
+        "failedOpenFolder": "Không thể mở thư mục kỹ năng",
+        "failedInstall": "Không thể cài đặt",
+        "failedUninstall": "Không thể gỡ cài đặt",
+        "failedFolderNotFound": "Thư mục kỹ năng chưa tồn tại. Cài đặt kỹ năng trước."
+    },
+    "marketplace": {
+        "title": "Chợ",
+        "securityNote": "Nhấp vào thẻ kỹ năng để xem tài liệu và thông tin bảo mật trên ClawHub trước khi cài đặt.",
+        "searching": "Đang tìm kiếm ClawHub...",
+        "noResults": "Không tìm thấy kỹ năng nào phù hợp với tìm kiếm của bạn.",
+        "emptyPrompt": "Tìm kiếm kỹ năng mới để mở rộng khả năng của bạn.",
+        "searchError": "Tìm kiếm ClawHub thất bại. Kiểm tra kết nối hoặc cài đặt của bạn."
+    }
+}

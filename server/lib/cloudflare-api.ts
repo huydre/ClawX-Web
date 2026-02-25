@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
 // Types
@@ -192,6 +193,44 @@ export class CloudflareAPI {
   }
 
   /**
+   * List all tunnels for an account
+   */
+  async listTunnels(accountId: string): Promise<TunnelInfo[]> {
+    try {
+      const response = await this.makeRequest<TunnelInfo[]>(
+        'GET',
+        `/accounts/${accountId}/cfd_tunnel`
+      );
+
+      return response || [];
+    } catch (error) {
+      logger.error('Failed to list tunnels', {
+        accountId,
+        error: (error as Error).message,
+      });
+      throw new Error(`Failed to list tunnels: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Find tunnel by name
+   */
+  async findTunnelByName(accountId: string, name: string): Promise<TunnelInfo | null> {
+    try {
+      const tunnels = await this.listTunnels(accountId);
+      const tunnel = tunnels.find(t => t.name === name);
+      return tunnel || null;
+    } catch (error) {
+      logger.error('Failed to find tunnel by name', {
+        accountId,
+        name,
+        error: (error as Error).message,
+      });
+      return null;
+    }
+  }
+
+  /**
    * Get tunnel token for cloudflared daemon
    */
   async getTunnelToken(accountId: string, tunnelId: string): Promise<string> {
@@ -235,27 +274,6 @@ export class CloudflareAPI {
         error: (error as Error).message,
       });
       throw new Error(`Failed to delete tunnel: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * List all tunnels for an account
-   */
-  async listTunnels(accountId: string): Promise<TunnelInfo[]> {
-    try {
-      const response = await this.makeRequest<TunnelInfo[]>(
-        'GET',
-        `/accounts/${accountId}/cfd_tunnel`
-      );
-
-      logger.info('Listed tunnels', { accountId, count: response.length });
-      return response;
-    } catch (error) {
-      logger.error('Failed to list tunnels', {
-        accountId,
-        error: (error as Error).message,
-      });
-      throw new Error(`Failed to list tunnels: ${(error as Error).message}`);
     }
   }
 
@@ -329,6 +347,63 @@ export class CloudflareAPI {
         error: (error as Error).message,
       });
       throw new Error(`Failed to delete DNS record: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Find DNS record by name
+   */
+  async findDnsRecord(zoneId: string, name: string): Promise<DnsRecord | null> {
+    try {
+      const response = await this.makeRequest<DnsRecord[]>(
+        'GET',
+        `/zones/${zoneId}/dns_records?name=${encodeURIComponent(name)}`
+      );
+
+      if (response && response.length > 0) {
+        return response[0];
+      }
+
+      return null;
+    } catch (error) {
+      logger.error('Failed to find DNS record', {
+        zoneId,
+        name,
+        error: (error as Error).message,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Update DNS record to point to a different tunnel
+   */
+  async updateDnsRecord(
+    zoneId: string,
+    recordId: string,
+    tunnelId: string
+  ): Promise<DnsRecord> {
+    try {
+      logger.info('Updating DNS record', { zoneId, recordId, tunnelId });
+
+      const response = await this.makeRequest<DnsRecord>(
+        'PATCH',
+        `/zones/${zoneId}/dns_records/${recordId}`,
+        {
+          content: `${tunnelId}.cfargotunnel.com`,
+        }
+      );
+
+      logger.info('DNS record updated successfully', { recordId });
+      return response;
+    } catch (error) {
+      logger.error('Failed to update DNS record', {
+        zoneId,
+        recordId,
+        tunnelId,
+        error: (error as Error).message,
+      });
+      throw new Error(`Failed to update DNS record: ${(error as Error).message}`);
     }
   }
 
@@ -484,9 +559,8 @@ export class CloudflareAPI {
    * Generate a random tunnel secret (base64 encoded 32 bytes)
    */
   private generateTunnelSecret(): string {
-    const bytes = new Uint8Array(32);
-    crypto.getRandomValues(bytes);
-    return Buffer.from(bytes).toString('base64');
+    const bytes = crypto.randomBytes(32);
+    return bytes.toString('base64');
   }
 
   /**

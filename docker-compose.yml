@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  clawx:
+    build: .
+    container_name: clawx-web
+    restart: unless-stopped
+    ports:
+      - "2003:2003"
+    environment:
+      - NODE_ENV=production
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_TUNNEL_DOMAIN=${CLOUDFLARE_TUNNEL_DOMAIN}
+      - CLOUDFLARE_TUNNEL_SUBDOMAIN=${CLOUDFLARE_TUNNEL_SUBDOMAIN}
+      - GATEWAY_TOKEN=${GATEWAY_TOKEN}
+    volumes:
+      - clawx-data:/app/data
+    networks:
+      - clawx-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:2003/status', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  clawx-data:
+    driver: local
+
+networks:
+  clawx-network:
+    driver: bridge
