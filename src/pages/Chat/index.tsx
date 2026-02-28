@@ -4,8 +4,8 @@
  * via gateway:rpc IPC. Session selector, thinking toggle, and refresh
  * are in the toolbar; messages render with markdown + streaming.
  */
-import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Bot, MessageSquare, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertCircle, Bot, ChevronDown, MessageSquare, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useChatStore, type RawMessage } from '@/stores/chat';
 import { useGatewayStore } from '@/stores/gateway';
@@ -34,7 +34,22 @@ export function Chat() {
   const clearError = useChatStore((s) => s.clearError);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
   const [streamingTimestamp, setStreamingTimestamp] = useState<number>(0);
+
+  // Track whether user is near the bottom of the scroll container
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const threshold = 120; // px from bottom
+    setIsNearBottom(el.scrollHeight - el.scrollTop - el.clientHeight < threshold);
+  }, []);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+    setIsNearBottom(true);
+  }, []);
 
   // Load data when gateway is running
   useEffect(() => {
@@ -50,10 +65,19 @@ export function Chat() {
     };
   }, [isGatewayRunning, loadHistory, loadSessions]);
 
-  // Auto-scroll on new messages or streaming
+  // Smart auto-scroll: only scroll if user is near bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingMessage, sending]);
+    if (isNearBottom) {
+      scrollToBottom('smooth');
+    }
+  }, [messages, streamingMessage, sending]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Always scroll to bottom when a new message is sent
+  useEffect(() => {
+    if (sending) {
+      scrollToBottom('instant');
+    }
+  }, [sending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update timestamp when sending starts
   useEffect(() => {
@@ -101,7 +125,11 @@ export function Chat() {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="relative flex-1 overflow-y-auto px-4 py-4"
+      >
         <div className="max-w-4xl mx-auto space-y-4">
           {loading ? (
             <div className="flex h-full items-center justify-center py-20">
@@ -150,6 +178,17 @@ export function Chat() {
           {/* Scroll anchor */}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Scroll-to-bottom floating button */}
+        {!isNearBottom && (
+          <button
+            onClick={() => scrollToBottom('smooth')}
+            className="absolute bottom-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border bg-background shadow-md hover:bg-accent transition-colors"
+            aria-label="Scroll to bottom"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Error bar */}

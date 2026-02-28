@@ -8,25 +8,9 @@ import { useState, useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
 import logoSvg from '@/assets/logo.svg';
 import { platform } from '@/lib/platform';
-import { api } from '@/lib/api';
+import { useProviderStore } from '@/stores/providers';
 
 const isMac = window.electron?.platform === 'darwin';
-
-function useCurrentModel() {
-  const [modelId, setModelId] = useState<string | null>(null);
-  const [provider, setProvider] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.getCurrentModel()
-      .then((data) => {
-        setModelId(data.modelId);
-        setProvider(data.provider);
-      })
-      .catch(() => {});
-  }, []);
-
-  return { modelId, provider };
-}
 
 export function TitleBar() {
   // Web mode: simple header without window controls
@@ -43,7 +27,14 @@ export function TitleBar() {
 }
 
 function WebTitleBar() {
-  const { modelId, provider } = useCurrentModel();
+  const modelId = useProviderStore((s) => s.currentModel.modelId);
+  const provider = useProviderStore((s) => s.currentModel.provider);
+  const refreshCurrentModel = useProviderStore((s) => s.refreshCurrentModel);
+
+  // Fetch on mount
+  useEffect(() => {
+    refreshCurrentModel();
+  }, [refreshCurrentModel]);
 
   return (
     <div className="flex h-10 shrink-0 items-center justify-between border-b bg-background px-3">

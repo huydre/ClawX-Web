@@ -26,12 +26,14 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { toast } from 'sonner';
 import { platform } from '@/lib/platform';
+import { api } from '@/lib/api';
 import {
   CHANNEL_META,
   getPrimaryChannels,
@@ -552,6 +554,7 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
   };
 
   const handleShowLogs = async () => {
+    if (!platform.isElectron) return;
     try {
       const logs = await window.electron.ipcRenderer.invoke('log:readFile', 100) as string;
       setLogContent(logs);
@@ -563,6 +566,7 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
   };
 
   const handleOpenLogDir = async () => {
+    if (!platform.isElectron) return;
     try {
       const logDir = await window.electron.ipcRenderer.invoke('log:getDir') as string;
       if (logDir) {
@@ -619,9 +623,11 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">{t('runtime.title')}</h2>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={handleShowLogs}>
-            {t('runtime.viewLogs')}
-          </Button>
+          {platform.isElectron && (
+            <Button variant="ghost" size="sm" onClick={handleShowLogs}>
+              {t('runtime.viewLogs')}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={runChecks}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('runtime.recheck')}
@@ -733,8 +739,15 @@ function ProviderContent({
     let cancelled = false;
     (async () => {
       try {
-        const list = await window.electron.ipcRenderer.invoke('provider:list') as Array<{ id: string; type: string; hasKey: boolean }>;
-        const defaultId = await window.electron.ipcRenderer.invoke('provider:getDefault') as string | null;
+        let list: Array<{ id: string; type: string; hasKey: boolean }>;
+        let defaultId: string | null;
+        if (platform.isElectron) {
+          list = await window.electron.ipcRenderer.invoke('provider:list') as Array<{ id: string; type: string; hasKey: boolean }>;
+          defaultId = await window.electron.ipcRenderer.invoke('provider:getDefault') as string | null;
+        } else {
+          list = await api.getProviders();
+          defaultId = (await api.getDefaultProvider()).id ?? null;
+        }
         const setupProviderTypes = new Set<string>(providers.map((p) => p.id));
         const setupCandidates = list.filter((p) => setupProviderTypes.has(p.type));
         const preferred =
@@ -747,10 +760,11 @@ function ProviderContent({
           const typeInfo = providers.find((p) => p.id === preferred.type);
           const requiresKey = typeInfo?.requiresApiKey ?? false;
           onConfiguredChange(!requiresKey || preferred.hasKey);
-          const storedKey = await window.electron.ipcRenderer.invoke('provider:getApiKey', preferred.id) as string | null;
-          if (storedKey) {
-            onApiKeyChange(storedKey);
+          if (platform.isElectron) {
+            const storedKey = await window.electron.ipcRenderer.invoke('provider:getApiKey', preferred.id) as string | null;
+            if (storedKey) onApiKeyChange(storedKey);
           }
+          // In web mode, API keys are not exposed for security — user must re-enter
         } else if (!cancelled) {
           onConfiguredChange(false);
         }
@@ -769,8 +783,15 @@ function ProviderContent({
     (async () => {
       if (!selectedProvider) return;
       try {
-        const list = await window.electron.ipcRenderer.invoke('provider:list') as Array<{ id: string; type: string; hasKey: boolean }>;
-        const defaultId = await window.electron.ipcRenderer.invoke('provider:getDefault') as string | null;
+        let list: Array<{ id: string; type: string; hasKey: boolean }>;
+        let defaultId: string | null;
+        if (platform.isElectron) {
+          list = await window.electron.ipcRenderer.invoke('provider:list') as Array<{ id: string; type: string; hasKey: boolean }>;
+          defaultId = await window.electron.ipcRenderer.invoke('provider:getDefault') as string | null;
+        } else {
+          list = await api.getProviders();
+          defaultId = (await api.getDefaultProvider()).id ?? null;
+        }
         const sameType = list.filter((p) => p.type === selectedProvider);
         const preferredInstance =
           (defaultId && sameType.find((p) => p.id === defaultId))
@@ -779,16 +800,17 @@ function ProviderContent({
         const providerIdForLoad = preferredInstance?.id || selectedProvider;
         setSelectedProviderConfigId(providerIdForLoad);
 
-        const savedProvider = await window.electron.ipcRenderer.invoke(
-          'provider:get',
-          providerIdForLoad
-        ) as { baseUrl?: string; model?: string } | null;
-        const storedKey = await window.electron.ipcRenderer.invoke('provider:getApiKey', providerIdForLoad) as string | null;
-        if (!cancelled) {
-          if (storedKey) {
-            onApiKeyChange(storedKey);
-          }
+        let savedProvider: { baseUrl?: string; model?: string } | null = null;
+        if (platform.isElectron) {
+          savedProvider = await window.electron.ipcRenderer.invoke('provider:get', providerIdForLoad) as { baseUrl?: string; model?: string } | null;
+          const storedKey = await window.electron.ipcRenderer.invoke('provider:getApiKey', providerIdForLoad) as string | null;
+          if (!cancelled && storedKey) onApiKeyChange(storedKey);
+        } else {
+          try { savedProvider = await api.getProvider(providerIdForLoad); } catch { /* not found */ }
+          // In web mode, API keys are not exposed for security — user must re-enter
+        }
 
+        if (!cancelled) {
           const info = providers.find((p) => p.id === selectedProvider);
           setBaseUrl(savedProvider?.baseUrl || info?.defaultBaseUrl || '');
           setModelId(savedProvider?.model || info?.defaultModelId || '');
@@ -840,8 +862,8 @@ function ProviderContent({
     setKeyValid(null);
 
     try {
-      // Validate key if the provider requires one and a key was entered
-      if (requiresKey && apiKey) {
+      // Validate key if the provider requires one and a key was entered (Electron only)
+      if (platform.isElectron && requiresKey && apiKey) {
         const result = await window.electron.ipcRenderer.invoke(
           'provider:validateKey',
           selectedProviderConfigId || selectedProvider,
@@ -872,33 +894,30 @@ function ProviderContent({
             : `custom-${crypto.randomUUID()}`)
           : selectedProvider;
 
+      const providerConfig = {
+        id: providerIdForSave,
+        name: selectedProvider === 'custom' ? t('settings:aiProviders.custom') : (selectedProviderData?.name || selectedProvider),
+        type: selectedProvider,
+        baseUrl: baseUrl.trim() || undefined,
+        model: effectiveModelId,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
       // Save provider config + API key, then set as default
-      const saveResult = await window.electron.ipcRenderer.invoke(
-        'provider:save',
-        {
-          id: providerIdForSave,
-          name: selectedProvider === 'custom' ? t('settings:aiProviders.custom') : (selectedProviderData?.name || selectedProvider),
-          type: selectedProvider,
-          baseUrl: baseUrl.trim() || undefined,
-          model: effectiveModelId,
-          enabled: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        apiKey || undefined
-      ) as { success: boolean; error?: string };
-
-      if (!saveResult.success) {
-        throw new Error(saveResult.error || 'Failed to save provider config');
-      }
-
-      const defaultResult = await window.electron.ipcRenderer.invoke(
-        'provider:setDefault',
-        providerIdForSave
-      ) as { success: boolean; error?: string };
-
-      if (!defaultResult.success) {
-        throw new Error(defaultResult.error || 'Failed to set default provider');
+      let saveResult: { success: boolean; error?: string };
+      let defaultResult: { success: boolean; error?: string };
+      if (platform.isElectron) {
+        saveResult = await window.electron.ipcRenderer.invoke('provider:save', providerConfig, apiKey || undefined) as { success: boolean; error?: string };
+        if (!saveResult.success) throw new Error(saveResult.error || 'Failed to save provider config');
+        defaultResult = await window.electron.ipcRenderer.invoke('provider:setDefault', providerIdForSave) as { success: boolean; error?: string };
+        if (!defaultResult.success) throw new Error(defaultResult.error || 'Failed to set default provider');
+      } else {
+        saveResult = await api.saveProvider(providerConfig, apiKey || undefined);
+        if (!saveResult.success) throw new Error(saveResult.error || 'Failed to save provider config');
+        defaultResult = await api.setDefaultProvider(providerIdForSave);
+        if (!defaultResult.success) throw new Error(defaultResult.error || 'Failed to set default provider');
       }
 
       setSelectedProviderConfigId(providerIdForSave);
@@ -1131,9 +1150,14 @@ function SetupChannelContent() {
   const primaryChannels = getPrimaryChannels();
 
   useEffect(() => {
+    if (!selectedChannel) return;
+    if (!platform.isElectron) {
+      // Web mode: channel config is handled from the Channels page
+      setConfigValues({});
+      return;
+    }
     let cancelled = false;
     (async () => {
-      if (!selectedChannel) return;
       try {
         const result = await window.electron.ipcRenderer.invoke(
           'channel:getFormValues',
@@ -1168,6 +1192,14 @@ function SetupChannelContent() {
     setValidationError(null);
 
     try {
+      if (!platform.isElectron) {
+        // Web mode: channel config is not available in setup — direct user to Channels page
+        toast.info('Channel configuration is available in the Channels page after setup.');
+        setSaved(true);
+        setSaving(false);
+        return;
+      }
+
       // Validate credentials first
       const validation = await window.electron.ipcRenderer.invoke(
         'channel:validateCredentials',
@@ -1241,7 +1273,7 @@ function SetupChannelContent() {
                 onClick={() => setSelectedChannel(type)}
                 className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-all text-left"
               >
-                <span className="text-3xl">{channelMeta.icon}</span>
+                <ChannelIcon type={type} className="h-8 w-8" />
                 <p className="font-medium mt-2">{channelMeta.name}</p>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                   {t(channelMeta.description)}
@@ -1266,7 +1298,7 @@ function SetupChannelContent() {
         </button>
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <span>{meta?.icon}</span> {t('channel.configure', { name: meta?.name })}
+            {meta && <ChannelIcon type={meta.id} className="h-5 w-5" />} {t('channel.configure', { name: meta?.name })}
           </h2>
           <p className="text-muted-foreground text-sm mt-1">{t(meta?.description || '')}</p>
         </div>
@@ -1410,6 +1442,16 @@ function InstallingContent({ skills, onComplete, onSkip }: InstallingContentProp
         // Step 1: Initialize all skills to 'installing' state for UI
         setSkillStates(prev => prev.map(s => ({ ...s, status: 'installing' })));
         setOverallProgress(10);
+
+        if (!platform.isElectron) {
+          // Web mode: server is already running, no local install needed
+          await new Promise((resolve) => setTimeout(resolve, 600));
+          setSkillStates(prev => prev.map(s => ({ ...s, status: 'completed' })));
+          setOverallProgress(100);
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          onComplete(skills.map(s => s.id));
+          return;
+        }
 
         // Step 2: Call the backend to install uv and setup Python
         const result = await window.electron.ipcRenderer.invoke('uv:install-all') as {

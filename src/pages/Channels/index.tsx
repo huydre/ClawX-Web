@@ -32,8 +32,8 @@ import { useChannelsStore } from '@/stores/channels';
 import { useGatewayStore } from '@/stores/gateway';
 import { StatusBadge, type Status } from '@/components/common/StatusBadge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import {
-  CHANNEL_ICONS,
   CHANNEL_NAMES,
   CHANNEL_META,
   getPrimaryChannels,
@@ -250,7 +250,7 @@ export function Channels() {
                     setShowAddDialog(true);
                   }}
                 >
-                  <span className="text-3xl">{meta.icon}</span>
+                  <ChannelIcon type={type} className="h-8 w-8" />
                   <p className="font-medium mt-2">{meta.name}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                     {meta.description}
@@ -306,9 +306,7 @@ function ChannelCard({ channel, onDelete }: ChannelCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">
-              {CHANNEL_ICONS[channel.type]}
-            </span>
+            <ChannelIcon type={channel.type} className="h-6 w-6 shrink-0" />
             <div>
               <CardTitle className="text-base">{channel.name}</CardTitle>
               <CardDescription className="text-xs">
@@ -680,7 +678,7 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
                     onClick={() => onSelectType(type)}
                     className="p-4 rounded-lg border hover:bg-accent transition-colors text-left"
                   >
-                    <span className="text-3xl">{channelMeta.icon}</span>
+                    <ChannelIcon type={type} className="h-8 w-8" />
                     <p className="font-medium mt-2">{channelMeta.name}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {channelMeta.connectionType === 'qr' ? t('dialog.qrCode') : t('dialog.token')}

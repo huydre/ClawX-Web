@@ -4,26 +4,22 @@
  * Rendered in the Header when on the Chat page.
  */
 import { RefreshCw, Brain, ChevronDown, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/stores/chat';
+import { useProviderStore } from '@/stores/providers';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
-import { api } from '@/lib/api';
 
 function ModelBadge() {
-  const [modelId, setModelId] = useState<string | null>(null);
-  const [provider, setProvider] = useState<string | null>(null);
+  const modelId = useProviderStore((s) => s.currentModel.modelId);
+  const provider = useProviderStore((s) => s.currentModel.provider);
+  const refreshCurrentModel = useProviderStore((s) => s.refreshCurrentModel);
 
   useEffect(() => {
-    api.getCurrentModel()
-      .then((data) => {
-        setModelId(data.modelId);
-        setProvider(data.provider);
-      })
-      .catch(() => {});
-  }, []);
+    refreshCurrentModel();
+  }, [refreshCurrentModel]);
 
   if (!modelId) return null;
 

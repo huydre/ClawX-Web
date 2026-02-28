@@ -1192,9 +1192,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
             },
           ) as { success: boolean; result?: { runId?: string }; error?: string };
         } else {
-          // Web mode: Media attachments not yet supported
-          set({ error: 'File attachments are not yet supported in web mode', sending: false });
-          return;
+          // Web mode: Use REST API send-with-media endpoint
+          const { api } = await import('@/lib/api');
+          result = await api.sendChatWithMedia({
+            sessionKey: currentSessionKey,
+            message: trimmed || 'Process the attached file(s).',
+            deliver: false,
+            idempotencyKey,
+            media: attachments.map((a) => ({
+              filePath: a.stagedPath,
+              mimeType: a.mimeType,
+              fileName: a.fileName,
+            })),
+          });
         }
       } else {
         // No media — use standard lightweight RPC
@@ -1426,9 +1436,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ...clearPendingImages,
             };
           });
-          // After the final response, quietly reload history to surface all intermediate
-          // tool-use turns (thinking + tool blocks) from the Gateway's authoritative record.
-          if (hasOutput && !toolOnly) {
+          // After the final response, quietly reload history ONLY when tools were used,
+          // to surface intermediate tool-use turns from the Gateway's authoritative record.
+          // Skip reload for simple text responses to avoid unnecessary network calls.
+          if (hasOutput && !toolOnly && get().streamingTools.length > 0) {
             void get().loadHistory(true);
           }
         } else {

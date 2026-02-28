@@ -243,13 +243,15 @@ export function setOpenClawDefaultModel(
   }
 
   const meta = REGISTRY[provider];
-  const model = modelOverride || meta?.defaultModel;
-  if (!model) {
+  const rawModel = modelOverride || meta?.defaultModel;
+  if (!rawModel) {
     logger.warn('No default model for provider', { provider });
     return;
   }
 
-  const modelId = model.startsWith(`${provider}/`) ? model.slice(provider.length + 1) : model;
+  // Ensure model string is in "provider/modelId" format for openclaw config
+  const model = rawModel.startsWith(`${provider}/`) ? rawModel : `${provider}/${rawModel}`;
+  const modelId = model.slice(provider.length + 1);
 
   // Set agents.defaults.model
   const agents = (config.agents || {}) as Record<string, unknown>;

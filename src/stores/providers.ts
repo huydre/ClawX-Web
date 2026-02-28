@@ -9,14 +9,22 @@ import { api } from '@/lib/api';
 // Re-export types for consumers that imported from here
 export type { ProviderConfig, ProviderWithKeyInfo } from '@/lib/providers';
 
+interface CurrentModelInfo {
+  model: string | null;
+  provider: string | null;
+  modelId: string | null;
+}
+
 interface ProviderState {
   providers: ProviderWithKeyInfo[];
   defaultProviderId: string | null;
   loading: boolean;
   error: string | null;
-  
+  currentModel: CurrentModelInfo;
+
   // Actions
   fetchProviders: () => Promise<void>;
+  refreshCurrentModel: () => Promise<void>;
   addProvider: (config: Omit<ProviderConfig, 'createdAt' | 'updatedAt'>, apiKey?: string) => Promise<void>;
   updateProvider: (providerId: string, updates: Partial<ProviderConfig>, apiKey?: string) => Promise<void>;
   deleteProvider: (providerId: string) => Promise<void>;
@@ -41,7 +49,17 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   defaultProviderId: null,
   loading: false,
   error: null,
-  
+  currentModel: { model: null, provider: null, modelId: null },
+
+  refreshCurrentModel: async () => {
+    try {
+      const data = await api.getCurrentModel();
+      set({ currentModel: { model: data.model, provider: data.provider, modelId: data.modelId } });
+    } catch {
+      // silently ignore
+    }
+  },
+
   fetchProviders: async () => {
     set({ loading: true, error: null });
 
@@ -103,8 +121,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
       await api.saveProvider(updatedConfig, apiKey);
 
-      // Refresh the list
+      // Refresh the list and model display
       await get().fetchProviders();
+      await get().refreshCurrentModel();
     } catch (error) {
       console.error('Failed to update provider:', error);
       throw error;
@@ -188,8 +207,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   setDefaultProvider: async (providerId) => {
     try {
       await api.setDefaultProvider(providerId);
-
       set({ defaultProviderId: providerId });
+      // Refresh model display in header
+      await get().refreshCurrentModel();
     } catch (error) {
       console.error('Failed to set default provider:', error);
       throw error;

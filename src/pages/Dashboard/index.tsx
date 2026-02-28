@@ -23,6 +23,7 @@ import { useSkillsStore } from '@/stores/skills';
 import { useSettingsStore } from '@/stores/settings';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useTranslation } from 'react-i18next';
+import { ChannelIcon } from '@/components/ui/ChannelIcon';
 
 export function Dashboard() {
   const { t } = useTranslation('dashboard');
@@ -219,11 +220,7 @@ export function Dashboard() {
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-lg">
-                        {channel.type === 'whatsapp' && '📱'}
-                        {channel.type === 'telegram' && '✈️'}
-                        {channel.type === 'discord' && '🎮'}
-                      </span>
+                      <ChannelIcon type={channel.type} className="h-5 w-5 shrink-0" />
                       <div>
                         <p className="font-medium">{channel.name}</p>
                         <p className="text-xs text-muted-foreground capitalize">

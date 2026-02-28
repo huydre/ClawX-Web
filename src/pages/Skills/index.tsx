@@ -27,6 +27,10 @@ import {
   Key,
   ChevronDown,
   FolderOpen,
+  Wrench,
+  Layers,
+  Zap,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +49,237 @@ import { platform } from '@/lib/platform';
 
 
 
+
+// ── Recommended Skills Bundle ─────────────────────────────────────
+
+interface RecommendedSkillDef {
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  downloads?: number;
+  difficulty: string;
+  note?: string;
+}
+
+const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
+  {
+    slug: 'summarize',
+    name: 'Summarize',
+    description: 'Tóm tắt tài liệu dài, email, báo cáo thành nội dung ngắn gọn',
+    icon: '🔍',
+    downloads: 10956,
+    difficulty: '⭐',
+  },
+  {
+    slug: 'weather',
+    name: 'Weather',
+    description: 'Thời tiết theo vị trí, tích hợp vào briefing buổi sáng',
+    icon: '🌤️',
+    downloads: 9002,
+    difficulty: '⭐',
+  },
+  {
+    slug: 'humanize-ai-text',
+    name: 'Humanize AI Text',
+    description: 'Chuyển văn bản AI thành giọng văn tự nhiên — viết mô tả sản phẩm, content marketing',
+    icon: '✍️',
+    downloads: 8771,
+    difficulty: '⭐',
+  },
+  {
+    slug: 'news-aggregator',
+    name: 'News Aggregator',
+    description: 'Tổng hợp tin tức từ nhiều nguồn, hỗ trợ RSS feed tùy chỉnh',
+    icon: '📰',
+    difficulty: '⭐',
+  },
+  {
+    slug: 'proactive-agent',
+    name: 'Proactive Agent',
+    description: 'Trợ lý chủ động — tự gửi briefing sáng, nhắc nhở lịch, cập nhật đơn hàng',
+    icon: '🤖',
+    downloads: 7010,
+    difficulty: '⭐⭐',
+  },
+  {
+    slug: 'tavily-web-search',
+    name: 'Tavily Web Search',
+    description: 'Tìm kiếm web nâng cao với kết quả có cấu trúc, phù hợp để AI xử lý',
+    icon: '🔎',
+    downloads: 8142,
+    difficulty: '⭐⭐',
+    note: 'Cần Tavily API key miễn phí',
+  },
+  {
+    slug: 'obsidian',
+    name: 'Obsidian',
+    description: 'Tạo, tìm kiếm, tổ chức ghi chú bằng ngôn ngữ tự nhiên — "bộ não thứ hai"',
+    icon: '📝',
+    downloads: 5791,
+    difficulty: '⭐⭐',
+  },
+  {
+    slug: 'gog',
+    name: 'Gog — Google Workspace',
+    description: 'Gmail, Calendar, Drive, Contacts, Sheets, Docs — bộ tích hợp chính thức của @steipete',
+    icon: '🔄',
+    downloads: 14313,
+    difficulty: '⭐⭐',
+  },
+  {
+    slug: 'agent-browser',
+    name: 'Agent Browser',
+    description: 'Tự động duyệt web, điền form, thu thập dữ liệu từ website',
+    icon: '🌐',
+    downloads: 11836,
+    difficulty: '⭐⭐',
+    note: 'Khuyến nghị 4GB+ RAM',
+  },
+  {
+    slug: 'homeassistant',
+    name: 'Home Assistant',
+    description: 'Điều khiển đèn, điều hòa, khóa cửa qua Home Assistant API',
+    icon: '🏠',
+    difficulty: '⭐⭐⭐',
+    note: 'Cần Home Assistant server riêng',
+  },
+];
+
+interface BundleCardProps {
+  installedSlugs: Set<string>;
+  installingMap: Record<string, boolean>;
+  onInstall: (slug: string) => Promise<void>;
+  onInstallAll: () => Promise<void>;
+}
+
+function BundleCard({ installedSlugs, installingMap, onInstall, onInstallAll }: BundleCardProps) {
+  const { t } = useTranslation('skills');
+  const uninstalledCount = RECOMMENDED_SKILLS.filter(s => !installedSlugs.has(s.slug)).length;
+  const isAnyInstalling = Object.values(installingMap).some(Boolean);
+
+  return (
+    <div className="space-y-4">
+      {/* Header card */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
+        <CardContent className="py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Layers className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Gói TV Box — Chủ Shop Online</h3>
+                <p className="text-sm text-muted-foreground">
+                  {RECOMMENDED_SKILLS.length - uninstalledCount}/{RECOMMENDED_SKILLS.length} skill đã cài •{' '}
+                  Chọn lọc theo quy tắc 100/3
+                </p>
+              </div>
+            </div>
+            {uninstalledCount > 0 && (
+              <Button
+                onClick={onInstallAll}
+                disabled={isAnyInstalling}
+                className="gap-2 shrink-0"
+                size="sm"
+              >
+                {isAnyInstalling ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Đang cài...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4" />
+                    Cài tất cả ({uninstalledCount})
+                  </>
+                )}
+              </Button>
+            )}
+            {uninstalledCount === 0 && (
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="text-sm font-medium">Đã cài đầy đủ</span>
+              </div>
+            )}
+          </div>
+
+          {/* Security notice */}
+          <div className="mt-4 flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2.5">
+            <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-yellow-500" />
+            <span>Áp dụng quy tắc 100/3: chỉ skill có 100+ downloads và tồn tại 3+ tháng. Luôn kiểm tra VirusTotal trước khi cài.</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Skill rows */}
+      <div className="space-y-2">
+        {RECOMMENDED_SKILLS.map((skill) => {
+          const isInstalled = installedSlugs.has(skill.slug);
+          const isInstalling = !!installingMap[skill.slug];
+
+          return (
+            <Card
+              key={skill.slug}
+              className={cn(
+                'transition-colors',
+                isInstalled && 'border-primary/30 bg-primary/5',
+              )}
+            >
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl w-7 text-center shrink-0">{skill.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="font-medium text-sm">{skill.name}</span>
+                      <span className="text-xs text-muted-foreground">{skill.difficulty}</span>
+                      {skill.downloads && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                          <Download className="h-3 w-3" />
+                          {skill.downloads.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{skill.description}</p>
+                    {skill.note && (
+                      <p className="text-[10px] text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-0.5">
+                        <Info className="h-2.5 w-2.5 shrink-0" />
+                        {skill.note}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0">
+                    {isInstalled ? (
+                      <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="text-xs hidden sm:inline">Đã cài</span>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => onInstall(skill.slug)}
+                        disabled={isInstalling}
+                      >
+                        {isInstalling ? (
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Download className="h-3 w-3" />
+                        )}
+                        <span className="hidden sm:inline">{isInstalling ? 'Đang cài...' : 'Cài'}</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // Skill detail dialog component
 interface SkillDetailDialogProps {
@@ -164,7 +399,10 @@ function SkillDetailDialog({ skill, onClose, onToggle }: SkillDetailDialogProps)
       <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <CardHeader className="flex flex-row items-start justify-between pb-2">
           <div className="flex items-center gap-4">
-            <span className="text-4xl">{skill.icon || '🔧'}</span>
+            {skill.icon
+              ? <span className="text-4xl">{skill.icon}</span>
+              : <Wrench className="h-9 w-9 text-muted-foreground" />
+            }
             <div>
               <CardTitle className="flex items-center gap-2">
                 {skill.name}
@@ -395,8 +633,8 @@ function MarketplaceSkillCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-              📦
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Package className="h-5 w-5 text-primary" />
             </div>
             <div>
               <CardTitle className="text-base group-hover:text-primary transition-colors">{skill.name}</CardTitle>
@@ -619,6 +857,23 @@ export function Skills() {
 
   const hasInstalledSkills = skills.some(s => !s.isBundled);
 
+  // Set of installed skill slugs (for bundle matching)
+  const installedSlugs = new Set(skills.map(s => s.slug).filter(Boolean) as string[]);
+
+  // Install all uninstalled recommended skills sequentially
+  const handleInstallAll = useCallback(async () => {
+    const toInstall = RECOMMENDED_SKILLS.filter(s => !installedSlugs.has(s.slug));
+    for (const skill of toInstall) {
+      try {
+        await installSkill(skill.slug);
+        await enableSkill(skill.slug);
+      } catch (err) {
+        toast.error(`Lỗi khi cài ${skill.name}: ${String(err)}`);
+      }
+    }
+    toast.success(`Đã hoàn tất cài ${toInstall.length} skill!`);
+  }, [installSkill, enableSkill, installedSlugs]);
+
   const handleOpenSkillsFolder = useCallback(async () => {
     try {
       const skillsDir = await window.electron.ipcRenderer.invoke('openclaw:getSkillsDir') as string;
@@ -756,10 +1011,10 @@ export function Skills() {
             <Globe className="h-4 w-4" />
             {t('tabs.marketplace')}
           </TabsTrigger>
-          {/* <TabsTrigger value="bundles" className="gap-2">
-            <Package className="h-4 w-4" />
-            Bundles
-          </TabsTrigger> */}
+          <TabsTrigger value="bundles" className="gap-2">
+            <Layers className="h-4 w-4" />
+            Gói đề xuất
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4 md:space-y-6 mt-4 md:mt-6">
@@ -839,7 +1094,10 @@ export function Skills() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{skill.icon || '🧩'}</span>
+                        {skill.icon
+                          ? <span className="text-2xl">{skill.icon}</span>
+                          : <Puzzle className="h-6 w-6 text-muted-foreground" />
+                        }
                         <div>
                           <CardTitle className="text-base flex items-center gap-2">
                             {skill.name}
@@ -1021,23 +1279,14 @@ export function Skills() {
           </div>
         </TabsContent>
 
-        {/* <TabsContent value="bundles" className="space-y-6 mt-6">
-          <p className="text-muted-foreground">
-            Skill bundles are pre-configured collections of skills for common use cases.
-            Enable a bundle to quickly set up multiple related skills at once.
-          </p>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {skillBundles.map((bundle) => (
-              <BundleCard
-                key={bundle.id}
-                bundle={bundle}
-                skills={skills}
-                onApply={() => handleBundleApply(bundle)}
-              />
-            ))}
-          </div>
-        </TabsContent> */}
+        <TabsContent value="bundles" className="space-y-4 mt-4 md:mt-6">
+          <BundleCard
+            installedSlugs={installedSlugs}
+            installingMap={installing}
+            onInstall={handleInstall}
+            onInstallAll={handleInstallAll}
+          />
+        </TabsContent>
       </Tabs>
 
 
