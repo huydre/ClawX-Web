@@ -535,9 +535,10 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
 
   const typeInfo = PROVIDER_TYPE_INFO.find((t) => t.id === selectedType);
 
-  // Only custom can be added multiple times.
+  // custom and 9router can be added multiple times (multiple instances/configs).
+  const MULTI_INSTANCE_TYPES = new Set(['custom', '9router']);
   const availableTypes = PROVIDER_TYPE_INFO.filter(
-    (t) => t.id === 'custom' || !existingTypes.has(t.id),
+    (t) => MULTI_INSTANCE_TYPES.has(t.id) || !existingTypes.has(t.id),
   );
 
   const handleAdd = async () => {

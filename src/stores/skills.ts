@@ -104,7 +104,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
               name: s.name || s.skillKey,
               description: s.description || '',
               enabled: !s.disabled,
-              icon: s.emoji || '📦',
+              icon: s.emoji || '',
               version: s.version || '1.0.0',
               author: s.author,
               config: {
@@ -132,7 +132,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
                 name: cs.slug,
                 description: 'Recently installed, initializing...',
                 enabled: false,
-                icon: '⌛',
+                icon: '',
                 version: cs.version || 'unknown',
                 author: undefined,
                 config: directConfig,
@@ -157,7 +157,7 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
             // disabled=true means off, disabled=false/undefined means on
             // but core/always skills are always enabled
             enabled: s.always ? true : s.disabled === true ? false : s.enabled === true ? true : !s.disabled,
-            icon: s.emoji || '📦',
+            icon: s.emoji || '',
             version: s.version || '1.0.0',
             author: s.author,
             config: s.config || {},

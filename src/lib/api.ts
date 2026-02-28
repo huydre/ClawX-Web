@@ -169,6 +169,51 @@ class ApiClient {
     return response.json();
   }
 
+  async stageFile(file: File) {
+    const token = this.getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE}/files/stage`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Stage failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json() as Promise<{
+      id: string;
+      fileName: string;
+      mimeType: string;
+      fileSize: number;
+      stagedPath: string;
+      preview: string | null;
+    }>;
+  }
+
+  async sendChatWithMedia(params: {
+    sessionKey: string;
+    message: string;
+    deliver?: boolean;
+    idempotencyKey: string;
+    media: Array<{ filePath: string; mimeType: string; fileName: string }>;
+  }) {
+    return this.request<{ success: boolean; result?: { runId?: string }; error?: string }>(
+      '/gateway/send-with-media',
+      {
+        method: 'POST',
+        body: JSON.stringify(params),
+      },
+    );
+  }
+
   async deleteFile(filename: string) {
     return this.request<{ success: boolean }>(`/files/${filename}`, {
       method: 'DELETE',

@@ -82,6 +82,11 @@ router.post('/', async (req, res) => {
         if (apiKey) {
             saveProviderKeyToOpenClaw(config.type, apiKey);
         }
+        // If this provider is the current default, sync model to openclaw.json
+        const defaultId = await getDefaultProvider();
+        if (defaultId === config.id && config.model) {
+            setOpenClawDefaultModel(config.type, config.model, config.baseUrl ? { baseUrl: config.baseUrl } : undefined);
+        }
         logger.info('Provider saved', { id: config.id });
         res.json({ success: true });
     }

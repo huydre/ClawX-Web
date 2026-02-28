@@ -10,6 +10,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Square, X, Paperclip, FileText, Film, Music, FileArchive, File, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { platform } from '@/lib/platform';
+import { api } from '@/lib/api';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -79,6 +81,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isComposingRef = useRef(false);
 
   // Auto-resize textarea
@@ -92,6 +95,12 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
   // ── File staging via native dialog ─────────────────────────────
 
   const pickFiles = useCallback(async () => {
+    if (!platform.isElectron) {
+      // Web mode: trigger browser file input
+      fileInputRef.current?.click();
+      return;
+    }
+
     try {
       const result = await window.electron.ipcRenderer.invoke('dialog:open', {
         properties: ['openFile', 'multiSelections'],
@@ -117,7 +126,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
       }
 
       // Stage all files via IPC
-      console.log('[pickFiles] Staging files:', result.filePaths);
       const staged = await window.electron.ipcRenderer.invoke(
         'file:stage',
         result.filePaths,
@@ -129,7 +137,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
         stagedPath: string;
         preview: string | null;
       }>;
-      console.log('[pickFiles] Stage result:', staged?.map(s => ({ id: s?.id, fileName: s?.fileName, mimeType: s?.mimeType, fileSize: s?.fileSize, stagedPath: s?.stagedPath, hasPreview: !!s?.preview })));
 
       // Update each placeholder with real data
       setAttachments(prev => {
@@ -144,7 +151,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
                 : a,
             );
           } else {
-            console.warn(`[pickFiles] No staged data for tempId=${tempId} at index ${i}`);
             updated = updated.map(a =>
               a.id === tempId
                 ? { ...a, status: 'error' as const, error: 'Staging failed' }
@@ -156,8 +162,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
       });
     } catch (err) {
       console.error('[pickFiles] Failed to stage files:', err);
-      // Mark any stuck 'staging' attachments as 'error' so the user can remove them
-      // and the send button isn't permanently blocked
       setAttachments(prev => prev.map(a =>
         a.status === 'staging'
           ? { ...a, status: 'error' as const, error: String(err) }
@@ -182,22 +186,20 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
       }]);
 
       try {
-        console.log(`[stageBuffer] Reading file: ${file.name} (${file.type}, ${file.size} bytes)`);
-        const base64 = await readFileAsBase64(file);
-        console.log(`[stageBuffer] Base64 length: ${base64?.length ?? 'null'}`);
-        const staged = await window.electron.ipcRenderer.invoke('file:stageBuffer', {
-          base64,
-          fileName: file.name,
-          mimeType: file.type || 'application/octet-stream',
-        }) as {
-          id: string;
-          fileName: string;
-          mimeType: string;
-          fileSize: number;
-          stagedPath: string;
-          preview: string | null;
-        };
-        console.log(`[stageBuffer] Staged: id=${staged?.id}, path=${staged?.stagedPath}, size=${staged?.fileSize}`);
+        let staged: { id: string; fileName: string; mimeType: string; fileSize: number; stagedPath: string; preview: string | null };
+
+        if (platform.isElectron) {
+          const base64 = await readFileAsBase64(file);
+          staged = await window.electron.ipcRenderer.invoke('file:stageBuffer', {
+            base64,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+          });
+        } else {
+          // Web mode: upload to server staging endpoint
+          staged = await api.stageFile(file);
+        }
+
         setAttachments(prev => prev.map(a =>
           a.id === tempId ? { ...staged, status: 'ready' as const } : a,
         ));
@@ -211,6 +213,17 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
       }
     }
   }, []);
+
+  // ── Hidden file input handler (web mode) ──────────────────────
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      stageBufferFiles(Array.from(files));
+    }
+    // Reset input so the same file can be selected again
+    e.target.value = '';
+  }, [stageBufferFiles]);
 
   // ── Attachment management ──────────────────────────────────────
 
@@ -318,6 +331,14 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Hidden file input for web mode */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
       <div className="max-w-4xl mx-auto">
         {/* Attachment Previews */}
         {attachments.length > 0 && (

@@ -4,7 +4,7 @@
  * with markdown, thinking sections, images, and tool cards.
  */
 import { useState, useCallback, useEffect, memo } from 'react';
-import { User, Sparkles, Copy, Check, ChevronDown, ChevronRight, Wrench, FileText, Film, Music, FileArchive, File, X, FolderOpen, ZoomIn } from 'lucide-react';
+import { User, Sparkles, Copy, Check, ChevronDown, ChevronRight, Wrench, FileText, Film, Music, FileArchive, File, X, FolderOpen, ZoomIn, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createPortal } from 'react-dom';
@@ -265,25 +265,47 @@ function ToolStatusBar({
     summary?: string;
   }>;
 }) {
+  const hasRunning = tools.some((t) => t.status === 'running');
+
   return (
-    <div className="w-full rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-      <div className="space-y-1">
+    <div className={cn(
+      'w-full rounded-lg border px-3 py-2.5 text-xs transition-colors',
+      hasRunning
+        ? 'border-primary/20 bg-primary/5'
+        : 'border-border/50 bg-muted/20 text-muted-foreground',
+    )}>
+      <div className="space-y-1.5">
         {tools.map((tool) => {
           const duration = formatDuration(tool.durationMs);
-          const statusLabel = tool.status === 'running' ? 'running' : (tool.status === 'error' ? 'error' : 'done');
+          const isRunning = tool.status === 'running';
+          const isError = tool.status === 'error';
           return (
-            <div key={tool.toolCallId || tool.id || tool.name} className="flex flex-wrap items-center gap-2">
-              <span className={cn(
-                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]',
-                tool.status === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-foreground/5 text-muted-foreground',
-              )}>
-                <span className="font-mono">{tool.name}</span>
-                <span className="opacity-70">{statusLabel}</span>
+            <div key={tool.toolCallId || tool.id || tool.name} className="flex items-start gap-2">
+              {/* Status icon */}
+              <span className="mt-0.5 shrink-0">
+                {isRunning ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                ) : isError ? (
+                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                )}
               </span>
-              {duration && <span className="text-[11px] opacity-70">{duration}</span>}
-              {tool.summary && (
-                <span className="truncate text-[11px]">{tool.summary}</span>
-              )}
+
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className={cn(
+                  'font-mono font-medium',
+                  isRunning ? 'text-primary' : isError ? 'text-destructive' : 'text-foreground/70',
+                )}>
+                  {tool.name}
+                </span>
+                {duration && (
+                  <span className="text-[11px] text-muted-foreground">{duration}</span>
+                )}
+                {tool.summary && (
+                  <span className="w-full truncate text-[11px] text-muted-foreground">{tool.summary}</span>
+                )}
+              </div>
             </div>
           );
         })}

@@ -161,6 +161,48 @@ router.get('/current-model', (_req, res) => {
   }
 });
 
+// POST /api/gateway/send-with-media
+// Web mode equivalent of Electron's chat:sendWithMedia IPC handler.
+// Accepts staged file paths (server-local) and sends them to the gateway.
+router.post('/send-with-media', async (req, res) => {
+  try {
+    const { sessionKey, message, deliver, idempotencyKey, media } = req.body as {
+      sessionKey: string;
+      message: string;
+      deliver?: boolean;
+      idempotencyKey: string;
+      media: Array<{ filePath: string; mimeType: string; fileName: string }>;
+    };
+
+    if (!sessionKey || !message || !Array.isArray(media)) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    // Wait for gateway to be connected
+    const maxWait = 10000;
+    const start = Date.now();
+    while (!gatewayManager.isConnected() && Date.now() - start < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (!gatewayManager.isConnected()) {
+      return res.status(503).json({ success: false, error: 'Gateway not connected' });
+    }
+
+    const result = await gatewayManager.rpc('chat.sendWithMedia', {
+      sessionKey,
+      message,
+      deliver: deliver ?? false,
+      idempotencyKey,
+      media,
+    }, 60000);
+
+    res.json({ success: true, result });
+  } catch (error) {
+    logger.error('Send with media error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
 // POST /api/gateway/rpc
 const rpcSchema = z.object({
   method: z.string(),
