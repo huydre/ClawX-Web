@@ -94,6 +94,15 @@ const REGISTRY: Record<string, ProviderBackendMeta> = {
       apiKeyEnv: 'SILICONFLOW_API_KEY',
     },
   },
+  '9router': {
+    envVar: 'NINEROUTER_API_KEY',
+    defaultModel: '9router/cc/claude-opus-4-6',
+    providerConfig: {
+      baseUrl: 'http://localhost:20128/v1',
+      api: 'openai-completions',
+      apiKeyEnv: 'NINEROUTER_API_KEY',
+    },
+  },
   // Additional providers with env var mappings but no default model
   groq: { envVar: 'GROQ_API_KEY' },
   deepgram: { envVar: 'DEEPGRAM_API_KEY' },

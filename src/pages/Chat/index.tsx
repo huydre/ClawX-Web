@@ -94,7 +94,7 @@ export function Chat() {
   const shouldRenderStreaming = sending && (hasStreamText || hasStreamThinking || hasStreamTools || hasStreamImages || hasStreamToolStatus);
 
   return (
-    <div className="flex flex-col -m-6" style={{ height: 'calc(100vh - 2.5rem)' }}>
+    <div className="flex flex-col -m-3 md:-m-6" style={{ height: 'calc(100vh - var(--titlebar-h) - var(--bnav-h))' }}>
       {/* Toolbar */}
       <div className="flex shrink-0 items-center justify-end px-4 py-2">
         <ChatToolbar />
@@ -186,16 +186,16 @@ export function Chat() {
 function WelcomeScreen() {
   const { t } = useTranslation('chat');
   return (
-    <div className="flex flex-col items-center justify-center text-center py-20">
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-6">
-        <Bot className="h-8 w-8 text-white" />
+    <div className="flex flex-col items-center justify-center text-center py-8 sm:py-16">
+      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-4 sm:mb-6">
+        <Bot className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
       </div>
-      <h2 className="text-2xl font-bold mb-2">{t('welcome.title')}</h2>
-      <p className="text-muted-foreground mb-8 max-w-md">
+      <h2 className="text-xl sm:text-2xl font-bold mb-2">{t('welcome.title')}</h2>
+      <p className="text-muted-foreground mb-6 sm:mb-8 max-w-md text-sm sm:text-base px-4">
         {t('welcome.subtitle')}
       </p>
 
-      <div className="grid grid-cols-2 gap-4 max-w-lg w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-lg w-full px-4 sm:px-0">
         {[
           { icon: MessageSquare, title: t('welcome.askQuestions'), desc: t('welcome.askQuestionsDesc') },
           { icon: Sparkles, title: t('welcome.creativeTasks'), desc: t('welcome.creativeTasksDesc') },

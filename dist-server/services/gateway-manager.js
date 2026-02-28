@@ -158,7 +158,8 @@ class GatewayManager extends EventEmitter {
                                     id: deviceIdentity.deviceId,
                                     publicKey: publicKeyRaw,
                                     signature,
-                                    signedAtMs,
+                                    signedAt: signedAtMs,
+                                    nonce,
                                 },
                                 locale: 'en-US',
                                 userAgent: 'clawx-web/0.1.15'

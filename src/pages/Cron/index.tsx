@@ -399,29 +399,29 @@ function CronJobCard({ job, onToggle, onEdit, onDelete, onTrigger }: CronJobCard
       job.enabled && 'border-primary/30'
     )}>
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <div className={cn(
-              'rounded-full p-2',
+              'rounded-full p-2 shrink-0',
               job.enabled
                 ? 'bg-green-100 dark:bg-green-900/30'
                 : 'bg-muted'
             )}>
               <Clock className={cn(
-                'h-5 w-5',
+                'h-4 w-4 md:h-5 md:w-5',
                 job.enabled ? 'text-green-600' : 'text-muted-foreground'
               )} />
             </div>
-            <div>
-              <CardTitle className="text-lg">{job.name}</CardTitle>
-              <CardDescription className="flex items-center gap-2">
-                <Timer className="h-3 w-3" />
-                {parseCronSchedule(job.schedule)}
+            <div className="min-w-0">
+              <CardTitle className="text-base md:text-lg truncate">{job.name}</CardTitle>
+              <CardDescription className="flex items-center gap-1.5 text-xs md:text-sm">
+                <Timer className="h-3 w-3 shrink-0" />
+                <span className="truncate">{parseCronSchedule(job.schedule)}</span>
               </CardDescription>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={job.enabled ? 'success' : 'secondary'}>
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <Badge variant={job.enabled ? 'success' : 'secondary'} className="hidden sm:inline-flex text-xs">
               {job.enabled ? t('stats.active') : t('stats.paused')}
             </Badge>
             <Switch
@@ -441,7 +441,7 @@ function CronJobCard({ job, onToggle, onEdit, onDelete, onTrigger }: CronJobCard
         </div>
 
         {/* Metadata */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs md:text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             {CHANNEL_ICONS[job.target.channelType]}
             {job.target.channelName}
@@ -488,15 +488,15 @@ function CronJobCard({ job, onToggle, onEdit, onDelete, onTrigger }: CronJobCard
             ) : (
               <Play className="h-4 w-4" />
             )}
-            <span className="ml-1">{t('card.runNow')}</span>
+            <span className="ml-1 hidden sm:inline">{t('card.runNow')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={onEdit}>
             <Edit className="h-4 w-4" />
-            <span className="ml-1">Edit</span>
+            <span className="ml-1 hidden sm:inline">Edit</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={handleDelete}>
             <Trash2 className="h-4 w-4 text-destructive" />
-            <span className="ml-1 text-destructive">Delete</span>
+            <span className="ml-1 hidden sm:inline text-destructive">Delete</span>
           </Button>
         </div>
       </CardContent>
@@ -560,20 +560,25 @@ export function Cron() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground hidden sm:block">
             {t('subtitle')}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchJobs} disabled={!isGatewayRunning}>
+        <div className="flex gap-2 shrink-0">
+          {/* Refresh — icon-only on mobile */}
+          <Button variant="outline" size="icon" className="md:hidden" onClick={fetchJobs} disabled={!isGatewayRunning}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" className="hidden md:flex" onClick={fetchJobs} disabled={!isGatewayRunning}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('refresh')}
           </Button>
+          {/* New Task — icon + text on mobile, full label on desktop */}
           <Button
             onClick={() => {
               setEditingJob(undefined);
@@ -581,8 +586,8 @@ export function Cron() {
             }}
             disabled={!isGatewayRunning}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            {t('newTask')}
+            <Plus className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">{t('newTask')}</span>
           </Button>
         </div>
       </div>
@@ -600,55 +605,55 @@ export function Cron() {
       )}
 
       {/* Statistics */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-primary/10 p-3">
-                <Clock className="h-6 w-6 text-primary" />
+          <CardContent className="p-4 md:pt-6">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="rounded-full bg-primary/10 p-2 md:p-3 shrink-0">
+                <Clock className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{jobs.length}</p>
-                <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
+                <p className="text-xl md:text-2xl font-bold">{jobs.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t('stats.total')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/30">
-                <Play className="h-6 w-6 text-green-600" />
+          <CardContent className="p-4 md:pt-6">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="rounded-full bg-green-100 p-2 md:p-3 dark:bg-green-900/30 shrink-0">
+                <Play className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{activeJobs.length}</p>
-                <p className="text-sm text-muted-foreground">{t('stats.active')}</p>
+                <p className="text-xl md:text-2xl font-bold">{activeJobs.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t('stats.active')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-yellow-100 p-3 dark:bg-yellow-900/30">
-                <Pause className="h-6 w-6 text-yellow-600" />
+          <CardContent className="p-4 md:pt-6">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="rounded-full bg-yellow-100 p-2 md:p-3 dark:bg-yellow-900/30 shrink-0">
+                <Pause className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pausedJobs.length}</p>
-                <p className="text-sm text-muted-foreground">{t('stats.paused')}</p>
+                <p className="text-xl md:text-2xl font-bold">{pausedJobs.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t('stats.paused')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-red-100 p-3 dark:bg-red-900/30">
-                <XCircle className="h-6 w-6 text-red-600" />
+          <CardContent className="p-4 md:pt-6">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="rounded-full bg-red-100 p-2 md:p-3 dark:bg-red-900/30 shrink-0">
+                <XCircle className="h-5 w-5 md:h-6 md:w-6 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{failedJobs.length}</p>
-                <p className="text-sm text-muted-foreground">{t('stats.failed')}</p>
+                <p className="text-xl md:text-2xl font-bold">{failedJobs.length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t('stats.failed')}</p>
               </div>
             </div>
           </CardContent>

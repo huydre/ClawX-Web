@@ -144,11 +144,8 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
         }
       } else {
         // Web mode: Use API
-        // 1. Fetch from Gateway (running skills)
+        // Fetch from Gateway (running skills) - this returns ALL skills (bundled + managed + workspace)
         const gatewayResult = await api.gatewayRpc('skills.status', {});
-
-        // 2. Fetch from ClawHub (installed on disk)
-        const clawhubResult = await api.clawhubList();
 
         // Map gateway skills info
         if (gatewayResult.success && gatewayResult.result?.skills) {
@@ -157,7 +154,9 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
             slug: s.slug || s.skillKey,
             name: s.name || s.skillKey,
             description: s.description || '',
-            enabled: !s.disabled,
+            // disabled=true means off, disabled=false/undefined means on
+            // but core/always skills are always enabled
+            enabled: s.always ? true : s.disabled === true ? false : s.enabled === true ? true : !s.disabled,
             icon: s.emoji || '📦',
             version: s.version || '1.0.0',
             author: s.author,
@@ -167,28 +166,6 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
           }));
         } else if (currentSkills.length > 0) {
           combinedSkills = [...currentSkills];
-        }
-
-        // Merge with ClawHub results
-        if (clawhubResult.success && clawhubResult.results) {
-          clawhubResult.results.forEach((cs: any) => {
-            const existing = combinedSkills.find(s => s.id === cs.slug);
-            if (!existing) {
-              combinedSkills.push({
-                id: cs.slug,
-                slug: cs.slug,
-                name: cs.slug,
-                description: 'Recently installed, initializing...',
-                enabled: false,
-                icon: '⌛',
-                version: cs.version || 'unknown',
-                author: undefined,
-                config: {},
-                isCore: false,
-                isBundled: false,
-              });
-            }
-          });
         }
       }
 
@@ -287,11 +264,16 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
     const { updateSkill } = get();
 
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'skills.update',
-        { skillKey: skillId, enabled: true }
-      ) as GatewayRpcResponse<unknown>;
+      let result: GatewayRpcResponse<unknown>;
+      if (platform.isElectron) {
+        result = await window.electron.ipcRenderer.invoke(
+          'gateway:rpc',
+          'skills.update',
+          { skillKey: skillId, enabled: true }
+        ) as GatewayRpcResponse<unknown>;
+      } else {
+        result = await api.gatewayRpc('skills.update', { skillKey: skillId, enabled: true });
+      }
 
       if (result.success) {
         updateSkill(skillId, { enabled: true });
@@ -313,11 +295,16 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
     }
 
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'gateway:rpc',
-        'skills.update',
-        { skillKey: skillId, enabled: false }
-      ) as GatewayRpcResponse<unknown>;
+      let result: GatewayRpcResponse<unknown>;
+      if (platform.isElectron) {
+        result = await window.electron.ipcRenderer.invoke(
+          'gateway:rpc',
+          'skills.update',
+          { skillKey: skillId, enabled: false }
+        ) as GatewayRpcResponse<unknown>;
+      } else {
+        result = await api.gatewayRpc('skills.update', { skillKey: skillId, enabled: false });
+      }
 
       if (result.success) {
         updateSkill(skillId, { enabled: false });

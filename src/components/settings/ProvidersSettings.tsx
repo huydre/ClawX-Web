@@ -14,6 +14,8 @@ import {
   Loader2,
   Star,
   Key,
+  Download,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useProviderStore, type ProviderConfig, type ProviderWithKeyInfo } from '@/stores/providers';
+import { api } from '@/lib/api';
 import {
   PROVIDER_TYPE_INFO,
   type ProviderType,
@@ -48,11 +51,63 @@ export function ProvidersSettings() {
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
+  const [detectedModel, setDetectedModel] = useState<{ provider: string; modelId: string } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [restarting, setRestarting] = useState(false);
 
   // Fetch providers on mount
   useEffect(() => {
     fetchProviders();
   }, [fetchProviders]);
+
+  // Detect current OpenClaw model when providers list is empty
+  useEffect(() => {
+    if (!loading && providers.length === 0) {
+      api.getCurrentModel()
+        .then((data) => {
+          if (data.provider && data.modelId) {
+            setDetectedModel({ provider: data.provider, modelId: data.modelId });
+          }
+        })
+        .catch(() => {});
+    } else {
+      setDetectedModel(null);
+    }
+  }, [loading, providers.length]);
+
+  const handleRestartOpenClaw = async () => {
+    setRestarting(true);
+    try {
+      const result = await api.restartOpenClaw();
+      if (result.success) {
+        toast.success(`OpenClaw đã khởi động lại (${result.method}). Đang kết nối lại...`);
+      } else {
+        toast.error(result.error || 'Khởi động lại thất bại');
+      }
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      setTimeout(() => setRestarting(false), 4000);
+    }
+  };
+
+  const handleImportFromOpenClaw = async () => {
+    setImporting(true);
+    try {
+      const result = await api.importFromOpenClaw();
+      if (result.success) {
+        toast.success(`Đã import: ${result.provider} / ${result.modelId}`);
+        await fetchProviders();
+        setDetectedModel(null);
+      } else {
+        toast.error(result.error || 'Import thất bại');
+      }
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handleAddProvider = async (
     type: ProviderType,
@@ -111,7 +166,17 @@ export function ProvidersSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleRestartOpenClaw}
+          disabled={restarting}
+          title="Khởi động lại OpenClaw để áp dụng thay đổi model"
+        >
+          <RotateCcw className={`h-4 w-4 mr-2 ${restarting ? 'animate-spin' : ''}`} />
+          {restarting ? 'Đang khởi động...' : 'Restart OpenClaw'}
+        </Button>
         <Button size="sm" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           {t('aiProviders.add')}
@@ -130,7 +195,30 @@ export function ProvidersSettings() {
             <p className="text-muted-foreground text-center mb-4">
               {t('aiProviders.empty.desc')}
             </p>
-            <Button onClick={() => setShowAddDialog(true)}>
+
+            {/* Detected OpenClaw model */}
+            {detectedModel && (
+              <div className="w-full max-w-sm mb-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-4 py-3">
+                <p className="text-xs text-muted-foreground mb-1">Phát hiện cấu hình OpenClaw:</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <span className="text-sm font-medium">{detectedModel.provider}</span>
+                    <span className="mx-1 text-muted-foreground">/</span>
+                    <span className="text-sm font-mono text-foreground/80">{detectedModel.modelId}</span>
+                  </div>
+                  <Button size="sm" onClick={handleImportFromOpenClaw} disabled={importing}>
+                    {importing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    Import
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <Button variant={detectedModel ? 'outline' : 'default'} onClick={() => setShowAddDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               {t('aiProviders.empty.cta')}
             </Button>

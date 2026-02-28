@@ -702,25 +702,33 @@ export function Skills() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground hidden sm:block">
             {t('subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={fetchSkills} disabled={!isGatewayRunning}>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="icon" className="md:hidden" onClick={fetchSkills} disabled={!isGatewayRunning}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" className="hidden md:flex" onClick={fetchSkills} disabled={!isGatewayRunning}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('refresh')}
           </Button>
           {hasInstalledSkills && (
-            <Button variant="outline" onClick={handleOpenSkillsFolder}>
-              <FolderOpen className="h-4 w-4 mr-2" />
-              {t('openFolder')}
-            </Button>
+            <>
+              <Button variant="outline" size="icon" className="md:hidden" onClick={handleOpenSkillsFolder}>
+                <FolderOpen className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" className="hidden md:flex" onClick={handleOpenSkillsFolder}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                {t('openFolder')}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -754,10 +762,10 @@ export function Skills() {
           </TabsTrigger> */}
         </TabsList>
 
-        <TabsContent value="all" className="space-y-6 mt-6">
+        <TabsContent value="all" className="space-y-4 md:space-y-6 mt-4 md:mt-6">
           {/* Search and Filter */}
-          <div className="flex gap-4 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('search')}
@@ -767,7 +775,7 @@ export function Skills() {
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant={selectedSource === 'all' ? 'default' : 'outline'}
                 size="sm"
@@ -779,7 +787,7 @@ export function Skills() {
                 variant={selectedSource === 'built-in' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedSource('built-in')}
-                className="gap-2"
+                className="gap-1.5"
               >
                 <Puzzle className="h-3 w-3" />
                 {t('filter.builtIn', { count: sourceStats.builtIn })}
@@ -788,7 +796,7 @@ export function Skills() {
                 variant={selectedSource === 'marketplace' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedSource('marketplace')}
-                className="gap-2"
+                className="gap-1.5"
               >
                 <Globe className="h-3 w-3" />
                 {t('filter.marketplace', { count: sourceStats.marketplace })}

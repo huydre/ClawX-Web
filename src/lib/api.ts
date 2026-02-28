@@ -97,9 +97,32 @@ class ApiClient {
     return this.request<{ id: string }>('/providers/default');
   }
 
+  async importFromOpenClaw() {
+    return this.request<{ success: boolean; provider?: string; modelId?: string; hasKey?: boolean; error?: string }>(
+      '/providers/import-from-openclaw',
+      { method: 'POST' }
+    );
+  }
+
   // Gateway API
   async getGatewayStatus() {
     return this.request<{ state: string; connected: boolean }>('/gateway/status');
+  }
+
+  async restartOpenClaw() {
+    return this.request<{ success: boolean; method?: string; error?: string }>(
+      '/gateway/restart-openclaw',
+      { method: 'POST' }
+    );
+  }
+
+  async getCurrentModel() {
+    return this.request<{
+      model: string | null;
+      provider: string | null;
+      modelId: string | null;
+      source: string;
+    }>('/gateway/current-model');
   }
 
   async startGateway() {

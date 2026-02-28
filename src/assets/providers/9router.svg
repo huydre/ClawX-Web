@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+  <!-- 9 shape -->
+  <path d="M12 2C9.24 2 7 4.24 7 7s2.24 5 5 5c1.03 0 1.98-.31 2.77-.84L13 13.5V22h2v-9.17C16.8 11.62 17 10.34 17 9c0-3.86-2.24-7-5-7zm0 9c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
+  <!-- routing dot indicators -->
+  <circle cx="5" cy="18" r="1.5"/>
+  <circle cx="19" cy="18" r="1.5"/>
+  <path d="M6.5 18h11" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M5 16.5v-2.5M19 16.5v-2.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>
