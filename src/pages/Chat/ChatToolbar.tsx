@@ -4,11 +4,44 @@
  * Rendered in the Header when on the Chat page.
  */
 import { RefreshCw, Brain, ChevronDown, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/stores/chat';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { api } from '@/lib/api';
+
+function ModelBadge() {
+  const [modelId, setModelId] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getCurrentModel()
+      .then((data) => {
+        setModelId(data.modelId);
+        setProvider(data.provider);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!modelId) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground cursor-default select-none">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+          <span className="max-w-[160px] truncate font-medium">{modelId}</span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Provider: {provider}</p>
+        <p>Model: {modelId}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function ChatToolbar() {
   const sessions = useChatStore((s) => s.sessions);
@@ -26,15 +59,20 @@ export function ChatToolbar() {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 sm:gap-2">
+      {/* Current Model Badge — hidden on mobile (shown in TitleBar instead) */}
+      <div className="hidden sm:block">
+        <ModelBadge />
+      </div>
+
       {/* Session Selector */}
       <div className="relative">
         <select
           value={currentSessionKey}
           onChange={handleSessionChange}
           className={cn(
-            'appearance-none rounded-md border border-border bg-background px-3 py-1.5 pr-8',
-            'text-sm text-foreground cursor-pointer',
+            'appearance-none rounded-md border border-border bg-background px-2 py-1.5 pr-7 sm:px-3 sm:pr-8',
+            'text-xs sm:text-sm text-foreground cursor-pointer max-w-[120px] sm:max-w-none',
             'focus:outline-none focus:ring-2 focus:ring-ring',
           )}
         >

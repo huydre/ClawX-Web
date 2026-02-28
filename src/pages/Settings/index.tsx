@@ -218,7 +218,7 @@ export function Settings() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 md:space-y-6 md:p-6 pb-16 md:pb-6">
       <div>
         <h1 className="text-2xl font-bold">{t('title')}</h1>
         <p className="text-muted-foreground">
@@ -235,7 +235,7 @@ export function Settings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>{t('appearance.theme')}</Label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant={theme === 'light' ? 'default' : 'outline'}
                 size="sm"
@@ -264,7 +264,7 @@ export function Settings() {
           </div>
           <div className="space-y-2">
             <Label>{t('appearance.language')}</Label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {SUPPORTED_LANGUAGES.map((lang) => (
                 <Button
                   key={lang.code}
@@ -301,14 +301,14 @@ export function Settings() {
           <CardDescription>{t('gateway.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <Label>{t('gateway.status')}</Label>
               <p className="text-sm text-muted-foreground">
                 {t('gateway.port')}: {gatewayStatus.port}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge
                 variant={
                   gatewayStatus.state === 'running' || gatewayStatus.state === 'connected'

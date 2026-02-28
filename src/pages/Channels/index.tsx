@@ -109,66 +109,69 @@ export function Channels() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground hidden sm:block">
             {t('subtitle')}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchChannels}>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="icon" className="md:hidden" onClick={fetchChannels}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" className="hidden md:flex" onClick={fetchChannels}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('refresh')}
           </Button>
           {platform.isElectron && (
             <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('addChannel')}
+              <Plus className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">{t('addChannel')}</span>
             </Button>
           )}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-primary/10 p-3">
-                <Radio className="h-6 w-6 text-primary" />
+          <CardContent className="p-3 md:pt-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-4 text-center sm:text-left">
+              <div className="rounded-full bg-primary/10 p-2 md:p-3 shrink-0">
+                <Radio className="h-4 w-4 md:h-6 md:w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{channels.length}</p>
-                <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
+                <p className="text-xl md:text-2xl font-bold">{channels.length}</p>
+                <p className="text-[10px] md:text-sm text-muted-foreground">{t('stats.total')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-green-100 p-3 dark:bg-green-900">
-                <Power className="h-6 w-6 text-green-600" />
+          <CardContent className="p-3 md:pt-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-4 text-center sm:text-left">
+              <div className="rounded-full bg-green-100 p-2 md:p-3 dark:bg-green-900 shrink-0">
+                <Power className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{connectedCount}</p>
-                <p className="text-sm text-muted-foreground">{t('stats.connected')}</p>
+                <p className="text-xl md:text-2xl font-bold">{connectedCount}</p>
+                <p className="text-[10px] md:text-sm text-muted-foreground">{t('stats.connected')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-slate-100 p-3 dark:bg-slate-800">
-                <PowerOff className="h-6 w-6 text-slate-600" />
+          <CardContent className="p-3 md:pt-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-4 text-center sm:text-left">
+              <div className="rounded-full bg-slate-100 p-2 md:p-3 dark:bg-slate-800 shrink-0">
+                <PowerOff className="h-4 w-4 md:h-6 md:w-6 text-slate-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{channels.length - connectedCount}</p>
-                <p className="text-sm text-muted-foreground">{t('stats.disconnected')}</p>
+                <p className="text-xl md:text-2xl font-bold">{channels.length - connectedCount}</p>
+                <p className="text-[10px] md:text-sm text-muted-foreground">{t('stats.disconnected')}</p>
               </div>
             </div>
           </CardContent>
@@ -234,14 +237,14 @@ export function Channels() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
             {displayedChannelTypes.map((type) => {
               const meta = CHANNEL_META[type];
               const isConfigured = configuredTypes.includes(type);
               return (
                 <button
                   key={type}
-                  className={`p-4 rounded-lg border hover:bg-accent transition-colors text-left relative ${isConfigured ? 'border-green-500/50 bg-green-500/5' : ''}`}
+                  className={`p-3 md:p-4 rounded-lg border hover:bg-accent transition-colors text-left relative ${isConfigured ? 'border-green-500/50 bg-green-500/5' : ''}`}
                   onClick={() => {
                     setSelectedChannelType(type);
                     setShowAddDialog(true);

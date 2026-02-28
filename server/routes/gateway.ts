@@ -1,7 +1,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
 import { gatewayManager } from '../services/gateway-manager.js';
+
+const execAsync = promisify(exec);
 
 const router = Router();
 
@@ -36,6 +43,121 @@ router.post('/stop', async (_req, res) => {
   } catch (error) {
     logger.error('Stop gateway error:', error);
     res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// POST /api/gateway/restart-openclaw
+// Restart the OpenClaw process (supports pm2, systemctl, or pkill on main process)
+router.post('/restart-openclaw', async (_req, res) => {
+  try {
+    let method = 'unknown';
+
+    // Disconnect gateway manager before killing OpenClaw
+    try {
+      await gatewayManager.stop();
+    } catch { /* ignore */ }
+
+    // 1. Try PM2 (check multiple possible process names)
+    let pm2Success = false;
+    for (const name of ['openclaw', 'openclaw-gateway', 'oclaw']) {
+      try {
+        const { stdout } = await execAsync(`pm2 id ${name} 2>/dev/null`);
+        if (stdout && stdout.trim() !== '[]') {
+          await execAsync(`pm2 restart ${name}`);
+          method = `pm2:${name}`;
+          pm2Success = true;
+          logger.info(`OpenClaw restarted via PM2`, { name });
+          break;
+        }
+      } catch { /* try next */ }
+    }
+
+    if (!pm2Success) {
+      // 2. Try systemctl
+      let systemctlSuccess = false;
+      for (const name of ['openclaw', 'openclaw-gateway']) {
+        try {
+          await execAsync(`systemctl is-active ${name}`);
+          await execAsync(`systemctl restart ${name}`);
+          method = `systemctl:${name}`;
+          systemctlSuccess = true;
+          logger.info(`OpenClaw restarted via systemctl`, { name });
+          break;
+        } catch { /* try next */ }
+      }
+
+      if (!systemctlSuccess) {
+        // 3. Kill main openclaw process (not gateway subprocess)
+        // The main process is typically named 'openclaw' without extra args
+        // Killing it will cause systemd/PM2 to respawn, or openclaw will self-restart
+        try {
+          // Kill main process - sends SIGTERM to allow graceful shutdown + restart
+          await execAsync('pkill -SIGTERM -x openclaw 2>/dev/null || pkill -SIGTERM -f "openclaw --" 2>/dev/null || true');
+          method = 'pkill:main';
+          logger.info('OpenClaw main process killed via SIGTERM (will respawn)');
+        } catch {
+          throw new Error('Could not restart OpenClaw: no supported method found. Try manually: pkill openclaw');
+        }
+      }
+    }
+
+    // Reconnect gateway manager after OpenClaw restarts (give it time to boot)
+    const reconnectDelay = method.startsWith('pkill') ? 5000 : 3000;
+    setTimeout(async () => {
+      try {
+        await gatewayManager.start();
+        logger.info('Gateway manager reconnected after OpenClaw restart');
+      } catch (err) {
+        logger.warn('Gateway reconnect after restart failed, will retry automatically', { err });
+      }
+    }, reconnectDelay);
+
+    res.json({ success: true, method });
+  } catch (error) {
+    logger.error('Restart OpenClaw error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// GET /api/gateway/current-model
+// Reads ~/.openclaw/openclaw.json to detect the currently configured model
+router.get('/current-model', (_req, res) => {
+  try {
+    const configPath = join(homedir(), '.openclaw', 'openclaw.json');
+
+    if (!existsSync(configPath)) {
+      return res.json({ model: null, provider: null, source: 'not_configured' });
+    }
+
+    const config = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+
+    // Read agents.defaults.model
+    const agents = config.agents as Record<string, unknown> | undefined;
+    const defaults = agents?.defaults as Record<string, unknown> | undefined;
+    const modelConfig = defaults?.model as { primary?: string } | string | undefined;
+
+    const modelStr = typeof modelConfig === 'string'
+      ? modelConfig
+      : modelConfig?.primary ?? null;
+
+    // Parse "provider/model" format
+    let provider: string | null = null;
+    let model: string | null = null;
+
+    if (modelStr) {
+      const slashIdx = modelStr.indexOf('/');
+      if (slashIdx !== -1) {
+        provider = modelStr.slice(0, slashIdx);
+        model = modelStr.slice(slashIdx + 1);
+      } else {
+        model = modelStr;
+      }
+    }
+
+    res.json({ model: modelStr, provider, modelId: model, source: 'openclaw_config' });
+  } catch (error) {
+    logger.error('Get current model error:', error);
+    res.status(500).json({ error: String(error) });
   }
 });
 

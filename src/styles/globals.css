@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Layout dimension tokens — used for height calculations */
+:root {
+  --titlebar-h: 2.5rem;  /* 40px */
+  --bnav-h: 0px;         /* 0 on desktop, overridden on mobile */
+}
+@media (max-width: 767px) {
+  :root {
+    --bnav-h: 3.5rem;    /* 56px bottom nav */
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

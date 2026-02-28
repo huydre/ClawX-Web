@@ -8,22 +8,30 @@ import { useState, useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
 import logoSvg from '@/assets/logo.svg';
 import { platform } from '@/lib/platform';
+import { api } from '@/lib/api';
 
 const isMac = window.electron?.platform === 'darwin';
+
+function useCurrentModel() {
+  const [modelId, setModelId] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getCurrentModel()
+      .then((data) => {
+        setModelId(data.modelId);
+        setProvider(data.provider);
+      })
+      .catch(() => {});
+  }, []);
+
+  return { modelId, provider };
+}
 
 export function TitleBar() {
   // Web mode: simple header without window controls
   if (platform.isWeb) {
-    return (
-      <div className="flex h-10 shrink-0 items-center border-b bg-background">
-        <div className="flex items-center gap-2 pl-3">
-          <img src={logoSvg} alt="ClawX" className="h-5 w-auto" />
-          <span className="text-xs font-medium text-muted-foreground select-none">
-            ClawX
-          </span>
-        </div>
-      </div>
-    );
+    return <WebTitleBar />;
   }
 
   if (isMac) {
@@ -32,6 +40,27 @@ export function TitleBar() {
   }
 
   return <WindowsTitleBar />;
+}
+
+function WebTitleBar() {
+  const { modelId, provider } = useCurrentModel();
+
+  return (
+    <div className="flex h-10 shrink-0 items-center justify-between border-b bg-background px-3">
+      <div className="flex items-center gap-2">
+        <img src={logoSvg} alt="ClawX" className="h-5 w-auto" />
+        <span className="text-xs font-medium text-muted-foreground select-none">ClawX</span>
+      </div>
+
+      {modelId && (
+        <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground select-none">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+          <span className="hidden sm:inline text-muted-foreground/60">{provider}</span>
+          <span className="text-foreground/70 font-medium truncate max-w-[100px] sm:max-w-[180px]">{modelId}</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function WindowsTitleBar() {

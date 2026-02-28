@@ -5,6 +5,7 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TitleBar } from './TitleBar';
+import { BottomNav } from './BottomNav';
 
 export function MainLayout() {
   return (
@@ -15,10 +16,13 @@ export function MainLayout() {
       {/* Below the title bar: sidebar + content */}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-3 md:p-6">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile bottom navigation — only shown on small screens */}
+      <BottomNav />
     </div>
   );
 }

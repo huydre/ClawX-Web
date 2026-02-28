@@ -83,9 +83,9 @@ export function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
       {/* Status Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Gateway Status */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
