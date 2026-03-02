@@ -132,6 +132,25 @@ export interface ToolStatus {
   updatedAt: number;
 }
 
+/** Parse raw error strings into user-friendly messages */
+function parseErrorMessage(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes('rate_limit') || lower.includes('429') || lower.includes('quota'))
+    return 'API rate limit exceeded. Please wait a moment and try again.';
+  if (lower.includes('401') || lower.includes('403') || lower.includes('unauthorized') || lower.includes('invalid.*key') || lower.includes('authentication'))
+    return 'API key is invalid or expired. Please check your provider settings.';
+  if (lower.includes('timeout') || lower.includes('timed out'))
+    return 'Request timed out. The model may be overloaded.';
+  if (lower.includes('not connected') || lower.includes('gateway'))
+    return 'Gateway is not connected. Please check the Dashboard.';
+  if (lower.includes('insufficient') || lower.includes('billing') || lower.includes('payment'))
+    return 'Insufficient API credits. Please check your provider billing.';
+  if (lower.includes('context') && lower.includes('length'))
+    return 'Message too long for the current model context window.';
+  // Return original if no match, but trim to reasonable length
+  return raw.length > 200 ? `${raw.slice(0, 200)}...` : raw;
+}
+
 interface ChatState {
   // Messages
   messages: RawMessage[];
@@ -149,6 +168,9 @@ interface ChatState {
   /** Images collected from tool results, attached to the next assistant message */
   pendingToolImages: AttachedFileMeta[];
 
+  // Retry
+  lastFailedMessage: { text: string; attachments?: Array<{ fileName: string; mimeType: string; fileSize: number; stagedPath: string; preview: string | null }> } | null;
+
   // Sessions
   sessions: ChatSession[];
   currentSessionKey: string;
@@ -163,6 +185,7 @@ interface ChatState {
   newSession: () => void;
   loadHistory: (quiet?: boolean) => Promise<void>;
   sendMessage: (text: string, attachments?: Array<{ fileName: string; mimeType: string; fileSize: number; stagedPath: string; preview: string | null }>) => Promise<void>;
+  retryLastMessage: () => Promise<void>;
   abortRun: () => Promise<void>;
   handleChatEvent: (event: Record<string, unknown>) => void;
   toggleThinking: () => void;
@@ -944,6 +967,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   pendingFinal: false,
   lastUserMessageAt: null,
   pendingToolImages: [],
+  lastFailedMessage: null,
 
   sessions: [],
   currentSessionKey: DEFAULT_SESSION_KEY,
@@ -1142,6 +1166,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messages: [...s.messages, userMsg],
       sending: true,
       error: null,
+      lastFailedMessage: null,
       streamingText: '',
       streamingMessage: null,
       streamingTools: [],
@@ -1219,40 +1244,50 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.log(`[sendMessage] RPC result: success=${result.success}, error=${result.error || 'none'}, runId=${result.result?.runId || 'none'}`);
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to send message', sending: false });
+        const friendlyError = parseErrorMessage(result.error || 'Failed to send message');
+        set({ error: friendlyError, sending: false, lastFailedMessage: { text: trimmed, attachments } });
       } else if (result.result?.runId) {
         set({ activeRunId: result.result.runId });
       } else {
         // No runId from gateway; keep sending state and wait for events.
       }
 
-      // Safety timeout: if we're still in "sending" state after 90s without
-      // receiving any streaming event, the run likely failed silently (e.g.
-      // provider error not surfaced as a chat event). Surface the error to the
-      // user instead of leaving an infinite spinner.
+      // Safety timeout: if we're still in "sending" state after 30s without
+      // receiving any streaming event, the run likely failed silently.
       if (result.success) {
         const sentAt = Date.now();
-        const SAFETY_TIMEOUT_MS = 90_000;
+        const SAFETY_TIMEOUT_MS = 30_000;
         const checkStuck = () => {
           const state = get();
           if (!state.sending) return;
           if (state.streamingMessage || state.streamingText) return;
           if (Date.now() - sentAt < SAFETY_TIMEOUT_MS) {
-            setTimeout(checkStuck, 10_000);
+            setTimeout(checkStuck, 5_000);
             return;
           }
           set({
-            error: 'No response received from the model. The provider may be unavailable or the API key may have insufficient quota. Please check your provider settings.',
+            error: 'No response received from the model. The provider may be unavailable or the API key may have insufficient quota.',
             sending: false,
             activeRunId: null,
             lastUserMessageAt: null,
+            lastFailedMessage: { text: trimmed, attachments },
           });
         };
-        setTimeout(checkStuck, 30_000);
+        setTimeout(checkStuck, 10_000);
       }
     } catch (err) {
-      set({ error: String(err), sending: false });
+      const friendlyError = parseErrorMessage(String(err));
+      set({ error: friendlyError, sending: false, lastFailedMessage: { text: trimmed, attachments } });
     }
+  },
+
+  // ── Retry last failed message ──
+
+  retryLastMessage: async () => {
+    const { lastFailedMessage, sendMessage } = get();
+    if (!lastFailedMessage) return;
+    set({ error: null, lastFailedMessage: null });
+    await sendMessage(lastFailedMessage.text, lastFailedMessage.attachments);
   },
 
   // ── Abort active run ──

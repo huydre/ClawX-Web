@@ -69,7 +69,7 @@ export function ProvidersSettings() {
             setDetectedModel({ provider: data.provider, modelId: data.modelId });
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     } else {
       setDetectedModel(null);
     }
@@ -96,7 +96,9 @@ export function ProvidersSettings() {
     try {
       const result = await api.importFromOpenClaw();
       if (result.success) {
-        toast.success(`Đã import: ${result.provider} / ${result.modelId}`);
+        const count = result.count || 0;
+        const names = result.imported?.map((i) => i.provider).join(', ') || '';
+        toast.success(count > 0 ? `Imported ${count} provider(s): ${names}` : 'No new providers to import');
         await fetchProviders();
         setDetectedModel(null);
       } else {
@@ -298,9 +300,38 @@ function ProviderCard({
   const [showKey, setShowKey] = useState(false);
   const [validating, setValidating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customModel, setCustomModel] = useState(false);
 
   const typeInfo = PROVIDER_TYPE_INFO.find((t) => t.id === provider.type);
-  const canEditConfig = Boolean(typeInfo?.showBaseUrl || typeInfo?.showModelId);
+  const canEditConfig = Boolean(typeInfo?.showBaseUrl || typeInfo?.showModelId || typeInfo?.models?.length || typeInfo?.canFetchModels);
+
+  // Live model fetch
+  const [fetchedModels, setFetchedModels] = useState<{ id: string; name: string }[] | null>(null);
+  const [fetchingModels, setFetchingModels] = useState(false);
+
+  const effectiveModels = fetchedModels && fetchedModels.length > 0 ? fetchedModels : typeInfo?.models;
+  const hasModelDropdown = (effectiveModels?.length ?? 0) > 0;
+
+  // Fetch models when entering edit mode
+  useEffect(() => {
+    if (!isEditing || !typeInfo?.canFetchModels) return;
+    let cancelled = false;
+    const fetchModels = async () => {
+      setFetchingModels(true);
+      try {
+        const resp = await fetch(`/api/providers/models/${provider.type}`);
+        if (resp.ok && !cancelled) {
+          const data = await resp.json();
+          if (data.models?.length > 0) {
+            setFetchedModels(data.models);
+          }
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setFetchingModels(false);
+    };
+    fetchModels();
+    return () => { cancelled = true; };
+  }, [isEditing, provider.type, typeInfo?.canFetchModels]);
 
   useEffect(() => {
     if (isEditing) {
@@ -308,8 +339,15 @@ function ProviderCard({
       setShowKey(false);
       setBaseUrl(provider.baseUrl || '');
       setModelId(provider.model || '');
+      // Check if current model is in the list
+      if (hasModelDropdown && provider.model) {
+        const inList = effectiveModels?.some((m) => m.id === provider.model);
+        setCustomModel(!inList);
+      } else {
+        setCustomModel(false);
+      }
     }
-  }, [isEditing, provider.baseUrl, provider.model]);
+  }, [isEditing, provider.baseUrl, provider.model, hasModelDropdown, effectiveModels]);
 
   const handleSaveEdits = async () => {
     setSaving(true);
@@ -330,23 +368,22 @@ function ProviderCard({
         payload.newApiKey = newKey.trim();
       }
 
+      const updates: Partial<ProviderConfig> = {};
       if (canEditConfig) {
         if (typeInfo?.showModelId && !modelId.trim()) {
           toast.error(t('aiProviders.toast.modelRequired'));
           setSaving(false);
           return;
         }
-
-        const updates: Partial<ProviderConfig> = {};
         if ((baseUrl.trim() || undefined) !== (provider.baseUrl || undefined)) {
           updates.baseUrl = baseUrl.trim() || undefined;
         }
-        if ((modelId.trim() || undefined) !== (provider.model || undefined)) {
-          updates.model = modelId.trim() || undefined;
-        }
-        if (Object.keys(updates).length > 0) {
-          payload.updates = updates;
-        }
+      }
+      if ((modelId.trim() || undefined) !== (provider.model || undefined)) {
+        updates.model = modelId.trim() || undefined;
+      }
+      if (Object.keys(updates).length > 0) {
+        payload.updates = updates;
       }
 
       if (!payload.newApiKey && !payload.updates) {
@@ -367,10 +404,15 @@ function ProviderCard({
     }
   };
 
+  // Get display name for current model
+  const modelDisplayName = provider.model
+    ? (typeInfo?.models?.find((m) => m.id === provider.model)?.name || provider.model)
+    : null;
+
   return (
     <Card className={cn(isDefault && 'ring-2 ring-primary')}>
       <CardContent className="p-4">
-        {/* Top row: icon + name */}
+        {/* Top row: icon + name + model */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             {getProviderIconUrl(provider.type) ? (
@@ -382,14 +424,77 @@ function ProviderCard({
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{provider.name}</span>
               </div>
-              <span className="text-xs text-muted-foreground capitalize">{provider.type}</span>
+              {modelDisplayName && (
+                <span className="text-xs text-muted-foreground">{modelDisplayName}</span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Key row */}
+        {/* Edit mode */}
         {isEditing ? (
           <div className="space-y-2">
+            {/* Model selector */}
+            {(hasModelDropdown || typeInfo?.canFetchModels) && (
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1">
+                  Model
+                  {fetchingModels && <Loader2 className="h-3 w-3 animate-spin" />}
+                </Label>
+                {customModel ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={modelId}
+                      onChange={(e) => setModelId(e.target.value)}
+                      placeholder="model-id"
+                      className="h-9 text-sm"
+                    />
+                    {hasModelDropdown && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 text-xs shrink-0"
+                        onClick={() => {
+                          setCustomModel(false);
+                          setModelId(typeInfo?.defaultModelId || effectiveModels?.[0]?.id || '');
+                        }}
+                      >
+                        List
+                      </Button>
+                    )}
+                  </div>
+                ) : hasModelDropdown ? (
+                  <select
+                    value={modelId}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setCustomModel(true);
+                        setModelId('');
+                      } else {
+                        setModelId(e.target.value);
+                      }
+                    }}
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    {!effectiveModels?.some((m) => m.id === modelId) && modelId && (
+                      <option value={modelId}>{modelId}</option>
+                    )}
+                    {effectiveModels?.map((m) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                    <option value="__custom__">Custom model...</option>
+                  </select>
+                ) : (
+                  <Input
+                    value={modelId}
+                    onChange={(e) => setModelId(e.target.value)}
+                    placeholder={typeInfo?.modelIdPlaceholder || 'model-id'}
+                    className="h-9 text-sm"
+                  />
+                )}
+              </div>
+            )}
+
             {canEditConfig && (
               <>
                 {typeInfo?.showBaseUrl && (
@@ -416,23 +521,40 @@ function ProviderCard({
                 )}
               </>
             )}
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type={showKey ? 'text' : 'password'}
-                  placeholder={typeInfo?.requiresApiKey ? typeInfo?.placeholder : (typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : t('aiProviders.card.editKey'))}
-                  value={newKey}
-                  onChange={(e) => setNewKey(e.target.value)}
-                  className="pr-10 h-9 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                </button>
+            {/* API Key — collapsed by default if already configured */}
+            {provider.hasKey && !showKey ? (
+              <button
+                type="button"
+                onClick={() => setShowKey(true)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mt-1"
+              >
+                <Key className="h-3 w-3" />
+                Change API key
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type="password"
+                    placeholder={typeInfo?.requiresApiKey ? typeInfo?.placeholder : (typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : t('aiProviders.card.editKey'))}
+                    value={newKey}
+                    onChange={(e) => setNewKey(e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                {provider.hasKey && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 text-xs"
+                    onClick={() => { setShowKey(false); setNewKey(''); }}
+                  >
+                    Cancel
+                  </Button>
+                )}
               </div>
+            )}
+            <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
                 size="sm"
@@ -449,10 +571,11 @@ function ProviderCard({
                 }
               >
                 {validating || saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
                 ) : (
-                  <Check className="h-3.5 w-3.5" />
+                  <Check className="h-3.5 w-3.5 mr-1" />
                 )}
+                Save
               </Button>
               <Button variant="ghost" size="sm" onClick={onCancelEdit}>
                 <X className="h-3.5 w-3.5" />
@@ -502,7 +625,7 @@ function ProviderCard({
           </div>
         )}
       </CardContent>
-    </Card>
+    </Card >
   );
 }
 
@@ -532,8 +655,45 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [customModel, setCustomModel] = useState(false);
 
   const typeInfo = PROVIDER_TYPE_INFO.find((t) => t.id === selectedType);
+
+  // Live model fetch
+  const [fetchedModels, setFetchedModels] = useState<{ id: string; name: string }[] | null>(null);
+  const [fetchingModels, setFetchingModels] = useState(false);
+
+  const effectiveModels = fetchedModels && fetchedModels.length > 0 ? fetchedModels : typeInfo?.models;
+  const hasModelDropdown = (effectiveModels?.length ?? 0) > 0;
+
+  // Auto-fetch models when API key changes (debounced)
+  useEffect(() => {
+    if (!selectedType || !typeInfo?.canFetchModels) return;
+    if (!apiKey.trim() && typeInfo?.requiresApiKey) return;
+
+    const timer = setTimeout(async () => {
+      setFetchingModels(true);
+      try {
+        const params = new URLSearchParams();
+        if (apiKey.trim()) params.set('apiKey', apiKey.trim());
+        if (baseUrl.trim()) params.set('baseUrl', baseUrl.trim());
+        const resp = await fetch(`/api/providers/models/${selectedType}?${params}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.models?.length > 0) {
+            setFetchedModels(data.models);
+            // Auto-select first model if none selected
+            if (!modelId.trim() || modelId === typeInfo?.defaultModelId) {
+              setModelId(data.models[0].id);
+            }
+          }
+        }
+      } catch { /* ignore */ }
+      setFetchingModels(false);
+    }, apiKey ? 800 : 0); // Debounce for key changes, immediate for no-key (Ollama)
+
+    return () => clearTimeout(timer);
+  }, [apiKey, selectedType, baseUrl, typeInfo?.canFetchModels, typeInfo?.requiresApiKey]);
 
   // custom and 9router can be added multiple times (multiple instances/configs).
   const MULTI_INSTANCE_TYPES = new Set(['custom', '9router']);
@@ -551,7 +711,7 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
       // Validate key first if the provider requires one and a key was entered
       const requiresKey = typeInfo?.requiresApiKey ?? false;
       if (requiresKey && !apiKey.trim()) {
-        setValidationError(t('aiProviders.toast.invalidKey')); // reusing invalid key msg or should add 'required' msg? null checks
+        setValidationError(t('aiProviders.toast.invalidKey'));
         setSaving(false);
         return;
       }
@@ -573,13 +733,15 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
         return;
       }
 
+      const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+
       await onAdd(
         selectedType,
         name || (typeInfo?.id === 'custom' ? t('aiProviders.custom') : typeInfo?.name) || selectedType,
         apiKey.trim(),
         {
           baseUrl: baseUrl.trim() || undefined,
-          model: (typeInfo?.defaultModelId || modelId.trim()) || undefined,
+          model: finalModel || undefined,
         }
       );
     } catch {
@@ -609,6 +771,7 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                     setName(type.id === 'custom' ? t('aiProviders.custom') : type.name);
                     setBaseUrl(type.defaultBaseUrl || '');
                     setModelId(type.defaultModelId || '');
+                    setCustomModel(false);
                   }}
                   className="p-4 rounded-lg border hover:bg-accent transition-colors text-center"
                 >
@@ -637,6 +800,7 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                       setValidationError(null);
                       setBaseUrl('');
                       setModelId('');
+                      setCustomModel(false);
                     }}
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
@@ -684,6 +848,65 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                   {t('aiProviders.dialog.apiKeyStored')}
                 </p>
               </div>
+
+              {/* Model Selection */}
+              {(hasModelDropdown || typeInfo?.canFetchModels) && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    Model
+                    {fetchingModels && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  </Label>
+                  {customModel ? (
+                    <div className="flex gap-2">
+                      <Input
+                        value={modelId}
+                        onChange={(e) => setModelId(e.target.value)}
+                        placeholder="model-id"
+                      />
+                      {hasModelDropdown && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => {
+                            setCustomModel(false);
+                            setModelId(typeInfo?.defaultModelId || effectiveModels?.[0]?.id || '');
+                          }}
+                        >
+                          List
+                        </Button>
+                      )}
+                    </div>
+                  ) : hasModelDropdown ? (
+                    <select
+                      value={modelId}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setCustomModel(true);
+                          setModelId('');
+                        } else {
+                          setModelId(e.target.value);
+                        }
+                      }}
+                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    >
+                      {!effectiveModels?.some((m) => m.id === modelId) && modelId && (
+                        <option value={modelId}>{modelId}</option>
+                      )}
+                      {effectiveModels?.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                      <option value="__custom__">Custom model...</option>
+                    </select>
+                  ) : (
+                    <Input
+                      value={modelId}
+                      onChange={(e) => setModelId(e.target.value)}
+                      placeholder={typeInfo?.modelIdPlaceholder || 'model-id'}
+                    />
+                  )}
+                </div>
+              )}
 
               {typeInfo?.showBaseUrl && (
                 <div className="space-y-2">

@@ -56,27 +56,33 @@ const schedulePresets: { label: string; value: string; type: ScheduleType }[] = 
 //   { kind: "every", everyMs: number }
 //   { kind: "at", at: "..." }
 function parseCronSchedule(schedule: unknown): string {
+  if (!schedule) return 'Unknown schedule';
+
   // Handle Gateway CronSchedule object format
-  if (schedule && typeof schedule === 'object') {
-    const s = schedule as { kind?: string; expr?: string; tz?: string; everyMs?: number; at?: string };
-    if (s.kind === 'cron' && typeof s.expr === 'string') {
-      return parseCronExpr(s.expr);
+  if (typeof schedule === 'object') {
+    const s = schedule as Record<string, unknown>;
+    // { kind: "cron", expr: "...", tz?: "..." }
+    if (typeof s.expr === 'string') {
+      const label = parseCronExpr(s.expr);
+      return s.tz && typeof s.tz === 'string' ? `${label} (${s.tz})` : label;
     }
-    if (s.kind === 'every' && typeof s.everyMs === 'number') {
+    // { kind: "every", everyMs: number }
+    if (typeof s.everyMs === 'number') {
       const ms = s.everyMs;
       if (ms < 60_000) return `Every ${Math.round(ms / 1000)}s`;
       if (ms < 3_600_000) return `Every ${Math.round(ms / 60_000)} minutes`;
       if (ms < 86_400_000) return `Every ${Math.round(ms / 3_600_000)} hours`;
       return `Every ${Math.round(ms / 86_400_000)} days`;
     }
-    if (s.kind === 'at' && typeof s.at === 'string') {
+    // { kind: "at", at: "..." }
+    if (typeof s.at === 'string') {
       try {
         return `Once at ${new Date(s.at).toLocaleString()}`;
       } catch {
         return `Once at ${s.at}`;
       }
     }
-    return String(schedule);
+    return 'Unknown schedule';
   }
 
   // Handle plain cron string
@@ -84,7 +90,7 @@ function parseCronSchedule(schedule: unknown): string {
     return parseCronExpr(schedule);
   }
 
-  return String(schedule ?? 'Unknown');
+  return 'Unknown schedule';
 }
 
 // Parse a plain cron expression string to human-readable text
@@ -141,7 +147,20 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
   const [schedule, setSchedule] = useState(initialSchedule);
   const [customSchedule, setCustomSchedule] = useState('');
   const [useCustom, setUseCustom] = useState(false);
-  const [channelId, setChannelId] = useState(job?.target.channelId || '');
+
+  // Find channel by type if channelId is empty (for existing jobs from Gateway)
+  const initialChannelId = (() => {
+    if (job?.target.channelId) return job.target.channelId;
+    // Try to find channel by type
+    const channelType = job?.target.channelType;
+    if (channelType) {
+      const matchingChannel = channels.find(c => c.type === channelType);
+      return matchingChannel?.id || '';
+    }
+    return '';
+  })();
+
+  const [channelId, setChannelId] = useState(initialChannelId);
   const [discordChannelId, setDiscordChannelId] = useState('');
   const [enabled, setEnabled] = useState(job?.enabled ?? true);
 

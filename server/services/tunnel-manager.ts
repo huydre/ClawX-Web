@@ -12,6 +12,7 @@ export interface TunnelConfig {
   mode: TunnelMode;
   token?: string; // For named tunnels
   localUrl?: string; // Default: http://localhost:2003
+  useIngressConfig?: boolean; // When true, omit --url and rely on Cloudflare API ingress rules
 }
 
 export interface TunnelStatus {
@@ -215,12 +216,19 @@ class TunnelManager extends EventEmitter {
         args.push('tunnel', '--url', localUrl);
         logger.info('Starting quick tunnel', { localUrl });
       } else if (this.config.mode === 'named') {
-        // Named tunnel mode: cloudflared tunnel run --token <token> --url <localUrl>
+        // Named tunnel mode
         if (!this.config.token) {
           throw new Error('Token is required for named tunnel');
         }
-        args.push('tunnel', 'run', '--token', this.config.token, '--url', localUrl);
-        logger.info('Starting named tunnel', { localUrl });
+        args.push('tunnel', 'run', '--token', this.config.token);
+        if (this.config.useIngressConfig) {
+          // Ingress rules are set via Cloudflare API — don't pass --url
+          logger.info('Starting named tunnel with API ingress config (no --url)');
+        } else {
+          // Single-service mode: route all traffic to localUrl
+          args.push('--url', localUrl);
+          logger.info('Starting named tunnel', { localUrl });
+        }
       }
 
       // Spawn the process

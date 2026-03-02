@@ -41,10 +41,10 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
       // Use API in web mode, IPC in Electron mode
       const result = platform.isElectron
         ? await window.electron.ipcRenderer.invoke(
-            'gateway:rpc',
-            'channels.status',
-            { probe: true }
-          )
+          'gateway:rpc',
+          'channels.status',
+          { probe: true }
+        )
         : await api.gatewayRpc('channels.status', { probe: true });
 
       const typedResult = result as {
@@ -83,7 +83,10 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
               : typeof (summary as { running?: boolean })?.running === 'boolean'
                 ? true
                 : false;
-          if (!configured) continue;
+          const running = typeof (summary as { running?: boolean })?.running === 'boolean'
+            ? (summary as { running?: boolean }).running
+            : false;
+          if (!configured && !running) continue;
 
           const accounts = data.channelAccounts?.[channelId] || [];
           const defaultAccountId = data.channelDefaultAccountId?.[channelId];
@@ -130,6 +133,14 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
             error:
               (typeof primaryAccount?.lastError === 'string' ? primaryAccount.lastError : undefined) ||
               (typeof summaryError === 'string' ? summaryError : undefined),
+            mode: (primaryAccount as Record<string, unknown>)?.mode as string | null | undefined,
+            tokenSource: (primaryAccount as Record<string, unknown>)?.tokenSource as string | undefined,
+            lastInboundAt: primaryAccount?.lastInboundAt,
+            lastOutboundAt: primaryAccount?.lastOutboundAt,
+            botUsername: ((summary as Record<string, unknown>)?.probe as Record<string, unknown>)?.bot
+              ? (((summary as Record<string, unknown>)?.probe as Record<string, unknown>)?.bot as Record<string, unknown>)?.username as string
+              : undefined,
+            probe: (summary as Record<string, unknown>)?.probe as Channel['probe'],
           });
         }
 
@@ -149,10 +160,10 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
       // Use API in web mode, IPC in Electron mode
       const result = platform.isElectron
         ? await window.electron.ipcRenderer.invoke(
-            'gateway:rpc',
-            'channels.add',
-            params
-          )
+          'gateway:rpc',
+          'channels.add',
+          params
+        )
         : await api.gatewayRpc('channels.add', params);
 
       const typedResult = result as { success: boolean; result?: Channel; error?: string };
@@ -195,28 +206,17 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
     const channelType = channelId.split('-')[0];
 
     try {
-      // Delete the channel configuration (Electron only)
       if (platform.isElectron) {
+        // Delete the channel configuration via IPC (Electron only)
         await window.electron.ipcRenderer.invoke('channel:deleteConfig', channelType);
+      } else {
+        // Delete via REST API (web mode)
+        await api.deleteChannelConfig(channelType);
+        // Restart OpenClaw so it picks up the removed channel
+        await api.restartOpenClaw().catch(() => { /* ignore restart errors */ });
       }
     } catch (error) {
       console.error('Failed to delete channel config:', error);
-    }
-
-    try {
-      // Use API in web mode, IPC in Electron mode
-      if (platform.isElectron) {
-        await window.electron.ipcRenderer.invoke(
-          'gateway:rpc',
-          'channels.delete',
-          { channelId: channelType }
-        );
-      } else {
-        await api.gatewayRpc('channels.delete', { channelId: channelType });
-      }
-    } catch (error) {
-      // Continue with local deletion even if gateway fails
-      console.error('Failed to delete channel from gateway:', error);
     }
 
     // Remove from local state
@@ -233,10 +233,10 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
       // Use API in web mode, IPC in Electron mode
       const result = platform.isElectron
         ? await window.electron.ipcRenderer.invoke(
-            'gateway:rpc',
-            'channels.connect',
-            { channelId }
-          )
+          'gateway:rpc',
+          'channels.connect',
+          { channelId }
+        )
         : await api.gatewayRpc('channels.connect', { channelId });
 
       const typedResult = result as { success: boolean; error?: string };
@@ -276,10 +276,10 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
     // Use API in web mode, IPC in Electron mode
     const result = platform.isElectron
       ? await window.electron.ipcRenderer.invoke(
-          'gateway:rpc',
-          'channels.requestQr',
-          { type: channelType }
-        )
+        'gateway:rpc',
+        'channels.requestQr',
+        { type: channelType }
+      )
       : await api.gatewayRpc('channels.requestQr', { type: channelType });
 
     const typedResult = result as { success: boolean; result?: { qrCode: string; sessionId: string }; error?: string };

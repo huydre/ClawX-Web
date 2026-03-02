@@ -31,6 +31,7 @@ import {
   Layers,
   Zap,
   Info,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,8 +59,24 @@ interface RecommendedSkillDef {
   description: string;
   icon: string;
   downloads?: number;
-  difficulty: string;
+  difficulty: 1 | 2 | 3;
   note?: string;
+}
+
+function DifficultyStars({ level }: { level: 1 | 2 | 3 }) {
+  return (
+    <span className="flex items-center gap-0.5">
+      {[1, 2, 3].map((i) => (
+        <Star
+          key={i}
+          className={cn(
+            'h-2.5 w-2.5',
+            i <= level ? 'fill-amber-400 text-amber-400' : 'fill-muted text-muted',
+          )}
+        />
+      ))}
+    </span>
+  );
 }
 
 const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
@@ -69,7 +86,7 @@ const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
     description: 'Tóm tắt tài liệu dài, email, báo cáo thành nội dung ngắn gọn',
     icon: '🔍',
     downloads: 10956,
-    difficulty: '⭐',
+    difficulty: 1,
   },
   {
     slug: 'weather',
@@ -77,7 +94,7 @@ const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
     description: 'Thời tiết theo vị trí, tích hợp vào briefing buổi sáng',
     icon: '🌤️',
     downloads: 9002,
-    difficulty: '⭐',
+    difficulty: 1,
   },
   {
     slug: 'humanize-ai-text',
@@ -85,14 +102,14 @@ const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
     description: 'Chuyển văn bản AI thành giọng văn tự nhiên — viết mô tả sản phẩm, content marketing',
     icon: '✍️',
     downloads: 8771,
-    difficulty: '⭐',
+    difficulty: 1,
   },
   {
     slug: 'news-aggregator',
     name: 'News Aggregator',
     description: 'Tổng hợp tin tức từ nhiều nguồn, hỗ trợ RSS feed tùy chỉnh',
     icon: '📰',
-    difficulty: '⭐',
+    difficulty: 1,
   },
   {
     slug: 'proactive-agent',
@@ -100,15 +117,15 @@ const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
     description: 'Trợ lý chủ động — tự gửi briefing sáng, nhắc nhở lịch, cập nhật đơn hàng',
     icon: '🤖',
     downloads: 7010,
-    difficulty: '⭐⭐',
+    difficulty: 2,
   },
   {
-    slug: 'tavily-web-search',
+    slug: 'tavily',
     name: 'Tavily Web Search',
     description: 'Tìm kiếm web nâng cao với kết quả có cấu trúc, phù hợp để AI xử lý',
     icon: '🔎',
     downloads: 8142,
-    difficulty: '⭐⭐',
+    difficulty: 2,
     note: 'Cần Tavily API key miễn phí',
   },
   {
@@ -117,7 +134,7 @@ const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
     description: 'Tạo, tìm kiếm, tổ chức ghi chú bằng ngôn ngữ tự nhiên — "bộ não thứ hai"',
     icon: '📝',
     downloads: 5791,
-    difficulty: '⭐⭐',
+    difficulty: 2,
   },
   {
     slug: 'gog',
@@ -125,7 +142,7 @@ const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
     description: 'Gmail, Calendar, Drive, Contacts, Sheets, Docs — bộ tích hợp chính thức của @steipete',
     icon: '🔄',
     downloads: 14313,
-    difficulty: '⭐⭐',
+    difficulty: 2,
   },
   {
     slug: 'agent-browser',
@@ -133,15 +150,15 @@ const RECOMMENDED_SKILLS: RecommendedSkillDef[] = [
     description: 'Tự động duyệt web, điền form, thu thập dữ liệu từ website',
     icon: '🌐',
     downloads: 11836,
-    difficulty: '⭐⭐',
+    difficulty: 2,
     note: 'Khuyến nghị 4GB+ RAM',
   },
   {
-    slug: 'homeassistant',
+    slug: 'openclaw-homeassistant',
     name: 'Home Assistant',
     description: 'Điều khiển đèn, điều hòa, khóa cửa qua Home Assistant API',
     icon: '🏠',
-    difficulty: '⭐⭐⭐',
+    difficulty: 3,
     note: 'Cần Home Assistant server riêng',
   },
 ];
@@ -169,7 +186,7 @@ function BundleCard({ installedSlugs, installingMap, onInstall, onInstallAll }: 
                 <Layers className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold">Gói TV Box — Chủ Shop Online</h3>
+                <h3 className="font-semibold">Bộ Skill Thiết Yếu Cho Trợ Lý AI</h3>
                 <p className="text-sm text-muted-foreground">
                   {RECOMMENDED_SKILLS.length - uninstalledCount}/{RECOMMENDED_SKILLS.length} skill đã cài •{' '}
                   Chọn lọc theo quy tắc 100/3
@@ -232,7 +249,7 @@ function BundleCard({ installedSlugs, installingMap, onInstall, onInstallAll }: 
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       <span className="font-medium text-sm">{skill.name}</span>
-                      <span className="text-xs text-muted-foreground">{skill.difficulty}</span>
+                      <DifficultyStars level={skill.difficulty} />
                       {skill.downloads && (
                         <span className="text-xs text-muted-foreground flex items-center gap-0.5">
                           <Download className="h-3 w-3" />
@@ -858,20 +875,66 @@ export function Skills() {
   const hasInstalledSkills = skills.some(s => !s.isBundled);
 
   // Set of installed skill slugs (for bundle matching)
-  const installedSlugs = new Set(skills.map(s => s.slug).filter(Boolean) as string[]);
+  // Check slug, id, and name (skillKey) since they might differ
+  const installedSlugs = new Set(
+    skills.flatMap(s => {
+      const identifiers = [s.slug, s.id, s.name].filter(Boolean);
+      // Also add lowercase/kebab-case variants
+      return identifiers.flatMap(id => [
+        id,
+        id.toLowerCase(),
+        id.toLowerCase().replace(/\s+/g, '-'),
+      ]);
+    }) as string[]
+  );
 
-  // Install all uninstalled recommended skills sequentially
+  // Install all uninstalled recommended skills sequentially with delay to avoid rate limit
   const handleInstallAll = useCallback(async () => {
     const toInstall = RECOMMENDED_SKILLS.filter(s => !installedSlugs.has(s.slug));
-    for (const skill of toInstall) {
+    let successCount = 0;
+    for (let i = 0; i < toInstall.length; i++) {
+      const skill = toInstall[i];
       try {
         await installSkill(skill.slug);
         await enableSkill(skill.slug);
+        successCount++;
+        toast.success(`Đã cài ${skill.name} (${successCount}/${toInstall.length})`);
       } catch (err) {
-        toast.error(`Lỗi khi cài ${skill.name}: ${String(err)}`);
+        const msg = String(err);
+        if (msg.toLowerCase().includes('rate limit')) {
+          toast.error(`Rate limit — chờ 10 giây rồi thử lại ${skill.name}...`);
+          await new Promise(r => setTimeout(r, 10000));
+          try {
+            await installSkill(skill.slug);
+            await enableSkill(skill.slug);
+            successCount++;
+            toast.success(`Đã cài ${skill.name} (${successCount}/${toInstall.length})`);
+          } catch (retryErr) {
+            toast.error(`Bỏ qua ${skill.name}: ${String(retryErr)}`);
+          }
+        } else if (msg.toLowerCase().includes('already installed')) {
+          // Skill đã cài rồi — chỉ cần enable
+          try {
+            await enableSkill(skill.slug);
+            successCount++;
+            toast.success(`${skill.name} đã có sẵn — đã bật (${successCount}/${toInstall.length})`);
+          } catch (enableErr) {
+            toast.warning(`${skill.name} đã cài nhưng không thể bật: ${String(enableErr)}`);
+          }
+        } else if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('skill not found')) {
+          toast.warning(`${skill.name}: slug "${skill.slug}" không tìm thấy trên ClawHub — bỏ qua`);
+        } else {
+          toast.error(`Lỗi khi cài ${skill.name}: ${msg}`);
+        }
+      }
+      // 3s delay between each install to respect rate limits
+      if (i < toInstall.length - 1) {
+        await new Promise(r => setTimeout(r, 3000));
       }
     }
-    toast.success(`Đã hoàn tất cài ${toInstall.length} skill!`);
+    if (successCount > 0) {
+      toast.success(`Hoàn tất! Đã cài ${successCount}/${toInstall.length} skill.`);
+    }
   }, [installSkill, enableSkill, installedSlugs]);
 
   const handleOpenSkillsFolder = useCallback(async () => {

@@ -24,6 +24,8 @@ interface CloudflareSettings {
   accountId?: string;
   domain?: string;
   publicUrl?: string;
+  dashboardUrl?: string; // URL for OpenClaw dashboard subdomain tunnel
+  useIngressConfig?: boolean; // When true, cloudflared uses API ingress rules instead of --url
   createdAt?: string;
   updatedAt?: string;
 }

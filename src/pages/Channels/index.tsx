@@ -5,11 +5,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
-  Radio,
   RefreshCw,
   Trash2,
-  Power,
-  PowerOff,
   QrCode,
   Loader2,
   X,
@@ -21,6 +18,9 @@ import {
   AlertCircle,
   CheckCircle,
   ShieldCheck,
+  Clock,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,6 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useChannelsStore } from '@/stores/channels';
 import { useGatewayStore } from '@/stores/gateway';
-import { StatusBadge, type Status } from '@/components/common/StatusBadge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import {
@@ -45,6 +44,20 @@ import {
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/lib/platform';
+import { api } from '@/lib/api';
+
+function formatRelativeTime(timestamp: number | null | undefined): string {
+  if (!timestamp) return 'Never';
+  const diff = Date.now() - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 export function Channels() {
   const { t } = useTranslation('channels');
@@ -97,9 +110,6 @@ export function Channels() {
   // Get channel types to display
   const displayedChannelTypes = getPrimaryChannels();
 
-  // Connected/disconnected channel counts
-  const connectedCount = channels.filter((c) => c.status === 'connected').length;
-
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -109,119 +119,64 @@ export function Channels() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
+    <div className="space-y-5 md:space-y-6 pb-16 md:pb-0">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl md:text-2xl font-bold">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground hidden sm:block">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
             {t('subtitle')}
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="icon" className="md:hidden" onClick={fetchChannels}>
+          <Button variant="outline" size="icon" onClick={fetchChannels}>
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button variant="outline" className="hidden md:flex" onClick={fetchChannels}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {t('refresh')}
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">{t('addChannel')}</span>
           </Button>
-          {platform.isElectron && (
-            <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">{t('addChannel')}</span>
-            </Button>
-          )}
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <Card>
-          <CardContent className="p-3 md:pt-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-4 text-center sm:text-left">
-              <div className="rounded-full bg-primary/10 p-2 md:p-3 shrink-0">
-                <Radio className="h-4 w-4 md:h-6 md:w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{channels.length}</p>
-                <p className="text-[10px] md:text-sm text-muted-foreground">{t('stats.total')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 md:pt-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-4 text-center sm:text-left">
-              <div className="rounded-full bg-green-100 p-2 md:p-3 dark:bg-green-900 shrink-0">
-                <Power className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{connectedCount}</p>
-                <p className="text-[10px] md:text-sm text-muted-foreground">{t('stats.connected')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 md:pt-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-4 text-center sm:text-left">
-              <div className="rounded-full bg-slate-100 p-2 md:p-3 dark:bg-slate-800 shrink-0">
-                <PowerOff className="h-4 w-4 md:h-6 md:w-6 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{channels.length - connectedCount}</p>
-                <p className="text-[10px] md:text-sm text-muted-foreground">{t('stats.disconnected')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Gateway Warning */}
       {!isGatewayRunning && (
-        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10">
-          <CardContent className="py-4 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-yellow-500" />
-            <span className="text-yellow-700 dark:text-yellow-400">
-              {t('gatewayWarning')}
-            </span>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/20">
+          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <span className="text-sm text-amber-700 dark:text-amber-300">
+            {t('gatewayWarning')}
+          </span>
+        </div>
       )}
 
       {/* Error Display */}
       {error && (
-        <Card className="border-destructive">
-          <CardContent className="py-4 text-destructive">
-            {error}
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 dark:border-red-800 dark:bg-red-950/20">
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+          <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
+        </div>
       )}
 
-      {/* Configured Channels */}
+      {/* Connected Channels */}
       {channels.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('configured')}</CardTitle>
-            <CardDescription>{t('configuredDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {channels.map((channel) => (
-                <ChannelCard
-                  key={channel.id}
-                  channel={channel}
-                  onDelete={() => {
-                    if (confirm(t('deleteConfirm'))) {
-                      deleteChannel(channel.id);
-                    }
-                  }}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            {t('configured')}
+          </h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {channels.map((channel) => (
+              <ChannelCard
+                key={channel.id}
+                channel={channel}
+                onDelete={() => {
+                  if (confirm(t('deleteConfirm'))) {
+                    deleteChannel(channel.id);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Available Channels */}
@@ -301,38 +256,92 @@ interface ChannelCardProps {
 }
 
 function ChannelCard({ channel, onDelete }: ChannelCardProps) {
+  const isOnline = channel.status === 'connected';
+  const isError = channel.status === 'error';
+  const statusColor = isOnline
+    ? 'bg-emerald-500'
+    : isError
+      ? 'bg-red-500'
+      : 'bg-zinc-400 dark:bg-zinc-600';
+  const statusLabel = isOnline ? 'Online' : isError ? 'Error' : 'Offline';
+
+  const lastActivity = channel.lastInboundAt || channel.lastOutboundAt;
+  const botName = channel.botUsername || channel.probe?.bot?.username;
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <ChannelIcon type={channel.type} className="h-6 w-6 shrink-0" />
-            <div>
-              <CardTitle className="text-base">{channel.name}</CardTitle>
-              <CardDescription className="text-xs">
-                {CHANNEL_NAMES[channel.type]}
-              </CardDescription>
-            </div>
+    <div className="group rounded-lg border bg-card p-4 transition-colors hover:border-foreground/20">
+      {/* Header: Icon + Name + Status */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="rounded-md bg-muted p-2 shrink-0">
+            <ChannelIcon type={channel.type} className="h-5 w-5" />
           </div>
-          <StatusBadge status={channel.status as Status} />
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">{CHANNEL_NAMES[channel.type]}</p>
+            {botName && (
+              <p className="text-xs text-muted-foreground truncate">@{botName}</p>
+            )}
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {channel.error && (
-          <p className="text-xs text-destructive mb-3">{channel.error}</p>
-        )}
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`inline-block h-2 w-2 rounded-full ${statusColor}`} />
+          <span className="text-xs text-muted-foreground">{statusLabel}</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Error */}
+      {channel.error && (
+        <p className="text-xs text-red-600 dark:text-red-400 mt-3 line-clamp-2">{channel.error}</p>
+      )}
+
+      {/* Info Grid */}
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+        <div>
+          <p className="text-[11px] text-muted-foreground">Connection</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            {isOnline ? (
+              <Wifi className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <WifiOff className="h-3 w-3 text-muted-foreground" />
+            )}
+            <span className="text-xs font-medium capitalize">
+              {channel.mode || (isOnline ? 'Active' : 'Inactive')}
+            </span>
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] text-muted-foreground">Last message</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <Clock className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs font-medium">
+              {formatRelativeTime(lastActivity)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-4 pt-3 border-t flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+          onClick={onDelete}
+        >
+          <Trash2 className="h-3.5 w-3.5 mr-1" />
+          Remove
+        </Button>
+        <a
+          href={CHANNEL_META[channel.type]?.docsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+        >
+          Docs
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
+    </div>
   );
 }
 
@@ -370,10 +379,9 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
       setConfigValues({});
       setChannelName('');
       setIsExistingConfig(false);
-      setChannelName('');
-      setIsExistingConfig(false);
-      // Ensure we clean up any pending QR session if switching away
-      window.electron.ipcRenderer.invoke('channel:cancelWhatsAppQr').catch(() => { });
+      if (platform.isElectron) {
+        window.electron.ipcRenderer.invoke('channel:cancelWhatsAppQr').catch(() => { });
+      }
       return;
     }
 
@@ -382,10 +390,16 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
 
     (async () => {
       try {
-        const result = await window.electron.ipcRenderer.invoke(
-          'channel:getFormValues',
-          selectedType
-        ) as { success: boolean; values?: Record<string, string> };
+        let result: { success: boolean; values?: Record<string, string> | null };
+
+        if (platform.isElectron) {
+          result = await window.electron.ipcRenderer.invoke(
+            'channel:getFormValues',
+            selectedType
+          ) as { success: boolean; values?: Record<string, string> };
+        } else {
+          result = await api.getChannelFormValues(selectedType);
+        }
 
         if (cancelled) return;
 
@@ -475,17 +489,22 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
     setValidationResult(null);
 
     try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'channel:validateCredentials',
-        selectedType,
-        configValues
-      ) as {
-        success: boolean;
+      let result: {
         valid?: boolean;
         errors?: string[];
         warnings?: string[];
         details?: Record<string, string>;
       };
+
+      if (platform.isElectron) {
+        result = await window.electron.ipcRenderer.invoke(
+          'channel:validateCredentials',
+          selectedType,
+          configValues
+        ) as typeof result;
+      } else {
+        result = await api.validateChannelCredentials(selectedType, configValues);
+      }
 
       const warnings = result.warnings || [];
       if (result.valid && result.details) {
@@ -519,27 +538,56 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
     setValidationResult(null);
 
     try {
-      // For QR-based channels, request QR code
+      // For QR-based channels, request QR code (Electron only)
       if (meta.connectionType === 'qr') {
-        const accountId = channelName.trim() || 'default';
-        await window.electron.ipcRenderer.invoke('channel:requestWhatsAppQr', accountId);
-        // The QR code will be set via event listener
+        if (platform.isElectron) {
+          const accountId = channelName.trim() || 'default';
+          await window.electron.ipcRenderer.invoke('channel:requestWhatsAppQr', accountId);
+        }
+        return;
+      }
+
+      // OpenZalo: web-based QR login via openzca
+      if (selectedType === 'openzalo') {
+        try {
+          const profile = configValues.profile?.trim() || 'default';
+          const response = await fetch('/api/channels/openzalo/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profile }),
+          });
+          const data = await response.json();
+          if (data.success && data.qrDataUrl) {
+            setQrCode(data.qrDataUrl);
+          } else {
+            toast.error(data.error || 'Failed to generate QR code');
+            setConnecting(false);
+          }
+        } catch (err) {
+          toast.error(`QR login failed: ${err instanceof Error ? err.message : String(err)}`);
+          setConnecting(false);
+        }
         return;
       }
 
       // Step 1: Validate credentials against the actual service API
       if (meta.connectionType === 'token') {
-        const validationResponse = await window.electron.ipcRenderer.invoke(
-          'channel:validateCredentials',
-          selectedType,
-          configValues
-        ) as {
-          success: boolean;
+        let validationResponse: {
           valid?: boolean;
           errors?: string[];
           warnings?: string[];
           details?: Record<string, string>;
         };
+
+        if (platform.isElectron) {
+          validationResponse = await window.electron.ipcRenderer.invoke(
+            'channel:validateCredentials',
+            selectedType,
+            configValues
+          ) as typeof validationResponse;
+        } else {
+          validationResponse = await api.validateChannelCredentials(selectedType, configValues);
+        }
 
         if (!validationResponse.valid) {
           setValidationResult({
@@ -551,51 +599,58 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
           return;
         }
 
-        // Show success details (bot name, guild name, etc.) as warnings/info
+        // Show success details
         const warnings = validationResponse.warnings || [];
         if (validationResponse.details) {
           const details = validationResponse.details;
-          if (details.botUsername) {
-            warnings.push(`Bot: @${details.botUsername}`);
-          }
-          if (details.guildName) {
-            warnings.push(`Server: ${details.guildName}`);
-          }
-          if (details.channelName) {
-            warnings.push(`Channel: #${details.channelName}`);
-          }
+          if (details.botUsername) warnings.push(`Bot: @${details.botUsername}`);
+          if (details.guildName) warnings.push(`Server: ${details.guildName}`);
+          if (details.channelName) warnings.push(`Channel: #${details.channelName}`);
         }
 
-        // Show validation success with details
-        setValidationResult({
-          valid: true,
-          errors: [],
-          warnings,
-        });
+        setValidationResult({ valid: true, errors: [], warnings });
       }
 
-      // Step 2: Save channel configuration via IPC
+      // Step 2: Save channel configuration
       const config: Record<string, unknown> = { ...configValues };
-      await window.electron.ipcRenderer.invoke('channel:saveConfig', selectedType, config);
 
-      // Step 3: Add a local channel entry for the UI
-      await addChannel({
-        type: selectedType,
-        name: channelName || CHANNEL_NAMES[selectedType],
-        token: configValues[meta.configFields[0]?.key] || undefined,
-      });
+      if (platform.isElectron) {
+        await window.electron.ipcRenderer.invoke('channel:saveConfig', selectedType, config);
+      } else {
+        await api.saveChannelConfig(selectedType, config);
+      }
 
-      toast.success(t('toast.channelSaved', { name: meta.name }));
+      // Step 3: Register channel + restart
+      if (platform.isElectron) {
+        // In Electron, use IPC flow
+        await addChannel({
+          type: selectedType,
+          name: channelName || CHANNEL_NAMES[selectedType],
+          token: configValues[meta.configFields[0]?.key] || undefined,
+        });
 
-      // Step 4: Restart the Gateway so it picks up the new channel config
-      // The Gateway watches the config file, but a restart ensures a clean start
-      // especially when adding a channel for the first time.
-      try {
-        await window.electron.ipcRenderer.invoke('gateway:restart');
-        toast.success(t('toast.channelConnecting', { name: meta.name }));
-      } catch (restartError) {
-        console.warn('Gateway restart after channel config:', restartError);
-        toast.info(t('toast.restartManual'));
+        toast.success(t('toast.channelSaved', { name: meta.name }));
+
+        try {
+          await window.electron.ipcRenderer.invoke('gateway:restart');
+          toast.success(t('toast.channelConnecting', { name: meta.name }));
+        } catch (restartError) {
+          console.warn('Gateway restart after channel config:', restartError);
+          toast.info(t('toast.restartManual'));
+        }
+      } else {
+        // In web mode: restart OpenClaw then fetch real channel status
+        toast.success(t('toast.channelSaved', { name: meta.name }));
+
+        try {
+          await api.restartOpenClaw();
+          toast.success(t('toast.channelConnecting', { name: meta.name }));
+          // Wait for OpenClaw to restart and pick up new config
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        } catch (restartError) {
+          console.warn('OpenClaw restart after channel config:', restartError);
+          toast.info(t('toast.restartManual'));
+        }
       }
 
       // Brief delay so user can see the success state before dialog closes
@@ -761,16 +816,26 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
               </div>
 
               {/* Configuration fields */}
-              {meta?.configFields.map((field) => (
-                <ConfigField
-                  key={field.key}
-                  field={field}
-                  value={configValues[field.key] || ''}
-                  onChange={(value) => updateConfigValue(field.key, value)}
-                  showSecret={showSecrets[field.key] || false}
-                  onToggleSecret={() => toggleSecretVisibility(field.key)}
-                />
-              ))}
+              {meta?.configFields.map((field) => {
+                // Hide allowFrom field unless dmPolicy is 'allowlist' or 'open'
+                if (field.key === 'allowFrom') {
+                  const dmPolicy = configValues['dmPolicy'] || 'pairing';
+                  if (dmPolicy !== 'allowlist' && dmPolicy !== 'open') {
+                    return null;
+                  }
+                }
+
+                return (
+                  <ConfigField
+                    key={field.key}
+                    field={field}
+                    value={configValues[field.key] || ''}
+                    onChange={(value) => updateConfigValue(field.key, value)}
+                    showSecret={showSecrets[field.key] || false}
+                    onToggleSecret={() => toggleSecretVisibility(field.key)}
+                  />
+                );
+              })}
 
               {/* Validation Results */}
               {validationResult && (
@@ -883,6 +948,7 @@ interface ConfigFieldProps {
 function ConfigField({ field, value, onChange, showSecret, onToggleSecret }: ConfigFieldProps) {
   const { t } = useTranslation('channels');
   const isPassword = field.type === 'password';
+  const isSelect = field.type === 'select';
 
   return (
     <div className="space-y-2">
@@ -890,26 +956,42 @@ function ConfigField({ field, value, onChange, showSecret, onToggleSecret }: Con
         {t(field.label)}
         {field.required && <span className="text-destructive ml-1">*</span>}
       </Label>
-      <div className="flex gap-2">
-        <Input
+      {isSelect ? (
+        <select
           id={field.key}
-          type={isPassword && !showSecret ? 'password' : 'text'}
-          placeholder={field.placeholder ? t(field.placeholder) : undefined}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="font-mono text-sm"
-        />
-        {isPassword && (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onToggleSecret}
-          >
-            {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        )}
-      </div>
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <option value="">{field.placeholder ? t(field.placeholder) : 'Select...'}</option>
+          {field.options?.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <div className="flex gap-2">
+          <Input
+            id={field.key}
+            type={isPassword && !showSecret ? 'password' : 'text'}
+            placeholder={field.placeholder ? t(field.placeholder) : undefined}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="font-mono text-sm"
+          />
+          {isPassword && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={onToggleSecret}
+            >
+              {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+      )}
       {field.description && (
         <p className="text-xs text-muted-foreground">
           {t(field.description)}

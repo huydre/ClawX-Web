@@ -26,6 +26,7 @@ export function TunnelSettings() {
     running,
     mode,
     publicUrl,
+    dashboardUrl,
     uptime,
     state,
     loading,
@@ -65,10 +66,9 @@ export function TunnelSettings() {
   };
 
   // Copy URL to clipboard
-  const handleCopyUrl = async () => {
-    if (!publicUrl) return;
+  const handleCopyUrl = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(publicUrl);
+      await navigator.clipboard.writeText(url);
       toast.success(t('tunnel.urlCopied'));
     } catch {
       toast.error(t('tunnel.copyFailed'));
@@ -90,16 +90,38 @@ export function TunnelSettings() {
                   </p>
                   {publicUrl && (
                     <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-muted-foreground">{publicUrl}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={() => handleCopyUrl(publicUrl)}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  {dashboardUrl && (
+                    <div className="flex items-center gap-2 mt-1">
                       <p className="text-sm text-muted-foreground">
-                        {publicUrl}
+                        <span className="text-xs text-blue-500 mr-1">[Dashboard]</span>
+                        {dashboardUrl}
                       </p>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 px-2"
-                        onClick={handleCopyUrl}
+                        onClick={() => handleCopyUrl(dashboardUrl)}
                       >
                         <Copy className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={() => window.open(dashboardUrl, '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3" />
                       </Button>
                     </div>
                   )}

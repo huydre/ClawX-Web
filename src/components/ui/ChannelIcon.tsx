@@ -52,6 +52,12 @@ const CUSTOM_ICONS: Record<string, { path: string; hex: string; viewBox?: string
     path: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l7 4.5-7 4.5z',
     viewBox: '0 0 24 24',
   },
+  // Zalo — stylized Z in a chat bubble
+  openzalo: {
+    hex: '0068FF',
+    path: 'M12.49 10.272v-.45h1.347v6.322h-.77l-.19-.49a3.3 3.3 0 0 1-2.098.69 3.361 3.361 0 0 1 0-6.722 3.26 3.26 0 0 1 1.711.65zm-1.572 5.431c1.24 0 1.6-.96 1.6-2.72 0-1.76-.4-2.72-1.6-2.72-1.2 0-1.6.96-1.6 2.72 0 1.76.44 2.72 1.6 2.72zM4.58 7.879V6.652h4.726v1l-3.208 4.16h3.37v1.226H4.42v-1l3.207-4.16H4.58zM17.4 13.038h1.347V6.652H17.4v6.386zM16.53 16.144a3.261 3.261 0 1 1 0-6.522 3.261 3.261 0 0 1 0 6.522zm0-1.301a1.96 1.96 0 1 0 0-3.92 1.96 1.96 0 0 0 0 3.92z',
+    viewBox: '0 0 24 24',
+  },
 };
 
 export function ChannelIcon({ type, className, color, mono = false }: ChannelIconProps) {

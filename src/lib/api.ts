@@ -98,7 +98,7 @@ class ApiClient {
   }
 
   async importFromOpenClaw() {
-    return this.request<{ success: boolean; provider?: string; modelId?: string; hasKey?: boolean; error?: string }>(
+    return this.request<{ success: boolean; imported?: { provider: string; model?: string; hasKey: boolean }[]; count?: number; error?: string }>(
       '/providers/import-from-openclaw',
       { method: 'POST' }
     );
@@ -227,7 +227,7 @@ class ApiClient {
   // Cron API (via Gateway RPC)
   async getCronJobs() {
     const result = await this.gatewayRpc('cron.list');
-    return result.result || [];
+    return result.result?.jobs || [];
   }
 
   async createCronJob(input: any) {
@@ -353,6 +353,36 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ apiToken }),
     });
+  }
+
+  // Channels API
+  async validateChannelCredentials(type: string, config: Record<string, string>) {
+    return this.request<{
+      valid: boolean;
+      errors: string[];
+      warnings: string[];
+      details?: Record<string, string>;
+    }>('/channels/validate', {
+      method: 'POST',
+      body: JSON.stringify({ type, config }),
+    });
+  }
+
+  async saveChannelConfig(type: string, config: Record<string, unknown>) {
+    return this.request<{ success: boolean }>('/channels/save', {
+      method: 'POST',
+      body: JSON.stringify({ type, config }),
+    });
+  }
+
+  async deleteChannelConfig(type: string) {
+    return this.request<{ success: boolean }>(`/channels/${type}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getChannelFormValues(type: string) {
+    return this.request<{ success: boolean; values: Record<string, string> | null }>(`/channels/${type}/form-values`);
   }
 }
 

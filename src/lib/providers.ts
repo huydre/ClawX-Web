@@ -11,7 +11,6 @@ export const PROVIDER_TYPES = [
   'google',
   'openrouter',
   'moonshot',
-  'siliconflow',
   'ollama',
   '9router',
   'custom',
@@ -52,21 +51,78 @@ export interface ProviderTypeInfo {
   modelIdPlaceholder?: string;
   /** Default model ID to pre-fill */
   defaultModelId?: string;
+  /** Popular models for dropdown selection */
+  models?: { id: string; name: string }[];
+  /** Whether models can be auto-fetched from API */
+  canFetchModels?: boolean;
 }
 
 import { providerIcons } from '@/assets/providers';
 
 /** All supported provider types with UI metadata */
 export const PROVIDER_TYPE_INFO: ProviderTypeInfo[] = [
-  { id: 'anthropic', name: 'Anthropic', icon: '🤖', placeholder: 'sk-ant-api03-...', model: 'Claude', requiresApiKey: true },
-  { id: 'openai', name: 'OpenAI', icon: '💚', placeholder: 'sk-proj-...', model: 'GPT', requiresApiKey: true },
-  { id: 'google', name: 'Google', icon: '🔷', placeholder: 'AIza...', model: 'Gemini', requiresApiKey: true },
-  { id: 'openrouter', name: 'OpenRouter', icon: '🌐', placeholder: 'sk-or-v1-...', model: 'Multi-Model', requiresApiKey: true },
-  { id: 'moonshot', name: 'Moonshot (CN)', icon: '🌙', placeholder: 'sk-...', model: 'Kimi', requiresApiKey: true, defaultBaseUrl: 'https://api.moonshot.cn/v1', defaultModelId: 'kimi-k2.5' },
-  { id: 'siliconflow', name: 'SiliconFlow (CN)', icon: '🌊', placeholder: 'sk-...', model: 'Multi-Model', requiresApiKey: true, defaultBaseUrl: 'https://api.siliconflow.cn/v1', defaultModelId: 'Pro/moonshotai/Kimi-K2.5' },
-  { id: 'ollama', name: 'Ollama', icon: '🦙', placeholder: 'Not required', requiresApiKey: false, defaultBaseUrl: 'http://localhost:11434', showBaseUrl: true, showModelId: true, modelIdPlaceholder: 'qwen3:latest' },
-  { id: '9router', name: '9Router', icon: '🔀', placeholder: 'Paste API key from 9Router dashboard', model: 'Multi-Model', requiresApiKey: true, defaultBaseUrl: 'http://localhost:20128/v1', showBaseUrl: true, showModelId: true, modelIdPlaceholder: 'cc/claude-opus-4-6', defaultModelId: 'cc/claude-opus-4-6' },
-  { id: 'custom', name: 'Custom', icon: '⚙️', placeholder: 'API key...', requiresApiKey: true, showBaseUrl: true, showModelId: true, modelIdPlaceholder: 'your-provider/model-id' },
+  {
+    id: 'anthropic', name: 'Anthropic', icon: '🤖', placeholder: 'sk-ant-api03-...', model: 'Claude', requiresApiKey: true,
+    defaultModelId: 'claude-sonnet-4-20250514',
+    canFetchModels: true,
+    models: [
+      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+      { id: 'claude-opus-4-20250514', name: 'Claude Opus 4' },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
+    ],
+  },
+  {
+    id: 'openai', name: 'OpenAI', icon: '💚', placeholder: 'sk-proj-...', model: 'GPT', requiresApiKey: true,
+    defaultModelId: 'gpt-4.1',
+    canFetchModels: true,
+    models: [
+      { id: 'gpt-4.1', name: 'GPT-4.1' },
+      { id: 'gpt-4o', name: 'GPT-4o' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+      { id: 'o3', name: 'o3' },
+      { id: 'o4-mini', name: 'o4 Mini' },
+    ],
+  },
+  {
+    id: 'google', name: 'Google', icon: '🔷', placeholder: 'AIza...', model: 'Gemini', requiresApiKey: true,
+    defaultModelId: 'gemini-2.5-flash',
+    canFetchModels: true,
+    models: [
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+    ],
+  },
+  {
+    id: 'openrouter', name: 'OpenRouter', icon: '🌐', placeholder: 'sk-or-v1-...', model: 'Multi-Model', requiresApiKey: true,
+    showModelId: true, modelIdPlaceholder: 'anthropic/claude-sonnet-4',
+    canFetchModels: true,
+  },
+  {
+    id: 'moonshot', name: 'Moonshot', icon: '🌙', placeholder: 'sk-...', model: 'Kimi', requiresApiKey: true,
+    defaultBaseUrl: 'https://api.moonshot.ai/v1', defaultModelId: 'kimi-k2.5',
+    canFetchModels: true,
+    models: [
+      { id: 'kimi-k2.5', name: 'Kimi K2.5' },
+      { id: 'moonshot-v1-128k', name: 'Moonshot v1 128K' },
+      { id: 'moonshot-v1-32k', name: 'Moonshot v1 32K' },
+    ],
+  },
+  {
+    id: 'ollama', name: 'Ollama', icon: '🦙', placeholder: 'Not required', requiresApiKey: false,
+    defaultBaseUrl: 'http://localhost:11434', showBaseUrl: true, showModelId: true, modelIdPlaceholder: 'qwen3:latest',
+    canFetchModels: true,
+  },
+  {
+    id: '9router', name: '9Router', icon: '🔀', placeholder: 'Paste API key from 9Router dashboard', model: 'Multi-Model', requiresApiKey: true,
+    defaultBaseUrl: 'http://localhost:20128/v1', showBaseUrl: true,
+    defaultModelId: 'cc/claude-opus-4-6',
+    canFetchModels: true,
+  },
+  {
+    id: 'custom', name: 'Custom', icon: '⚙️', placeholder: 'API key...', requiresApiKey: true,
+    showBaseUrl: true, showModelId: true, modelIdPlaceholder: 'your-provider/model-id',
+  },
 ];
 
 /** Get the SVG logo URL for a provider type, falls back to undefined */

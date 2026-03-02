@@ -5,11 +5,21 @@ set -e
 echo "🚀 Updating ClawX on VPS"
 
 # Build locally
+echo "📦 Building frontend..."
+pnpm build
+
 echo "📦 Building server..."
 pnpm build:server
 
 # Upload to VPS
-echo "📤 Uploading to VPS..."
+echo "📤 Uploading frontend to VPS..."
+rsync -avz --progress \
+  --exclude='node_modules' \
+  --exclude='.git' \
+  dist/ \
+  root@192.168.1.10:/opt/clawx/dist/
+
+echo "📤 Uploading server to VPS..."
 rsync -avz --progress \
   --exclude='node_modules' \
   --exclude='.git' \

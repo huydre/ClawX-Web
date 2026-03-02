@@ -22,6 +22,33 @@ interface CronState {
   setJobs: (jobs: CronJob[]) => void;
 }
 
+// Transform raw Gateway job object → CronJob UI format
+function transformGatewayJob(job: any): CronJob {
+  const delivery = job.delivery || {};
+  const state = job.state || {};
+  return {
+    id: job.id,
+    name: job.name || 'Unnamed',
+    message: job.payload?.message || '',
+    schedule: job.schedule,
+    target: {
+      channelType: delivery.channel || 'telegram',
+      channelId: delivery.to || '',
+      channelName: delivery.channel || 'telegram',
+    },
+    enabled: job.enabled ?? true,
+    createdAt: job.createdAtMs ? new Date(job.createdAtMs).toISOString() : new Date().toISOString(),
+    updatedAt: job.updatedAtMs ? new Date(job.updatedAtMs).toISOString() : new Date().toISOString(),
+    lastRun: state.lastRunAtMs ? {
+      time: new Date(state.lastRunAtMs).toISOString(),
+      success: state.lastRunStatus === 'success',
+      error: typeof state.lastError === 'string' ? state.lastError : undefined,
+      duration: state.lastDurationMs,
+    } : undefined,
+    nextRun: state.nextRunAtMs ? new Date(state.nextRunAtMs).toISOString() : undefined,
+  };
+}
+
 export const useCronStore = create<CronState>((set) => ({
   jobs: [],
   loading: false,
@@ -31,15 +58,16 @@ export const useCronStore = create<CronState>((set) => ({
     set({ loading: true, error: null });
 
     try {
-      let result: CronJob[];
+      let result: any[];
 
       if (platform.isElectron) {
-        result = await window.electron.ipcRenderer.invoke('cron:list') as CronJob[];
+        result = await window.electron.ipcRenderer.invoke('cron:list') as any[];
       } else {
         result = await api.getCronJobs();
       }
 
-      set({ jobs: Array.isArray(result) ? result : [], loading: false });
+      const jobs: CronJob[] = Array.isArray(result) ? result.map(transformGatewayJob) : [];
+      set({ jobs, loading: false });
     } catch (error) {
       console.error('Failed to fetch cron jobs:', error);
       set({ jobs: [], error: String(error), loading: false });
@@ -130,15 +158,16 @@ export const useCronStore = create<CronState>((set) => ({
 
       // Refresh jobs after trigger to update lastRun/nextRun state
       try {
-        let jobs: CronJob[];
+        let rawJobs: any[];
 
         if (platform.isElectron) {
-          jobs = await window.electron.ipcRenderer.invoke('cron:list') as CronJob[];
+          rawJobs = await window.electron.ipcRenderer.invoke('cron:list') as any[];
         } else {
-          jobs = await api.getCronJobs();
+          rawJobs = await api.getCronJobs();
         }
 
-        set({ jobs: Array.isArray(jobs) ? jobs : [] });
+        const jobs = Array.isArray(rawJobs) ? rawJobs.map(transformGatewayJob) : [];
+        set({ jobs });
       } catch {
         // Ignore refresh error
       }

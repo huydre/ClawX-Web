@@ -255,6 +255,37 @@ export class CloudflareAPI {
   }
 
   /**
+   * Update tunnel ingress configuration via Cloudflare API.
+   * This allows routing multiple hostnames to different local services
+   * without using the --url flag in cloudflared.
+   * The last entry must be a catch-all with no hostname (e.g. http_status:404).
+   */
+  async updateTunnelConfig(
+    accountId: string,
+    tunnelId: string,
+    ingress: Array<{ hostname?: string; service: string }>
+  ): Promise<void> {
+    try {
+      logger.info('Updating tunnel ingress config', { accountId, tunnelId, ingressCount: ingress.length });
+
+      await this.makeRequest<unknown>(
+        'PUT',
+        `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`,
+        { config: { ingress } }
+      );
+
+      logger.info('Tunnel ingress config updated successfully', { tunnelId });
+    } catch (error) {
+      logger.error('Failed to update tunnel config', {
+        accountId,
+        tunnelId,
+        error: (error as Error).message,
+      });
+      throw new Error(`Failed to update tunnel config: ${(error as Error).message}`);
+    }
+  }
+
+  /**
    * Delete a tunnel
    */
   async deleteTunnel(accountId: string, tunnelId: string): Promise<void> {

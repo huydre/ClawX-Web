@@ -10,8 +10,10 @@ export function createWebSocketServer(server) {
     });
     wss.on('connection', async (ws, req) => {
         logger.info('WebSocket client connected', { ip: req.socket.remoteAddress });
-        // Authenticate
-        const token = req.headers.authorization?.replace('Bearer ', '');
+        // Authenticate: check Authorization header or query param ?token=xxx
+        const headerToken = req.headers.authorization?.replace('Bearer ', '');
+        const queryToken = new URL(req.url || '', `http://${req.headers.host}`).searchParams.get('token');
+        const token = headerToken || queryToken || '';
         const settings = await getSettings();
         // Skip auth for localhost in development
         const isLocalhost = req.socket.remoteAddress === '127.0.0.1' ||

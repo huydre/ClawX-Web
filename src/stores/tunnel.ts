@@ -15,6 +15,7 @@ interface TunnelState {
   running: boolean;
   mode?: 'quick' | 'named';
   publicUrl?: string;
+  dashboardUrl?: string;
   uptime?: number;
   state: 'stopped' | 'starting' | 'connected' | 'error';
   loading: boolean;
@@ -61,6 +62,7 @@ export const useTunnelStore = create<TunnelState>()(
       running: false,
       mode: undefined,
       publicUrl: undefined,
+      dashboardUrl: undefined,
       uptime: undefined,
       state: 'stopped',
       loading: false,
@@ -78,6 +80,7 @@ export const useTunnelStore = create<TunnelState>()(
             running: status.running,
             mode: status.mode,
             publicUrl: status.publicUrl,
+            dashboardUrl: status.dashboardUrl,
             uptime: status.uptime,
             state: status.state,
             error: status.error || null,
