@@ -426,6 +426,7 @@ router.get('/status', async (_req, res) => {
       running: tunnelManager.isConnected(),
       mode: status.mode,
       publicUrl: status.publicUrl || (config.domain ? `https://${config.domain}` : undefined),
+      dashboardUrl: config.dashboardUrl,
       uptime: status.uptime,
       state: status.state,
     });

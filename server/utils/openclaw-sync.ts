@@ -71,21 +71,12 @@ const REGISTRY: Record<string, ProviderBackendMeta> = {
     envVar: 'MOONSHOT_API_KEY',
     defaultModel: 'moonshot/kimi-k2.5',
     providerConfig: {
-      baseUrl: 'https://api.moonshot.cn/v1',
+      baseUrl: 'https://api.moonshot.ai/v1',
       api: 'openai-completions',
       apiKeyEnv: 'MOONSHOT_API_KEY',
       models: [
         { id: 'kimi-k2.5', name: 'Kimi K2.5' },
       ],
-    },
-  },
-  siliconflow: {
-    envVar: 'SILICONFLOW_API_KEY',
-    defaultModel: 'siliconflow/deepseek-ai/DeepSeek-V3',
-    providerConfig: {
-      baseUrl: 'https://api.siliconflow.cn/v1',
-      api: 'openai-completions',
-      apiKeyEnv: 'SILICONFLOW_API_KEY',
     },
   },
   '9router': {
@@ -165,12 +156,43 @@ export function getProviderKeyFromEnv(providerType: string): string | null {
     google: 'GEMINI_API_KEY',
     openrouter: 'OPENROUTER_API_KEY',
     moonshot: 'MOONSHOT_API_KEY',
-    siliconflow: 'SILICONFLOW_API_KEY',
     '9router': 'NINEROUTER_API_KEY',
   };
   const envVar = envMap[providerType];
   if (!envVar) return null;
   return process.env[envVar] ?? null;
+}
+
+/**
+ * Read provider config (baseUrl, models) from OpenClaw's openclaw.json
+ * Path: models.providers.<providerType>
+ */
+export function getProviderConfigFromOpenClaw(providerType: string): {
+  baseUrl?: string;
+  models?: { id: string; name: string }[];
+  apiKey?: string;
+} | null {
+  try {
+    const configPath = join(homedir(), '.openclaw', 'openclaw.json');
+    if (!existsSync(configPath)) return null;
+    const config = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+    const modelsSection = config.models as Record<string, unknown> | undefined;
+    const providers = modelsSection?.providers as Record<string, unknown> | undefined;
+    const providerData = providers?.[providerType] as Record<string, unknown> | undefined;
+    if (!providerData) return null;
+
+    return {
+      baseUrl: typeof providerData.baseUrl === 'string' ? providerData.baseUrl : undefined,
+      models: Array.isArray(providerData.models)
+        ? (providerData.models as { id: string; name: string }[]).map((m) => ({ id: m.id, name: m.name || m.id }))
+        : undefined,
+      apiKey: typeof providerData.apiKey === 'string' && !providerData.apiKey.startsWith('${')
+        ? providerData.apiKey
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -289,7 +311,11 @@ export function setOpenClawDefaultModel(
       ...existingProvider,
       baseUrl: providerCfg.baseUrl,
       api: providerCfg.api,
-      apiKey: `\${${providerCfg.apiKeyEnv}}`,
+      // Don't write apiKey here — keys are managed via auth-profiles.json
+      // (see saveProviderKeyToOpenClaw). Remove stale env var references.
+      ...(existingProvider.apiKey && typeof existingProvider.apiKey === 'string' && !String(existingProvider.apiKey).startsWith('${')
+        ? { apiKey: existingProvider.apiKey }
+        : {}),
       models: mergedModels,
     };
     models.providers = providers;

@@ -5,9 +5,9 @@
  * are in the toolbar; messages render with markdown + streaming.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, Bot, ChevronDown, MessageSquare, Sparkles } from 'lucide-react';
+import { AlertCircle, Bot, ChevronDown, MessageSquare, RefreshCw, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useChatStore, type RawMessage } from '@/stores/chat';
+import { useChatStore, type RawMessage, type ToolStatus } from '@/stores/chat';
 import { useGatewayStore } from '@/stores/gateway';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ChatMessage } from './ChatMessage';
@@ -32,6 +32,8 @@ export function Chat() {
   const sendMessage = useChatStore((s) => s.sendMessage);
   const abortRun = useChatStore((s) => s.abortRun);
   const clearError = useChatStore((s) => s.clearError);
+  const lastFailedMessage = useChatStore((s) => s.lastFailedMessage);
+  const retryLastMessage = useChatStore((s) => s.retryLastMessage);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -66,9 +68,10 @@ export function Chat() {
   }, [isGatewayRunning, loadHistory, loadSessions]);
 
   // Smart auto-scroll: only scroll if user is near bottom
+  // Use 'instant' to avoid visible scroll animation from top on re-render
   useEffect(() => {
     if (isNearBottom) {
-      scrollToBottom('smooth');
+      scrollToBottom('instant');
     }
   }, [messages, streamingMessage, sending]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -152,16 +155,16 @@ export function Chat() {
                 <ChatMessage
                   message={(streamMsg
                     ? {
-                        ...(streamMsg as Record<string, unknown>),
-                        role: (typeof streamMsg.role === 'string' ? streamMsg.role : 'assistant') as RawMessage['role'],
-                        content: streamMsg.content ?? streamText,
-                        timestamp: streamMsg.timestamp ?? streamingTimestamp,
-                      }
+                      ...(streamMsg as Record<string, unknown>),
+                      role: (typeof streamMsg.role === 'string' ? streamMsg.role : 'assistant') as RawMessage['role'],
+                      content: streamMsg.content ?? streamText,
+                      timestamp: streamMsg.timestamp ?? streamingTimestamp,
+                    }
                     : {
-                        role: 'assistant',
-                        content: streamText,
-                        timestamp: streamingTimestamp,
-                      }) as RawMessage}
+                      role: 'assistant',
+                      content: streamText,
+                      timestamp: streamingTimestamp,
+                    }) as RawMessage}
                   showThinking={showThinking}
                   isStreaming
                   streamingTools={streamingTools}
@@ -170,7 +173,7 @@ export function Chat() {
 
               {/* Typing indicator when sending but no stream yet */}
               {sending && !hasStreamText && !hasStreamThinking && !hasStreamTools && !hasStreamImages && !hasStreamToolStatus && (
-                <TypingIndicator />
+                <ProgressIndicator streamingTools={streamingTools} />
               )}
             </>
           )}
@@ -193,18 +196,29 @@ export function Chat() {
 
       {/* Error bar */}
       {error && (
-        <div className="px-4 py-2 bg-destructive/10 border-t border-destructive/20">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <p className="text-sm text-destructive flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              {error}
+        <div className="px-4 py-2.5 bg-destructive/10 border-t border-destructive/20">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <p className="text-sm text-destructive flex items-center gap-2 flex-1 min-w-0">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span className="truncate">{error}</span>
             </p>
-            <button
-              onClick={clearError}
-              className="text-xs text-destructive/60 hover:text-destructive underline"
-            >
-              {t('common:actions.dismiss')}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {lastFailedMessage && (
+                <button
+                  onClick={retryLastMessage}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:text-destructive/80 bg-destructive/10 hover:bg-destructive/20 px-2.5 py-1.5 rounded-md transition-colors"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  {t('common:actions.retry', 'Retry')}
+                </button>
+              )}
+              <button
+                onClick={clearError}
+                className="text-xs text-destructive/60 hover:text-destructive underline"
+              >
+                {t('common:actions.dismiss')}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -252,20 +266,44 @@ function WelcomeScreen() {
   );
 }
 
-// ── Typing Indicator ────────────────────────────────────────────
+// ── Progress Indicator ──────────────────────────────────────────
 
-function TypingIndicator() {
+function ProgressIndicator({ streamingTools }: { streamingTools: ToolStatus[] }) {
+  const { t } = useTranslation('chat');
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = Date.now();
+    const timer = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Determine status text from streaming tools
+  let statusText = t('processing', 'Processing...');
+  if (streamingTools.length > 0) {
+    const active = streamingTools.find(t => t.status === 'running');
+    if (active) {
+      statusText = `Using tool: ${active.name}`;
+    }
+  }
+
   return (
     <div className="flex gap-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
         <Sparkles className="h-4 w-4" />
       </div>
-      <div className="bg-muted rounded-2xl px-4 py-3">
+      <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-3">
         <div className="flex gap-1">
           <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
           <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
           <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
+        <span className="text-xs text-muted-foreground">
+          {statusText}
+          {elapsed > 2 && <span className="ml-1 tabular-nums">{elapsed}s</span>}
+        </span>
       </div>
     </div>
   );

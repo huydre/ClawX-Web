@@ -17,7 +17,8 @@ export type ChannelType =
   | 'line'
   | 'msteams'
   | 'googlechat'
-  | 'mattermost';
+  | 'mattermost'
+  | 'openzalo';
 
 /**
  * Channel connection status
@@ -42,6 +43,15 @@ export interface Channel {
   error?: string;
   avatar?: string;
   metadata?: Record<string, unknown>;
+  botUsername?: string;
+  mode?: string | null;
+  tokenSource?: string;
+  lastInboundAt?: number | null;
+  lastOutboundAt?: number | null;
+  probe?: {
+    ok: boolean;
+    bot?: { username: string; id: number; canJoinGroups: boolean };
+  };
 }
 
 /**
@@ -88,6 +98,7 @@ export const CHANNEL_ICONS: Record<ChannelType, string> = {
   msteams: '👔',
   googlechat: '💭',
   mattermost: '💠',
+  openzalo: '💙',
 };
 
 /**
@@ -105,6 +116,7 @@ export const CHANNEL_NAMES: Record<ChannelType, string> = {
   msteams: 'Microsoft Teams',
   googlechat: 'Google Chat',
   mattermost: 'Mattermost',
+  openzalo: 'Zalo',
 };
 
 /**
@@ -128,12 +140,26 @@ export const CHANNEL_META: Record<ChannelType, ChannelMeta> = {
         envVar: 'TELEGRAM_BOT_TOKEN',
       },
       {
-        key: 'allowedUsers',
-        label: 'channels:meta.telegram.fields.allowedUsers.label',
+        key: 'dmPolicy',
+        label: 'channels:meta.telegram.fields.dmPolicy.label',
+        type: 'select',
+        placeholder: 'channels:meta.telegram.fields.dmPolicy.placeholder',
+        description: 'channels:meta.telegram.fields.dmPolicy.description',
+        required: false,
+        options: [
+          { value: 'pairing', label: 'Pairing (Default) - Approve users individually' },
+          { value: 'allowlist', label: 'Allowlist - Only specific user IDs' },
+          { value: 'open', label: 'Open - Anyone can message' },
+          { value: 'disabled', label: 'Disabled - Block all DMs' },
+        ],
+      },
+      {
+        key: 'allowFrom',
+        label: 'channels:meta.telegram.fields.allowFrom.label',
         type: 'text',
-        placeholder: 'channels:meta.telegram.fields.allowedUsers.placeholder',
-        description: 'channels:meta.telegram.fields.allowedUsers.description',
-        required: true,
+        placeholder: 'channels:meta.telegram.fields.allowFrom.placeholder',
+        description: 'channels:meta.telegram.fields.allowFrom.description',
+        required: false,
       },
     ],
     instructions: [
@@ -435,13 +461,52 @@ export const CHANNEL_META: Record<ChannelType, ChannelMeta> = {
     ],
     isPlugin: true,
   },
+  openzalo: {
+    id: 'openzalo',
+    name: 'Zalo',
+    icon: '💙',
+    description: 'channels:meta.openzalo.description',
+    connectionType: 'token',
+    docsUrl: 'channels:meta.openzalo.docsUrl',
+    configFields: [
+      {
+        key: 'profile',
+        label: 'channels:meta.openzalo.fields.profile.label',
+        type: 'text',
+        placeholder: 'channels:meta.openzalo.fields.profile.placeholder',
+        description: 'channels:meta.openzalo.fields.profile.description',
+        required: false,
+      },
+      {
+        key: 'dmPolicy',
+        label: 'channels:meta.openzalo.fields.dmPolicy.label',
+        type: 'select',
+        placeholder: 'channels:meta.openzalo.fields.dmPolicy.placeholder',
+        description: 'channels:meta.openzalo.fields.dmPolicy.description',
+        required: false,
+        options: [
+          { value: 'pairing', label: 'Pairing (Owner only at first)' },
+          { value: 'open', label: 'Open (Anyone)' },
+          { value: 'allowlist', label: 'Allowlist' },
+          { value: 'disabled', label: 'Disabled' },
+        ],
+      },
+    ],
+    instructions: [
+      'channels:meta.openzalo.instructions.0',
+      'channels:meta.openzalo.instructions.1',
+      'channels:meta.openzalo.instructions.2',
+      'channels:meta.openzalo.instructions.3',
+    ],
+    isPlugin: true,
+  },
 };
 
 /**
  * Get primary supported channels (non-plugin, commonly used)
  */
 export function getPrimaryChannels(): ChannelType[] {
-  return ['telegram', 'discord', 'whatsapp', 'feishu'];
+  return ['telegram', 'discord', 'whatsapp', 'feishu', 'openzalo'];
 }
 
 /**

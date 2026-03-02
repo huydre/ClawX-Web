@@ -41,6 +41,33 @@ async function start() {
         catch (error) {
             logger.warn('Failed to load gateway token from environment', { error });
         }
+        // Sync gateway token to OpenClaw config so gateway uses same auth token
+        try {
+            const { getSetting } = await import('./services/storage.js');
+            const gatewayToken = await getSetting('gatewayToken');
+            if (gatewayToken) {
+                const fs = await import('fs');
+                const path = await import('path');
+                const os = await import('os');
+                const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
+                if (fs.existsSync(configPath)) {
+                    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+                    const currentToken = config?.gateway?.auth?.token;
+                    if (currentToken !== gatewayToken) {
+                        if (!config.gateway)
+                            config.gateway = {};
+                        if (!config.gateway.auth)
+                            config.gateway.auth = {};
+                        config.gateway.auth.token = gatewayToken;
+                        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+                        logger.info('Synced gateway auth token to OpenClaw config', { configPath });
+                    }
+                }
+            }
+        }
+        catch (error) {
+            logger.warn('Failed to sync gateway token to OpenClaw config', { error });
+        }
         // Auto-start gateway connection
         try {
             await gatewayManager.start();
@@ -95,31 +122,55 @@ async function start() {
                         const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
                         dnsSubdomain = `${subdomain}.${subdomainPrefix}`;
                     }
-                    // Check if DNS record already exists
-                    const existingDnsRecord = await cfApi.findDnsRecord(zoneId, fullDomain);
-                    if (existingDnsRecord) {
-                        // Check if it points to the correct tunnel
-                        const expectedContent = `${tunnel.id}.cfargotunnel.com`;
-                        if (existingDnsRecord.content !== expectedContent) {
-                            logger.info('Updating existing DNS record to point to tunnel', {
-                                recordId: existingDnsRecord.id,
-                                oldContent: existingDnsRecord.content,
-                                newContent: expectedContent,
-                            });
-                            await cfApi.updateDnsRecord(zoneId, existingDnsRecord.id, tunnel.id);
+                    // Helper: ensure DNS record points to the correct tunnel
+                    const ensureDnsRecord = async (recordName, dnsSubdomainName) => {
+                        const existing = await cfApi.findDnsRecord(zoneId, recordName);
+                        if (existing) {
+                            const expected = `${tunnel.id}.cfargotunnel.com`;
+                            if (existing.content !== expected) {
+                                logger.info('Updating DNS record', { recordId: existing.id, name: recordName });
+                                await cfApi.updateDnsRecord(zoneId, existing.id, tunnel.id);
+                            }
+                            else {
+                                logger.info('DNS record OK', { name: recordName });
+                            }
                         }
                         else {
-                            logger.info('DNS record already exists and points to correct tunnel', {
-                                recordId: existingDnsRecord.id,
-                                name: fullDomain,
-                            });
+                            logger.info('Creating DNS record', { subdomain: dnsSubdomainName, tunnelId: tunnel.id });
+                            await cfApi.createDnsRecord(zoneId, dnsSubdomainName, tunnel.id);
                         }
-                    }
-                    else {
-                        logger.info('Creating new DNS record', { subdomain: dnsSubdomain, tunnelId: tunnel.id });
-                        await cfApi.createDnsRecord(zoneId, dnsSubdomain, tunnel.id);
-                    }
+                    };
+                    // Ensure main domain DNS record
+                    await ensureDnsRecord(fullDomain, dnsSubdomain);
                     const publicUrl = `https://${fullDomain}`;
+                    // Check if OpenClaw dashboard port is configured
+                    const dashboardPort = process.env.CLOUDFLARE_DASHBOARD_PORT;
+                    const hasDashboard = dashboardPort && parseInt(dashboardPort, 10) > 0;
+                    let dashboardUrl;
+                    let useIngressConfig = false;
+                    if (hasDashboard) {
+                        const dashboardSubdomain = `dashboard-${subdomain}`;
+                        const dashboardFullDomain = `${dashboardSubdomain}.${envDomain}`;
+                        let dashboardDnsSubdomain;
+                        if (envDomain === zoneName) {
+                            dashboardDnsSubdomain = dashboardSubdomain;
+                        }
+                        else {
+                            const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
+                            dashboardDnsSubdomain = `${dashboardSubdomain}.${subdomainPrefix}`;
+                        }
+                        // Ensure dashboard DNS record
+                        await ensureDnsRecord(dashboardFullDomain, dashboardDnsSubdomain);
+                        // Set tunnel ingress rules via API so both hostnames are routed correctly
+                        await cfApi.updateTunnelConfig(accountId, tunnel.id, [
+                            { hostname: fullDomain, service: `http://localhost:${PORT}` },
+                            { hostname: dashboardFullDomain, service: `http://localhost:${dashboardPort}` },
+                            { service: 'http_status:404' },
+                        ]);
+                        dashboardUrl = `https://${dashboardFullDomain}`;
+                        useIngressConfig = true;
+                        logger.info('Dashboard tunnel ingress configured', { dashboardUrl });
+                    }
                     // Save configuration
                     const { saveCloudflareSettings } = await import('./services/storage.js');
                     await saveCloudflareSettings({
@@ -131,14 +182,16 @@ async function start() {
                         accountId,
                         domain: fullDomain,
                         publicUrl,
+                        dashboardUrl,
+                        useIngressConfig,
                     });
-                    // Start tunnel
+                    // Start tunnel — without --url when ingress config is set via API
                     await tunnelManager.start({
                         mode: 'named',
                         token: tunnelToken,
-                        localUrl: `http://localhost:${PORT}`,
+                        ...(useIngressConfig ? { useIngressConfig: true } : { localUrl: `http://localhost:${PORT}` }),
                     });
-                    logger.info('Tunnel auto-setup complete from environment', { publicUrl });
+                    logger.info('Tunnel auto-setup complete from environment', { publicUrl, dashboardUrl });
                 }
             }
             else {
@@ -157,6 +210,9 @@ async function start() {
                         await tunnelManager.start({
                             mode: 'named',
                             token: cloudflareSettings.tunnelToken,
+                            ...(cloudflareSettings.useIngressConfig
+                                ? { useIngressConfig: true }
+                                : { localUrl: `http://localhost:${PORT}` }),
                         });
                         logger.info('Named tunnel started automatically');
                     }

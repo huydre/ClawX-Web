@@ -20,17 +20,15 @@ class WebSocketClient {
     // In development, connect directly to backend server
     // In production, use same host as frontend
     const isDev = import.meta.env.DEV;
-    const wsUrl = isDev
+    const baseWsUrl = isDev
       ? 'ws://localhost:2003/ws'
       : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
+    // Browser WebSocket doesn't support custom headers — send token as query param
+    const wsUrl = token ? `${baseWsUrl}?token=${encodeURIComponent(token)}` : baseWsUrl;
+
     try {
       this.ws = new WebSocket(wsUrl);
-
-      if (token) {
-        // Note: WebSocket doesn't support custom headers in browser
-        // Token will be sent via query param or first message if needed
-      }
 
       this.ws.onopen = () => {
         console.log('WebSocket connected to', wsUrl);

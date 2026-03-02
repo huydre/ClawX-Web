@@ -87,22 +87,53 @@ router.post('/restart-openclaw', async (_req, res) => {
       }
 
       if (!systemctlSuccess) {
-        // 3. Kill main openclaw process (not gateway subprocess)
-        // The main process is typically named 'openclaw' without extra args
-        // Killing it will cause systemd/PM2 to respawn, or openclaw will self-restart
+        // 3. Kill and respawn openclaw process
         try {
-          // Kill main process - sends SIGTERM to allow graceful shutdown + restart
-          await execAsync('pkill -SIGTERM -x openclaw 2>/dev/null || pkill -SIGTERM -f "openclaw --" 2>/dev/null || true');
-          method = 'pkill:main';
-          logger.info('OpenClaw main process killed via SIGTERM (will respawn)');
-        } catch {
-          throw new Error('Could not restart OpenClaw: no supported method found. Try manually: pkill openclaw');
+          // Kill existing process
+          await execAsync('pkill -SIGTERM -x openclaw-gateway 2>/dev/null || pkill -SIGTERM -x openclaw 2>/dev/null || pkill -SIGTERM -f "openclaw" 2>/dev/null || true');
+          method = 'respawn';
+          logger.info('OpenClaw main process killed via SIGTERM');
+
+          // Wait for process to fully exit
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Find openclaw entry point (resolve symlink to get actual .mjs path)
+          const { spawn } = await import('child_process');
+          const { realpathSync } = await import('fs');
+          const { dirname } = await import('path');
+
+          const openclawBin = '/opt/homebrew/bin/openclaw';
+          let openclawScript: string;
+          try {
+            openclawScript = realpathSync(openclawBin); // resolves symlink → /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs
+          } catch {
+            throw new Error(`OpenClaw not found at ${openclawBin}`);
+          }
+
+          // Use the current Node.js binary (process.execPath) to run openclaw
+          // This avoids "env: node: No such file or directory" in detached process
+          const nodeBin = process.execPath;
+          const nodeBinDir = dirname(nodeBin);
+
+          // Ensure PATH includes node binary dir and homebrew
+          const envPath = [nodeBinDir, '/opt/homebrew/bin', '/usr/local/bin', process.env.PATH || ''].join(':');
+
+          const child = spawn(nodeBin, [openclawScript, 'gateway', '--verbose'], {
+            cwd: homedir(),
+            detached: true,
+            stdio: 'ignore',
+            env: { ...process.env, PATH: envPath },
+          });
+          child.unref();
+          logger.info('OpenClaw respawned as background process', { pid: child.pid, cmd: `${nodeBin} ${openclawScript} gateway --verbose` });
+        } catch (err) {
+          throw new Error(`Could not restart OpenClaw: ${err instanceof Error ? err.message : String(err)}. Try manually: openclaw`);
         }
       }
     }
 
     // Reconnect gateway manager after OpenClaw restarts (give it time to boot)
-    const reconnectDelay = method.startsWith('pkill') ? 5000 : 3000;
+    const reconnectDelay = method === 'respawn' ? 8000 : 3000;
     setTimeout(async () => {
       try {
         await gatewayManager.start();
@@ -163,7 +194,8 @@ router.get('/current-model', (_req, res) => {
 
 // POST /api/gateway/send-with-media
 // Web mode equivalent of Electron's chat:sendWithMedia IPC handler.
-// Accepts staged file paths (server-local) and sends them to the gateway.
+// Builds a text message with [media attached: ...] file references
+// and sends via the standard chat.send RPC. Gateway reads files from disk paths.
 router.post('/send-with-media', async (req, res) => {
   try {
     const { sessionKey, message, deliver, idempotencyKey, media } = req.body as {
@@ -188,12 +220,21 @@ router.post('/send-with-media', async (req, res) => {
       return res.status(503).json({ success: false, error: 'Gateway not connected' });
     }
 
-    const result = await gatewayManager.rpc('chat.sendWithMedia', {
+    // Build message text with media references
+    // Format: [media attached: /path/to/file (mime/type) | filename]
+    // Gateway reads files from these disk paths
+    const mediaRefs = media.map(item =>
+      `[media attached: ${item.filePath} (${item.mimeType}) | ${item.fileName}]`
+    );
+    const fullMessage = mediaRefs.length > 0
+      ? `${message}\n\n${mediaRefs.join('\n')}`
+      : message;
+
+    const result = await gatewayManager.rpc('chat.send', {
       sessionKey,
-      message,
+      message: fullMessage,
       deliver: deliver ?? false,
       idempotencyKey,
-      media,
     }, 60000);
 
     res.json({ success: true, result });

@@ -18,14 +18,16 @@ export function createWebSocketServer(server: any): WebSocketServer {
   wss.on('connection', async (ws: AuthenticatedWebSocket, req: IncomingMessage) => {
     logger.info('WebSocket client connected', { ip: req.socket.remoteAddress });
 
-    // Authenticate
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    // Authenticate: check Authorization header or query param ?token=xxx
+    const headerToken = req.headers.authorization?.replace('Bearer ', '');
+    const queryToken = new URL(req.url || '', `http://${req.headers.host}`).searchParams.get('token');
+    const token = headerToken || queryToken || '';
     const settings = await getSettings();
 
     // Skip auth for localhost in development
     const isLocalhost = req.socket.remoteAddress === '127.0.0.1' ||
-                       req.socket.remoteAddress === '::1' ||
-                       req.socket.remoteAddress === '::ffff:127.0.0.1';
+      req.socket.remoteAddress === '::1' ||
+      req.socket.remoteAddress === '::ffff:127.0.0.1';
 
     if (!isLocalhost && token !== settings.serverToken) {
       logger.warn('WebSocket authentication failed', { ip: req.socket.remoteAddress });

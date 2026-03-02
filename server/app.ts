@@ -10,6 +10,7 @@ import settingsRouter from './routes/settings.js';
 import filesRouter from './routes/files.js';
 import clawhubRouter from './routes/clawhub.js';
 import tunnelRouter from './routes/tunnel.js';
+import channelsRouter from './routes/channels.js';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
   originAgentCluster: false,
   hsts: false, // Disable HSTS for HTTP deployment
+  contentSecurityPolicy: false, // Disable CSP to allow CSS/JS loading through Cloudflare Tunnel
 }));
 app.use(cors({
   origin: [
@@ -52,13 +54,33 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/clawhub', clawhubRouter);
 app.use('/api/tunnel', tunnelRouter);
+app.use('/api/channels', channelsRouter);
 
-// Serve static files
-app.use(express.static('dist'));
+// Serve hashed assets with long-term immutable cache
+app.use('/assets', express.static(path.join('dist', 'assets'), {
+  maxAge: '1y',
+  immutable: true,
+}));
+
+// Serve other static files with no-cache (index.html etc.)
+app.use(express.static('dist', {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
+}));
 
 // SPA fallback - use middleware instead of route
 app.use((req, res, next) => {
-  if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/ws') && !req.path.startsWith('/assets')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
   } else {
     next();

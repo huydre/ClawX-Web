@@ -58,7 +58,12 @@
                     "label": "ボットトークン",
                     "placeholder": "123456:ABC-DEF..."
                 },
-                "allowedUsers": {
+                "dmPolicy": {
+                    "label": "DMポリシー",
+                    "placeholder": "DMポリシーを選択...",
+                    "description": "ボットにダイレクトメッセージを送信できるユーザーを制御します"
+                },
+                "allowFrom": {
                     "label": "許可されたユーザーID",
                     "placeholder": "例: 123456789, 987654321",
                     "description": "ボットの使用を許可するユーザーIDのリスト（カンマ区切り）。セキュリティのため必須です。"
