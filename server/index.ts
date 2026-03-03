@@ -56,29 +56,27 @@ async function start() {
       logger.warn('Failed to load gateway token from environment', { error });
     }
 
-    // Sync gateway token to OpenClaw config so gateway uses same auth token
+    // Sync gateway token FROM OpenClaw config (not the other way around)
+    // OpenClaw gateway owns the token, ClawX-Web reads it
     try {
-      const { getSetting } = await import('./services/storage.js');
-      const gatewayToken = await getSetting('gatewayToken');
-      if (gatewayToken) {
-        const fs = await import('fs');
-        const path = await import('path');
-        const os = await import('os');
-        const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
-        if (fs.existsSync(configPath)) {
-          const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-          const currentToken = config?.gateway?.auth?.token;
-          if (currentToken !== gatewayToken) {
-            if (!config.gateway) config.gateway = {};
-            if (!config.gateway.auth) config.gateway.auth = {};
-            config.gateway.auth.token = gatewayToken;
-            fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-            logger.info('Synced gateway auth token to OpenClaw config', { configPath });
+      const { getSetting, setSetting } = await import('./services/storage.js');
+      const fs = await import('fs');
+      const path = await import('path');
+      const os = await import('os');
+      const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        const openclawToken = config?.gateway?.auth?.token;
+        if (openclawToken) {
+          const currentToken = await getSetting('gatewayToken');
+          if (currentToken !== openclawToken) {
+            await setSetting('gatewayToken', openclawToken);
+            logger.info('Synced gateway token from OpenClaw config', { configPath });
           }
         }
       }
     } catch (error) {
-      logger.warn('Failed to sync gateway token to OpenClaw config', { error });
+      logger.warn('Failed to sync gateway token from OpenClaw config', { error });
     }
 
     // Auto-start gateway connection
