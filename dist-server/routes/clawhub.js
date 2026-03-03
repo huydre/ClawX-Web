@@ -6,6 +6,8 @@ import path from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import fs from 'fs';
+import fsp from 'fs/promises';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const router = Router();
@@ -142,23 +144,36 @@ const uninstallSchema = z.object({
 router.post('/uninstall', async (req, res) => {
     try {
         const { slug } = uninstallSchema.parse(req.body);
-        // Delete skill directory and update lock file
-        const fs = await import('fs/promises');
-        const skillDir = path.join(homedir(), '.openclaw', 'skills', slug);
-        if (await fs.stat(skillDir).catch(() => null)) {
-            await fs.rm(skillDir, { recursive: true, force: true });
+        const openclawDir = path.join(homedir(), '.openclaw');
+        // 1. Delete from managed skills dir (~/.openclaw/skills/{slug}/)
+        const managedSkillDir = path.join(openclawDir, 'skills', slug);
+        if (fs.existsSync(managedSkillDir)) {
+            await fsp.rm(managedSkillDir, { recursive: true, force: true });
+            logger.info('Removed managed skill dir', { slug, managedSkillDir });
         }
-        // Remove from lock.json
-        const lockFile = path.join(homedir(), '.openclaw', '.clawhub', 'lock.json');
-        try {
-            const lockData = JSON.parse(await fs.readFile(lockFile, 'utf8'));
-            if (lockData.skills && lockData.skills[slug]) {
-                delete lockData.skills[slug];
-                await fs.writeFile(lockFile, JSON.stringify(lockData, null, 2));
+        // 2. Update clawhub lock.json (~/.openclaw/.clawhub/lock.json)
+        const lockPath = path.join(openclawDir, '.clawhub', 'lock.json');
+        if (fs.existsSync(lockPath)) {
+            try {
+                const raw = await fsp.readFile(lockPath, 'utf8');
+                const lock = JSON.parse(raw);
+                if (lock?.skills?.[slug]) {
+                    delete lock.skills[slug];
+                    await fsp.writeFile(lockPath, JSON.stringify(lock, null, 2), 'utf8');
+                    logger.info('Removed from lock.json', { slug });
+                }
+            }
+            catch (e) {
+                logger.warn('Failed to update lock.json', { slug, error: String(e) });
             }
         }
-        catch (err) {
-            logger.warn('Failed to update lock file', { err });
+        // 3. Delete workspace copy (~/.openclaw/workspace/skills/{slug}/)
+        // This is the key step — workspace has highest precedence in OpenClaw's skill resolution,
+        // so without deleting this copy, the skill keeps appearing after reload.
+        const workspaceSkillDir = path.join(openclawDir, 'workspace', 'skills', slug);
+        if (fs.existsSync(workspaceSkillDir)) {
+            await fsp.rm(workspaceSkillDir, { recursive: true, force: true });
+            logger.info('Removed workspace skill copy', { slug, workspaceSkillDir });
         }
         res.json({ success: true });
     }

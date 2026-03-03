@@ -66,21 +66,28 @@ log "System packages ready"
 # ── Step 2: Node.js ────────────────────────────────────────────────────────
 step "Checking Node.js"
 
+install_nodejs() {
+  info "Setting up NodeSource repository..."
+  # Modern NodeSource setup (keyring-based, no pipe-to-bash)
+  mkdir -p /etc/apt/keyrings
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg 2>/dev/null
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+  apt-get update -qq
+  apt-get install -y -qq nodejs >/dev/null 2>&1
+  log "Node.js $(node -v) installed"
+}
+
 if command -v node &>/dev/null; then
   NODE_VER=$(node -v | sed 's/v//' | cut -d. -f1)
   if [[ "$NODE_VER" -ge "$NODE_MAJOR" ]]; then
     log "Node.js $(node -v) already installed"
   else
-    warn "Node.js v${NODE_VER} is too old, installing v${NODE_MAJOR}..."
-    curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - >/dev/null 2>&1
-    apt-get install -y -qq nodejs >/dev/null 2>&1
-    log "Node.js $(node -v) installed"
+    warn "Node.js v${NODE_VER} is too old, upgrading to v${NODE_MAJOR}..."
+    install_nodejs
   fi
 else
   info "Installing Node.js ${NODE_MAJOR}..."
-  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - >/dev/null 2>&1
-  apt-get install -y -qq nodejs >/dev/null 2>&1
-  log "Node.js $(node -v) installed"
+  install_nodejs
 fi
 
 # ── Step 3: pnpm ───────────────────────────────────────────────────────────
