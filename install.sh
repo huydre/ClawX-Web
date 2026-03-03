@@ -59,11 +59,22 @@ info "Detected: ${BOLD}${PRETTY_NAME}${NC} (${ARCH})"
 # ── Step 1: System packages ────────────────────────────────────────────────
 step "Installing system dependencies"
 
-# Clean up any existing NodeSource repos to avoid Signed-By conflicts
+# Thorough cleanup of ALL NodeSource entries to avoid Signed-By conflicts
+# Remove from sources.list.d
 rm -f /etc/apt/sources.list.d/nodesource*.list
+# Remove from main sources.list (comment out nodesource lines)
+if [[ -f /etc/apt/sources.list ]]; then
+  sed -i '/nodesource/d' /etc/apt/sources.list 2>/dev/null || true
+fi
+# Remove ALL nodesource keyrings
 rm -f /usr/share/keyrings/nodesource.gpg
 rm -f /etc/apt/keyrings/nodesource.gpg
+rm -f /usr/share/keyrings/nodesource-repo.gpg.key
+# Remove legacy apt-key entries (both known NodeSource key IDs)
 apt-key del "9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280" 2>/dev/null || true
+apt-key del "2F59B5F99B1BE0B4" 2>/dev/null || true
+# Remove any .list file that references nodesource
+grep -rl "nodesource" /etc/apt/sources.list.d/ 2>/dev/null | xargs rm -f 2>/dev/null || true
 
 apt-get update -qq
 apt-get install -y -qq curl git ca-certificates gnupg >/dev/null 2>&1
@@ -74,13 +85,6 @@ step "Checking Node.js"
 
 install_nodejs() {
   info "Setting up NodeSource repository..."
-
-  # Remove old NodeSource repos and keys to avoid Signed-By conflicts
-  rm -f /etc/apt/sources.list.d/nodesource*.list
-  rm -f /usr/share/keyrings/nodesource.gpg
-  rm -f /etc/apt/keyrings/nodesource.gpg
-  # Also clean up legacy apt-key entries
-  apt-key del "9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280" 2>/dev/null || true
 
   # Modern NodeSource setup (keyring-based)
   mkdir -p /etc/apt/keyrings
