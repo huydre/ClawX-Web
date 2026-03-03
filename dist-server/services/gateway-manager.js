@@ -82,9 +82,9 @@ class GatewayManager extends EventEmitter {
     async connect() {
         try {
             const gatewayPort = await getSetting('gatewayPort');
-            const gatewayToken = await getSetting('gatewayToken');
+            let gatewayToken = await getSetting('gatewayToken');
             const url = `ws://127.0.0.1:${gatewayPort}`;
-            // Auto-detect gateway password from ~/.openclaw/openclaw.json
+            // Auto-detect gateway token and password from ~/.openclaw/openclaw.json
             let gatewayPassword;
             try {
                 const configPath = join(homedir(), '.openclaw', 'openclaw.json');
@@ -92,9 +92,15 @@ class GatewayManager extends EventEmitter {
                 const raw = readFileSync(configPath, 'utf-8');
                 const config = JSON.parse(raw);
                 gatewayPassword = config?.gateway?.auth?.password;
+                // Use token from openclaw.json if available (overrides auto-generated one)
+                const configToken = config?.gateway?.auth?.token;
+                if (configToken) {
+                    gatewayToken = configToken;
+                    logger.info('Using gateway token from openclaw.json');
+                }
                 logger.info('Gateway auth config', {
                     hasPassword: !!gatewayPassword,
-                    hasToken: !!config?.gateway?.auth?.token,
+                    hasToken: !!configToken,
                     authMode: config?.gateway?.auth?.mode,
                 });
             }
