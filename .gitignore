@@ -4,8 +4,7 @@ node_modules/
 .pnp.js
 
 # Build outputs
-dist/
-dist-server/
+# dist/ and dist-server/ are committed for pre-built deployment
 dist-electron/
 release/
 *.local
