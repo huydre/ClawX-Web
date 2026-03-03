@@ -17,7 +17,37 @@ DIM='\033[2m'
 NC='\033[0m'
 
 CLAWX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLAWX_USER="clawx"
+
+# Auto-detect the user who installed OpenClaw
+# Priority: 1) owner of openclaw-gateway process, 2) SUDO_USER, 3) current user
+detect_clawx_user() {
+  # Try to find user running openclaw-gateway
+  local gw_user
+  gw_user=$(ps -eo user,comm 2>/dev/null | grep -i 'openclaw' | head -1 | awk '{print $1}' || true)
+  if [[ -n "$gw_user" && "$gw_user" != "root" ]]; then
+    echo "$gw_user"
+    return
+  fi
+
+  # Try SUDO_USER (the real user who ran sudo)
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+    echo "$SUDO_USER"
+    return
+  fi
+
+  # Scan /home for .openclaw directory
+  for home_dir in /home/*/; do
+    if [[ -f "${home_dir}.openclaw/openclaw.json" ]]; then
+      basename "$home_dir"
+      return
+    fi
+  done
+
+  # Fallback: current user
+  whoami
+}
+
+CLAWX_USER="$(detect_clawx_user)"
 SERVICE_NAME="clawx"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 ENV_FILE="${CLAWX_DIR}/.env"
@@ -221,6 +251,9 @@ setup_systemd() {
   local node_path
   node_path=$(which node)
 
+  local user_home
+  user_home=$(eval echo "~${CLAWX_USER}")
+
   cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=ClawX-Web Dashboard
@@ -241,12 +274,15 @@ StartLimitBurst=3
 
 # Environment
 Environment=NODE_ENV=production
+Environment=HOME=${user_home}
 EnvironmentFile=${ENV_FILE}
 
 # Security hardening
 NoNewPrivileges=true
 ProtectSystem=strict
 ReadWritePaths=${CLAWX_DIR}
+ReadWritePaths=${user_home}/.openclaw
+ReadWritePaths=${user_home}/.clawx-device-identity.json
 PrivateTmp=true
 
 # Logging
