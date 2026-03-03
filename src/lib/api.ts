@@ -444,6 +444,39 @@ class ApiClient {
   async getChannelFormValues(type: string) {
     return this.request<{ success: boolean; values: Record<string, string> | null }>(`/channels/${type}/form-values`);
   }
+
+  // System / Update API (web-only)
+  async getSystemInfo() {
+    return this.request<{
+      localSha: string;
+      localShort: string;
+      remoteSha: string;
+      remoteShort: string;
+      remoteMessage: string;
+      remoteAuthor: string;
+      remoteDate: string;
+      updateAvailable: boolean;
+      checkedAt: number | null;
+    }>('/system/info');
+  }
+
+  async checkUpdate() {
+    return this.request<{
+      localSha: string;
+      localShort: string;
+      remoteSha: string;
+      remoteShort: string;
+      remoteMessage: string;
+      remoteAuthor: string;
+      remoteDate: string;
+      updateAvailable: boolean;
+      checkedAt: number | null;
+    }>('/system/check-update', { method: 'POST' });
+  }
+
+  async startUpdate() {
+    return this.request<{ ok: boolean; message: string }>('/system/update', { method: 'POST' });
+  }
 }
 
 export const api = new ApiClient();

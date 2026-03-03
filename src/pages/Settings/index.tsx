@@ -29,6 +29,7 @@ import { useGatewayStore } from '@/stores/gateway';
 import { useUpdateStore } from '@/stores/update';
 import { ProvidersSettings } from '@/components/settings/ProvidersSettings';
 import { UpdateSettings } from '@/components/settings/UpdateSettings';
+import { WebUpdateSettings } from '@/components/settings/WebUpdateSettings';
 import { TunnelSettings } from '@/components/settings/TunnelSettings';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
@@ -385,6 +386,22 @@ export function Settings() {
           <TunnelSettings />
         </CardContent>
       </Card>
+
+      {/* Updates - Web/VPS mode */}
+      {platform.isWeb && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              {t('updates.title')}
+            </CardTitle>
+            <CardDescription>Check for and install ClawX-Web updates</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WebUpdateSettings />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Updates - Only available in Electron mode */}
       {platform.isElectron && (

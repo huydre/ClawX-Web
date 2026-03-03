@@ -12,6 +12,7 @@ import filesRouter from './routes/files.js';
 import clawhubRouter from './routes/clawhub.js';
 import tunnelRouter from './routes/tunnel.js';
 import channelsRouter from './routes/channels.js';
+import systemRouter from './routes/system.js';
 const app = express();
 // ============================================================================
 // Dashboard reverse proxy
@@ -74,6 +75,7 @@ app.use('/api/files', filesRouter);
 app.use('/api/clawhub', clawhubRouter);
 app.use('/api/tunnel', tunnelRouter);
 app.use('/api/channels', channelsRouter);
+app.use('/api/system', systemRouter);
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
     maxAge: '1y',

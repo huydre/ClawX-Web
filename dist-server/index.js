@@ -6,6 +6,7 @@ import { initStorage, getCloudflareSettings } from './services/storage.js';
 import { gatewayManager } from './services/gateway-manager.js';
 import { tunnelManager } from './services/tunnel-manager.js';
 import { startAutoPairing } from './services/auto-pairing.js';
+import { updateChecker } from './services/update-checker.js';
 const PORT = parseInt(process.env.PORT || '2003', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 async function start() {
@@ -86,6 +87,8 @@ async function start() {
         }
         // Auto-approve OpenClaw device pairing requests (so remote dashboard works without manual CLI)
         startAutoPairing();
+        // Start update checker (polls GitHub every 6h)
+        updateChecker.start();
         // Auto-start tunnel if enabled
         try {
             // Check for environment variables first
