@@ -59,40 +59,30 @@ info "Detected: ${BOLD}${PRETTY_NAME}${NC} (${ARCH})"
 # ── Step 1: System packages ────────────────────────────────────────────────
 step "Installing system dependencies"
 
-# Thorough cleanup of ALL NodeSource entries to avoid Signed-By conflicts
-# Remove from sources.list.d
-rm -f /etc/apt/sources.list.d/nodesource*.list
-# Remove from main sources.list (comment out nodesource lines)
-if [[ -f /etc/apt/sources.list ]]; then
-  sed -i '/nodesource/d' /etc/apt/sources.list 2>/dev/null || true
-fi
-# Remove ALL nodesource keyrings
-rm -f /usr/share/keyrings/nodesource.gpg
-rm -f /etc/apt/keyrings/nodesource.gpg
-rm -f /usr/share/keyrings/nodesource-repo.gpg.key
-# Remove legacy apt-key entries (both known NodeSource key IDs)
-apt-key del "9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280" 2>/dev/null || true
-apt-key del "2F59B5F99B1BE0B4" 2>/dev/null || true
-# Remove any .list file that references nodesource
-grep -rl "nodesource" /etc/apt/sources.list.d/ 2>/dev/null | xargs rm -f 2>/dev/null || true
-
-apt-get update -qq
-apt-get install -y -qq curl git ca-certificates gnupg >/dev/null 2>&1
+apt-get update -qq 2>/dev/null || true
+apt-get install -y -qq curl git ca-certificates gnupg xz-utils >/dev/null 2>&1
 log "System packages ready"
 
 # ── Step 2: Node.js ────────────────────────────────────────────────────────
 step "Checking Node.js"
 
-install_nodejs() {
-  info "Setting up NodeSource repository..."
+NODE_VERSION="20.18.1"
 
-  # Modern NodeSource setup (keyring-based)
-  mkdir -p /etc/apt/keyrings
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg 2>/dev/null
-  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
-  apt-get update -qq
-  apt-get install -y -qq nodejs >/dev/null 2>&1
-  log "Node.js $(node -v) installed"
+install_nodejs() {
+  # Direct binary download from nodejs.org (bypasses all APT repo conflicts)
+  local arch
+  case "$(uname -m)" in
+    x86_64)  arch="x64" ;;
+    aarch64) arch="arm64" ;;
+    armv7l)  arch="armv7l" ;;
+    *)       error "Unsupported architecture: $(uname -m)" ;;
+  esac
+
+  info "Downloading Node.js v${NODE_VERSION} (${arch})..."
+  local url="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz"
+
+  curl -fsSL "$url" | tar -xJ -C /usr/local --strip-components=1
+  log "Node.js $(node -v) installed to /usr/local"
 }
 
 if command -v node &>/dev/null; then
@@ -100,11 +90,11 @@ if command -v node &>/dev/null; then
   if [[ "$NODE_VER" -ge "$NODE_MAJOR" ]]; then
     log "Node.js $(node -v) already installed"
   else
-    warn "Node.js v${NODE_VER} is too old, upgrading to v${NODE_MAJOR}..."
+    warn "Node.js v${NODE_VER} is too old, upgrading to v${NODE_VERSION}..."
     install_nodejs
   fi
 else
-  info "Installing Node.js ${NODE_MAJOR}..."
+  info "Installing Node.js ${NODE_VERSION}..."
   install_nodejs
 fi
 
