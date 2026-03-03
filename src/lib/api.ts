@@ -225,33 +225,92 @@ class ApiClient {
   }
 
   // Cron API (via Gateway RPC)
+  // Transforms frontend format to Gateway format (matching Electron IPC handlers)
   async getCronJobs() {
-    const result = await this.gatewayRpc('cron.list');
+    const result = await this.gatewayRpc('cron.list', { includeDisabled: true });
     return result.result?.jobs || [];
   }
 
   async createCronJob(input: any) {
-    const result = await this.gatewayRpc('cron.create', input);
+    // Transform frontend input to Gateway cron.add format
+    // New jobs use sessionTarget='isolated' + payload.kind='agentTurn'
+    const recipientId = input.target?.channelId || '';
+    const deliveryTo = input.target?.channelType === 'discord' && recipientId
+      ? `channel:${recipientId}`
+      : recipientId;
+
+    const gatewayInput = {
+      name: input.name,
+      schedule: typeof input.schedule === 'string'
+        ? { kind: 'cron', expr: input.schedule }
+        : input.schedule,
+      payload: { kind: 'agentTurn', message: input.message || '' },
+      enabled: input.enabled ?? true,
+      wakeMode: 'next-heartbeat',
+      sessionTarget: 'isolated',
+      delivery: {
+        mode: 'announce',
+        channel: input.target?.channelType || 'telegram',
+        to: deliveryTo,
+      },
+    };
+    const result = await this.gatewayRpc('cron.add', gatewayInput);
     return result.result;
   }
 
+  // Build payload object based on sessionTarget
+  // isolated → { kind: 'agentTurn', message: '...' }
+  // main     → { kind: 'systemEvent', text: '...' }
+  private _cronPayload(sessionTarget: string, msg?: string): Record<string, any> {
+    if (sessionTarget === 'main') {
+      return msg !== undefined
+        ? { kind: 'systemEvent', text: msg }
+        : { kind: 'systemEvent' };
+    }
+    return msg !== undefined
+      ? { kind: 'agentTurn', message: msg }
+      : { kind: 'agentTurn' };
+  }
+
   async updateCronJob(id: string, input: any) {
-    const result = await this.gatewayRpc('cron.update', { id, ...input });
+    // Gateway cron.update format: { id, patch: { ... } }
+    // payload.kind depends on sessionTarget (isolated=agentTurn, main=systemEvent)
+    const session = input.sessionTarget || 'isolated';
+    const patch: Record<string, any> = {
+      payload: this._cronPayload(session, input.message),
+    };
+
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.enabled !== undefined) patch.enabled = input.enabled;
+
+    if (input.schedule !== undefined) {
+      patch.schedule = typeof input.schedule === 'string'
+        ? { kind: 'cron', expr: input.schedule }
+        : input.schedule;
+    }
+
+    const result = await this.gatewayRpc('cron.update', { id, patch });
     return result.result;
   }
 
   async deleteCronJob(id: string) {
-    const result = await this.gatewayRpc('cron.delete', { id });
+    const result = await this.gatewayRpc('cron.remove', { id });
     return result.result;
   }
 
-  async toggleCronJob(id: string, enabled: boolean) {
-    const result = await this.gatewayRpc('cron.toggle', { id, enabled });
+  async toggleCronJob(id: string, enabled: boolean, sessionTarget = 'isolated') {
+    const result = await this.gatewayRpc('cron.update', {
+      id,
+      patch: {
+        enabled,
+        payload: this._cronPayload(sessionTarget),
+      },
+    });
     return result.result;
   }
 
   async triggerCronJob(id: string) {
-    const result = await this.gatewayRpc('cron.trigger', { id });
+    const result = await this.gatewayRpc('cron.run', { id, mode: 'force' });
     return result.result;
   }
 
