@@ -127,6 +127,9 @@ fi
 # ── Step 5: Clone repository ──────────────────────────────────────────────
 step "Setting up ClawX-Web"
 
+# Fix git "dubious ownership" when running as root
+git config --global --add safe.directory "$CLAWX_DIR" 2>/dev/null || true
+
 if [[ -d "$CLAWX_DIR/.git" ]]; then
   info "Existing installation found, updating..."
   cd "$CLAWX_DIR"
