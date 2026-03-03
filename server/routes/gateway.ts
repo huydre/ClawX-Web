@@ -194,8 +194,15 @@ router.get('/current-model', (_req, res) => {
 
 // POST /api/gateway/send-with-media
 // Web mode equivalent of Electron's chat:sendWithMedia IPC handler.
-// Builds a text message with [media attached: ...] file references
-// and sends via the standard chat.send RPC. Gateway reads files from disk paths.
+// Uses the same dual-path approach as Electron:
+// Path A: `attachments` param → { content: base64, mimeType, fileName }
+//   → Gateway injects as inline vision content when model supports images.
+// Path B: `[media attached: ...]` in message text → Gateway's native image
+//   detection reads the file from disk. Also works for history replay.
+const VISION_MIME_TYPES = new Set([
+  'image/png', 'image/jpeg', 'image/bmp', 'image/webp',
+]);
+
 router.post('/send-with-media', async (req, res) => {
   try {
     const { sessionKey, message, deliver, idempotencyKey, media } = req.body as {
@@ -220,23 +227,65 @@ router.post('/send-with-media', async (req, res) => {
       return res.status(503).json({ success: false, error: 'Gateway not connected' });
     }
 
-    // Build message text with media references
-    // Format: [media attached: /path/to/file (mime/type) | filename]
-    // Gateway reads files from these disk paths
-    const mediaRefs = media.map(item =>
-      `[media attached: ${item.filePath} (${item.mimeType}) | ${item.fileName}]`
-    );
-    const fullMessage = mediaRefs.length > 0
-      ? `${message}\n\n${mediaRefs.join('\n')}`
-      : message;
+    // Build attachments and file references (matching Electron's format)
+    const imageAttachments: Array<Record<string, unknown>> = [];
+    const fileReferences: string[] = [];
+    let fullMessage = message;
 
-    const result = await gatewayManager.rpc('chat.send', {
+    for (const item of media) {
+      const exists = existsSync(item.filePath);
+      const isVision = VISION_MIME_TYPES.has(item.mimeType);
+      logger.info(`[send-with-media] Processing: ${item.fileName} (${item.mimeType}), path: ${item.filePath}, exists: ${exists}, isVision: ${isVision}`);
+
+      // Always add file path reference so the model can access via tools
+      fileReferences.push(
+        `[media attached: ${item.filePath} (${item.mimeType}) | ${item.filePath}]`
+      );
+
+      // For vision-compatible images, also add as base64 attachment
+      if (isVision && exists) {
+        try {
+          const fileBuffer = readFileSync(item.filePath);
+          const base64Data = fileBuffer.toString('base64');
+          logger.info(`[send-with-media] Read ${fileBuffer.length} bytes, base64 length: ${base64Data.length}`);
+          imageAttachments.push({
+            content: base64Data,
+            mimeType: item.mimeType,
+            fileName: item.fileName,
+          });
+        } catch (err) {
+          logger.warn('[send-with-media] Failed to read file for base64', { filePath: item.filePath, err });
+        }
+      }
+    }
+
+    // Append file references to message text
+    if (fileReferences.length > 0) {
+      const refs = fileReferences.join('\n');
+      fullMessage = fullMessage ? `${fullMessage}\n\n${refs}` : refs;
+    }
+
+    // Build RPC params (matching Electron's format)
+    const rpcParams: Record<string, unknown> = {
       sessionKey,
       message: fullMessage,
       deliver: deliver ?? false,
       idempotencyKey,
-    }, 60000);
+    };
 
+    // Add attachments separately (NOT inside message)
+    // Gateway expects: { content: base64String, mimeType: string, fileName?: string }
+    if (imageAttachments.length > 0) {
+      rpcParams.attachments = imageAttachments;
+    }
+
+    logger.info(`[send-with-media] Sending: message="${fullMessage.substring(0, 100)}", attachments=${imageAttachments.length}, fileRefs=${fileReferences.length}`);
+
+    // Use longer timeout when images are present (120s vs 60s)
+    const timeoutMs = imageAttachments.length > 0 ? 120000 : 60000;
+    const result = await gatewayManager.rpc('chat.send', rpcParams, timeoutMs);
+
+    logger.info(`[send-with-media] RPC result: ${JSON.stringify(result)}`);
     res.json({ success: true, result });
   } catch (error) {
     logger.error('Send with media error:', error);

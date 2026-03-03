@@ -43,6 +43,7 @@ export interface CronJob {
   schedule: string | CronSchedule;
   target: CronJobTarget;
   enabled: boolean;
+  sessionTarget?: string;
   createdAt: string;
   updatedAt: string;
   lastRun?: CronJobLastRun;
@@ -69,6 +70,7 @@ export interface CronJobUpdateInput {
   schedule?: string;
   target?: CronJobTarget;
   enabled?: boolean;
+  sessionTarget?: string;
 }
 
 /**

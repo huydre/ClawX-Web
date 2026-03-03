@@ -26,10 +26,13 @@ interface CronState {
 function transformGatewayJob(job: any): CronJob {
   const delivery = job.delivery || {};
   const state = job.state || {};
+  const payload = job.payload || {};
+  // agentTurn uses 'message', systemEvent uses 'text'
+  const msg = payload.message || payload.text || '';
   return {
     id: job.id,
     name: job.name || 'Unnamed',
-    message: job.payload?.message || '',
+    message: msg,
     schedule: job.schedule,
     target: {
       channelType: delivery.channel || 'telegram',
@@ -37,6 +40,7 @@ function transformGatewayJob(job: any): CronJob {
       channelName: delivery.channel || 'telegram',
     },
     enabled: job.enabled ?? true,
+    sessionTarget: job.sessionTarget || 'isolated',
     createdAt: job.createdAtMs ? new Date(job.createdAtMs).toISOString() : new Date().toISOString(),
     updatedAt: job.updatedAtMs ? new Date(job.updatedAtMs).toISOString() : new Date().toISOString(),
     lastRun: state.lastRunAtMs ? {
@@ -97,7 +101,9 @@ export const useCronStore = create<CronState>((set) => ({
       if (platform.isElectron) {
         await window.electron.ipcRenderer.invoke('cron:update', id, input);
       } else {
-        await api.updateCronJob(id, input);
+        // Include sessionTarget so API can pick the right payload.kind
+        const existingJob = useCronStore.getState().jobs.find(j => j.id === id);
+        await api.updateCronJob(id, { ...input, sessionTarget: existingJob?.sessionTarget || 'isolated' });
       }
 
       set((state) => ({
@@ -133,7 +139,8 @@ export const useCronStore = create<CronState>((set) => ({
       if (platform.isElectron) {
         await window.electron.ipcRenderer.invoke('cron:toggle', id, enabled);
       } else {
-        await api.toggleCronJob(id, enabled);
+        const existingJob = useCronStore.getState().jobs.find(j => j.id === id);
+        await api.toggleCronJob(id, enabled, existingJob?.sessionTarget || 'isolated');
       }
 
       set((state) => ({
