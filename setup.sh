@@ -177,26 +177,41 @@ cmd_update() {
 
 # ── Build ──────────────────────────────────────────────────────────────────
 do_build() {
-  step "Installing dependencies"
   cd "$CLAWX_DIR"
 
-  # Run pnpm install as clawx user if running as root
-  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-    su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm install --frozen-lockfile 2>/dev/null || pnpm install" "$CLAWX_USER"
-  else
-    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-  fi
-  log "Dependencies installed"
+  # Check if pre-built dist exists (committed to repo)
+  if [[ -d "$CLAWX_DIR/dist" && -d "$CLAWX_DIR/dist-server" ]]; then
+    step "Installing production dependencies (pre-built mode)"
+    info "Pre-built dist/ and dist-server/ found, skipping build"
 
-  step "Building ClawX-Web"
-
-  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-    su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm build && pnpm build:server" "$CLAWX_USER"
+    # Only install production deps (much faster, less RAM)
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod" "$CLAWX_USER"
+    else
+      pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod
+    fi
+    log "Production dependencies installed"
   else
-    pnpm build
-    pnpm build:server
+    # No pre-built dist, do full build
+    step "Installing dependencies"
+
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm install --frozen-lockfile 2>/dev/null || pnpm install" "$CLAWX_USER"
+    else
+      pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+    fi
+    log "Dependencies installed"
+
+    step "Building ClawX-Web"
+
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm build && pnpm build:server" "$CLAWX_USER"
+    else
+      pnpm build
+      pnpm build:server
+    fi
+    log "Build complete"
   fi
-  log "Build complete"
 }
 
 # ── Setup systemd ──────────────────────────────────────────────────────────
