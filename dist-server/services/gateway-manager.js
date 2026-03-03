@@ -112,7 +112,7 @@ class GatewayManager extends EventEmitter {
             // OpenClaw Gateway might not require authentication for localhost connections
             this.ws = new WebSocket(url, {
                 headers: {
-                    'Origin': 'http://127.0.0.1:2003'
+                    'Origin': `http://localhost:${gatewayPort}`
                 }
             });
             this.ws.on('open', () => {
