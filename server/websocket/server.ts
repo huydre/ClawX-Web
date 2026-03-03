@@ -3,14 +3,18 @@ import { IncomingMessage } from 'http';
 import { logger } from '../utils/logger.js';
 import { gatewayManager } from '../services/gateway-manager.js';
 import { tunnelManager } from '../services/tunnel-manager.js';
+import { updateChecker } from '../services/update-checker.js';
 import { getSettings } from '../services/storage.js';
+
+// Exported so routes can broadcast to all clients
+export let wss: WebSocketServer;
 
 interface AuthenticatedWebSocket extends WebSocket {
   isAuthenticated?: boolean;
 }
 
 export function createWebSocketServer(server: any): WebSocketServer {
-  const wss = new WebSocketServer({
+  wss = new WebSocketServer({
     server,
     path: '/ws'
   });
@@ -88,11 +92,18 @@ export function createWebSocketServer(server: any): WebSocketServer {
       }
     };
 
+    const onUpdateChecked = (info: any) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'updateInfo', info }));
+      }
+    };
+
     gatewayManager.on('notification', onNotification);
     gatewayManager.on('stateChange', onStateChange);
     tunnelManager.on('stateChange', onTunnelStateChange);
     tunnelManager.on('connected', onTunnelConnected);
     tunnelManager.on('disconnected', onTunnelDisconnected);
+    updateChecker.on('checked', onUpdateChecked);
 
     // Send initial state
     ws.send(JSON.stringify({
@@ -119,6 +130,12 @@ export function createWebSocketServer(server: any): WebSocketServer {
       }
     });
 
+    // Send cached update info if available
+    const cachedInfo = updateChecker.getCached();
+    if (cachedInfo) {
+      ws.send(JSON.stringify({ type: 'updateInfo', info: cachedInfo }));
+    }
+
     ws.on('close', () => {
       logger.info('WebSocket client disconnected');
       gatewayManager.off('notification', onNotification);
@@ -126,6 +143,7 @@ export function createWebSocketServer(server: any): WebSocketServer {
       tunnelManager.off('stateChange', onTunnelStateChange);
       tunnelManager.off('connected', onTunnelConnected);
       tunnelManager.off('disconnected', onTunnelDisconnected);
+      updateChecker.off('checked', onUpdateChecked);
     });
 
     ws.on('error', (error) => {

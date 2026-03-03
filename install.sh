@@ -140,6 +140,12 @@ fi
 
 chown -R "$CLAWX_USER":"$CLAWX_USER" "$CLAWX_DIR"
 
+# Allow clawx user to restart its own service (for auto-update)
+SUDOERS_FILE="/etc/sudoers.d/clawx-restart"
+echo "$CLAWX_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart clawx" > "$SUDOERS_FILE"
+chmod 440 "$SUDOERS_FILE"
+log "Sudoers rule added: $CLAWX_USER can restart clawx service"
+
 # ── Step 7: Run setup ─────────────────────────────────────────────────────
 step "Running setup"
 
