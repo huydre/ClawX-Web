@@ -59,6 +59,12 @@ info "Detected: ${BOLD}${PRETTY_NAME}${NC} (${ARCH})"
 # ── Step 1: System packages ────────────────────────────────────────────────
 step "Installing system dependencies"
 
+# Clean up any existing NodeSource repos to avoid Signed-By conflicts
+rm -f /etc/apt/sources.list.d/nodesource*.list
+rm -f /usr/share/keyrings/nodesource.gpg
+rm -f /etc/apt/keyrings/nodesource.gpg
+apt-key del "9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280" 2>/dev/null || true
+
 apt-get update -qq
 apt-get install -y -qq curl git ca-certificates gnupg >/dev/null 2>&1
 log "System packages ready"
