@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { homedir } from 'os';
 import { join } from 'path';
+import { readFileSync } from 'fs';
 import { logger } from '../utils/logger.js';
 import { getSetting } from './storage.js';
 import {
@@ -111,6 +112,23 @@ class GatewayManager extends EventEmitter {
       const gatewayToken = await getSetting('gatewayToken');
       const url = `ws://127.0.0.1:${gatewayPort}`;
 
+      // Auto-detect gateway password from ~/.openclaw/openclaw.json
+      let gatewayPassword: string | undefined;
+      try {
+        const configPath = join(homedir(), '.openclaw', 'openclaw.json');
+        logger.info('Reading gateway config', { configPath });
+        const raw = readFileSync(configPath, 'utf-8');
+        const config = JSON.parse(raw);
+        gatewayPassword = config?.gateway?.auth?.password;
+        logger.info('Gateway auth config', {
+          hasPassword: !!gatewayPassword,
+          hasToken: !!config?.gateway?.auth?.token,
+          authMode: config?.gateway?.auth?.mode,
+        });
+      } catch (configErr: any) {
+        logger.warn('Failed to read gateway password from openclaw.json', { error: configErr?.message });
+      }
+
       logger.info('Connecting to gateway', { url });
 
       // Try connecting without Authorization header first
@@ -156,7 +174,7 @@ class GatewayManager extends EventEmitter {
             const clientId = 'webchat';
             const clientMode = 'webchat';
             const role = 'operator';
-            const scopes = ['operator.read', 'operator.write', 'operator.admin'];
+            const scopes = ['operator.read', 'operator.write', 'operator.admin', 'operator.approvals', 'operator.pairing'];
             const signedAtMs = Date.now();
 
             const payload = buildDeviceAuthPayload({
@@ -191,7 +209,7 @@ class GatewayManager extends EventEmitter {
                 },
                 role,
                 scopes,
-                auth: { token: gatewayToken },
+                auth: { token: gatewayToken, ...(gatewayPassword ? { password: gatewayPassword } : {}) },
                 device: {
                   id: deviceIdentity.deviceId,
                   publicKey: publicKeyRaw,

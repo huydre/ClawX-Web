@@ -348,6 +348,7 @@ class ApiClient {
       running: boolean;
       mode?: 'quick' | 'named';
       publicUrl?: string;
+      dashboardUrl?: string;
       uptime?: number;
       state: 'stopped' | 'starting' | 'connected' | 'error';
       error?: string;
