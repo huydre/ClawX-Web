@@ -12,6 +12,7 @@ import {
   Settings,
   Plus,
   Terminal,
+  ExternalLink,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import { useGatewayStore } from '@/stores/gateway';
 import { useChannelsStore } from '@/stores/channels';
 import { useSkillsStore } from '@/stores/skills';
 import { useSettingsStore } from '@/stores/settings';
+import { api } from '@/lib/api';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useTranslation } from 'react-i18next';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
@@ -32,6 +34,7 @@ export function Dashboard() {
   const { channels, fetchChannels } = useChannelsStore();
   const { skills, fetchSkills } = useSkillsStore();
   const devModeUnlocked = useSettingsStore((state) => state.devModeUnlocked);
+
 
   const [uptime, setUptime] = useState(0);
 
@@ -81,6 +84,22 @@ export function Dashboard() {
     } catch (err) {
       console.error('Error opening Dev Console:', err);
     }
+  };
+
+  const openGatewayDashboard = async () => {
+    // Use dashboardUrl from API (includes auth token), fallback to publicUrl + token
+    try {
+      const status = await api.getTunnelStatus();
+      // dashboardUrl already has token, e.g. https://dashboard-xxx/?token=abc
+      if (status.dashboardUrl) {
+        window.open(status.dashboardUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    const { toast } = await import('sonner');
+    toast.error('Tunnel chưa kết nối. Vui lòng bật tunnel trước.');
   };
 
   return (
@@ -192,6 +211,14 @@ export function Dashboard() {
                 <span>{t('quickActions.devConsole')}</span>
               </Button>
             )}
+            <Button
+              variant="outline"
+              className="h-auto flex-col gap-2 py-4"
+              onClick={openGatewayDashboard}
+            >
+              <ExternalLink className="h-5 w-5" />
+              <span>{t('quickActions.gatewayDashboard', 'Gateway Dashboard')}</span>
+            </Button>
           </div>
         </CardContent>
       </Card>

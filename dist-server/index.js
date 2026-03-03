@@ -1,10 +1,11 @@
 import 'dotenv/config';
-import { app } from './app.js';
+import { app, dashboardProxy } from './app.js';
 import { logger } from './utils/logger.js';
 import { createWebSocketServer } from './websocket/server.js';
 import { initStorage, getCloudflareSettings } from './services/storage.js';
 import { gatewayManager } from './services/gateway-manager.js';
 import { tunnelManager } from './services/tunnel-manager.js';
+import { startAutoPairing } from './services/auto-pairing.js';
 const PORT = parseInt(process.env.PORT || '2003', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 async function start() {
@@ -29,6 +30,13 @@ async function start() {
         });
         // Create WebSocket server
         createWebSocketServer(server);
+        // Proxy WebSocket upgrade requests for dashboard-* hosts to the OpenClaw gateway
+        server.on('upgrade', (req, socket, head) => {
+            const host = (req.headers.host || '').toLowerCase();
+            if (host.startsWith('dashboard-')) {
+                dashboardProxy.upgrade(req, socket, head);
+            }
+        });
         // Set gateway token from environment BEFORE starting gateway
         try {
             const envGatewayToken = process.env.GATEWAY_TOKEN;
@@ -76,6 +84,8 @@ async function start() {
         catch (error) {
             logger.warn('Failed to auto-start gateway', { error });
         }
+        // Auto-approve OpenClaw device pairing requests (so remote dashboard works without manual CLI)
+        startAutoPairing();
         // Auto-start tunnel if enabled
         try {
             // Check for environment variables first
@@ -143,34 +153,33 @@ async function start() {
                     // Ensure main domain DNS record
                     await ensureDnsRecord(fullDomain, dnsSubdomain);
                     const publicUrl = `https://${fullDomain}`;
-                    // Check if OpenClaw dashboard port is configured
-                    const dashboardPort = process.env.CLOUDFLARE_DASHBOARD_PORT;
-                    const hasDashboard = dashboardPort && parseInt(dashboardPort, 10) > 0;
-                    let dashboardUrl;
-                    let useIngressConfig = false;
-                    if (hasDashboard) {
-                        const dashboardSubdomain = `dashboard-${subdomain}`;
-                        const dashboardFullDomain = `${dashboardSubdomain}.${envDomain}`;
-                        let dashboardDnsSubdomain;
-                        if (envDomain === zoneName) {
-                            dashboardDnsSubdomain = dashboardSubdomain;
-                        }
-                        else {
-                            const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
-                            dashboardDnsSubdomain = `${dashboardSubdomain}.${subdomainPrefix}`;
-                        }
-                        // Ensure dashboard DNS record
-                        await ensureDnsRecord(dashboardFullDomain, dashboardDnsSubdomain);
-                        // Set tunnel ingress rules via API so both hostnames are routed correctly
-                        await cfApi.updateTunnelConfig(accountId, tunnel.id, [
-                            { hostname: fullDomain, service: `http://localhost:${PORT}` },
-                            { hostname: dashboardFullDomain, service: `http://localhost:${dashboardPort}` },
-                            { service: 'http_status:404' },
-                        ]);
-                        dashboardUrl = `https://${dashboardFullDomain}`;
-                        useIngressConfig = true;
-                        logger.info('Dashboard tunnel ingress configured', { dashboardUrl });
+                    // Always set up dashboard subdomain when a fixed subdomain is configured.
+                    // Dashboard = OpenClaw gateway web UI running on OPENCLAW_GATEWAY_PORT (default 18789).
+                    // Access requires ?token=<gateway_token> — we include it in the stored URL.
+                    const dashboardPort = process.env.OPENCLAW_GATEWAY_PORT || '18789';
+                    const dashboardSubdomain = `dashboard-${subdomain}`;
+                    const dashboardFullDomain = `${dashboardSubdomain}.${envDomain}`;
+                    let dashboardDnsSubdomain;
+                    if (envDomain === zoneName) {
+                        dashboardDnsSubdomain = dashboardSubdomain;
                     }
+                    else {
+                        const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
+                        dashboardDnsSubdomain = `${dashboardSubdomain}.${subdomainPrefix}`;
+                    }
+                    // Ensure dashboard DNS record
+                    await ensureDnsRecord(dashboardFullDomain, dashboardDnsSubdomain);
+                    // Set tunnel ingress rules via API so both hostnames route to the right service
+                    await cfApi.updateTunnelConfig(accountId, tunnel.id, [
+                        { hostname: fullDomain, service: `http://localhost:${PORT}` },
+                        { hostname: dashboardFullDomain, service: `http://localhost:${dashboardPort}` },
+                        { service: 'http_status:404' },
+                    ]);
+                    // Build dashboard URL with gateway auth token so users can open it directly
+                    const { getSetting } = await import('./services/storage.js');
+                    const gatewayToken = await getSetting('gatewayToken');
+                    const dashboardUrl = `https://${dashboardFullDomain}/?token=${gatewayToken}`;
+                    logger.info('Dashboard tunnel ingress configured', { dashboardUrl });
                     // Save configuration
                     const { saveCloudflareSettings } = await import('./services/storage.js');
                     await saveCloudflareSettings({
@@ -183,13 +192,14 @@ async function start() {
                         domain: fullDomain,
                         publicUrl,
                         dashboardUrl,
-                        useIngressConfig,
+                        useIngressConfig: false,
                     });
-                    // Start tunnel — without --url when ingress config is set via API
+                    // Use --url pointing to ClawX (port 2003).
+                    // Dashboard routing is handled by the Express proxy middleware (Host: dashboard-*).
                     await tunnelManager.start({
                         mode: 'named',
                         token: tunnelToken,
-                        ...(useIngressConfig ? { useIngressConfig: true } : { localUrl: `http://localhost:${PORT}` }),
+                        localUrl: `http://localhost:${PORT}`,
                     });
                     logger.info('Tunnel auto-setup complete from environment', { publicUrl, dashboardUrl });
                 }
@@ -210,9 +220,7 @@ async function start() {
                         await tunnelManager.start({
                             mode: 'named',
                             token: cloudflareSettings.tunnelToken,
-                            ...(cloudflareSettings.useIngressConfig
-                                ? { useIngressConfig: true }
-                                : { localUrl: `http://localhost:${PORT}` }),
+                            localUrl: `http://localhost:${PORT}`,
                         });
                         logger.info('Named tunnel started automatically');
                     }

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { requestLogger } from './middleware/logger.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import providersRouter from './routes/providers.js';
@@ -13,6 +14,33 @@ import tunnelRouter from './routes/tunnel.js';
 import channelsRouter from './routes/channels.js';
 
 const app = express();
+
+// ============================================================================
+// Dashboard reverse proxy
+// Requests with Host: dashboard-* are proxied to the OpenClaw gateway web UI.
+// This runs BEFORE all other middleware so that dashboard traffic never reaches
+// the ClawX static file handlers.
+// ============================================================================
+const DASHBOARD_PORT = process.env.OPENCLAW_GATEWAY_PORT || '18789';
+
+const dashboardProxy = createProxyMiddleware({
+  target: `http://127.0.0.1:${DASHBOARD_PORT}`,
+  changeOrigin: true,
+  ws: true,
+  on: {
+    error: (_err, _req, res: any) => {
+      res.status(502).send('OpenClaw dashboard is unavailable');
+    },
+  },
+});
+
+app.use((req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase();
+  if (host.startsWith('dashboard-')) {
+    return dashboardProxy(req, res, next);
+  }
+  next();
+});
 
 // Security
 app.use(helmet({
@@ -90,4 +118,4 @@ app.use((req, res, next) => {
 // Error handler (must be last)
 app.use(errorHandler);
 
-export { app };
+export { app, dashboardProxy };

@@ -203,6 +203,18 @@ class TunnelManager extends EventEmitter {
       // Ensure binary is available
       const binaryPath = await cloudflaredBinaryManager.ensureBinary();
 
+      // Kill any orphaned cloudflared processes from previous runs before spawning a new one.
+      // This prevents stale processes (started with --url) from interfering with ingress routing.
+      try {
+        const { execSync } = await import('child_process');
+        execSync(`pkill -f "${binaryPath}"`, { stdio: 'ignore' });
+        logger.info('Killed orphaned cloudflared processes');
+        // Brief pause for the OS to clean up ports/connections
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch {
+        // pkill exits with code 1 if no processes found — that's fine
+      }
+
       if (!this.config) {
         throw new Error('No configuration available');
       }
