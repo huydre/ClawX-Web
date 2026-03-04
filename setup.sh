@@ -308,12 +308,21 @@ install_openzalo() {
   if [[ "$plugin_installed" == "true" ]]; then
     info "OpenZalo plugin already installed"
   else
-    info "Installing @openclaw/openzalo plugin..."
-    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-      su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw plugins install @openclaw/openzalo" "$CLAWX_USER" 2>/dev/null || \
-        warn "Failed to install OpenZalo plugin (non-critical)"
+    info "Installing OpenZalo plugin from GitHub..."
+    local tmp_dir="/tmp/openzalo-$$"
+    git clone --depth 1 https://github.com/darkamenosa/openzalo "$tmp_dir" 2>/dev/null
+
+    if [[ -d "$tmp_dir" ]]; then
+      if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+        chown -R "$CLAWX_USER":"$CLAWX_USER" "$tmp_dir"
+        su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw plugins install '$tmp_dir'" "$CLAWX_USER" 2>/dev/null || \
+          warn "Failed to install OpenZalo plugin (non-critical)"
+      else
+        "$openclaw_bin" plugins install "$tmp_dir" 2>/dev/null || warn "Failed to install OpenZalo plugin (non-critical)"
+      fi
+      rm -rf "$tmp_dir"
     else
-      "$openclaw_bin" plugins install @openclaw/openzalo 2>/dev/null || warn "Failed to install OpenZalo plugin (non-critical)"
+      warn "Failed to clone OpenZalo repo (non-critical)"
     fi
   fi
 
