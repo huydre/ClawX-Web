@@ -801,6 +801,54 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
                 }}>
                   {t('dialog.refreshCode')}
                 </Button>
+                {selectedType === 'openzalo' && (
+                  <Button onClick={async () => {
+                    try {
+                      setQrCode(null);
+                      toast.info('Saving Zalo configuration...');
+
+                      // Save channel config via API
+                      const profile = configValues.profile?.trim() || 'default';
+                      const saveRes = await fetch('/api/channels', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          type: 'openzalo',
+                          name: channelName || 'Zalo',
+                          config: { profile, enabled: true },
+                        }),
+                      });
+                      const saveData = await saveRes.json();
+
+                      if (saveData.success) {
+                        toast.success('Zalo channel saved!');
+
+                        // Register channel locally
+                        await addChannel({
+                          type: 'openzalo',
+                          name: channelName || 'Zalo',
+                        });
+
+                        // Restart gateway to pick up new config
+                        try {
+                          await api.restartOpenClaw();
+                          toast.success('Gateway restarting...');
+                          await new Promise((resolve) => setTimeout(resolve, 3000));
+                        } catch { /* ignore */ }
+
+                        onChannelAdded();
+                      } else {
+                        toast.error(saveData.error || 'Failed to save config');
+                      }
+                    } catch (err) {
+                      toast.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+                    } finally {
+                      setConnecting(false);
+                    }
+                  }}>
+                    ✅ {t('dialog.doneScan', { defaultValue: 'Done scanning' })}
+                  </Button>
+                )}
               </div>
             </div>
           ) : loadingConfig ? (
