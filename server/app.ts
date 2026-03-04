@@ -13,6 +13,8 @@ import clawhubRouter from './routes/clawhub.js';
 import tunnelRouter from './routes/tunnel.js';
 import channelsRouter from './routes/channels.js';
 import systemRouter from './routes/system.js';
+import authRouter from './routes/auth.js';
+import { authMiddleware } from './middleware/auth.js';
 
 const app = express();
 
@@ -75,6 +77,12 @@ app.use(requestLogger);
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
 });
+
+// Auth routes (before auth middleware so login endpoints are accessible)
+app.use('/api/auth', authRouter);
+
+// Password gate — all routes below require authentication
+app.use(authMiddleware);
 
 // API routes
 app.use('/api/providers', providersRouter);

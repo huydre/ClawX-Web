@@ -3,7 +3,7 @@
  * Handles routing and global providers
  */
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Component, useEffect } from 'react';
+import { Component, useEffect, useState, useCallback } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import i18n from './i18n';
@@ -19,6 +19,7 @@ import { Setup } from './pages/Setup';
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
 import { ws } from './lib/websocket';
+import { LoginPage } from './pages/Login';
 import './lib/platform'; // Initialize platform compatibility layer
 
 
@@ -94,6 +95,31 @@ function App() {
   const setupComplete = useSettingsStore((state) => state.setupComplete);
   const initGateway = useGatewayStore((state) => state.init);
 
+  // Auth state
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
+
+  // Check auth status on mount
+  useEffect(() => {
+    fetch('/api/auth/status')
+      .then(res => res.json())
+      .then(data => {
+        setAuthRequired(data.authRequired);
+        setAuthenticated(data.authenticated);
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        // If can't reach server, assume no auth
+        setAuthChecked(true);
+        setAuthenticated(true);
+      });
+  }, []);
+
+  const handleLoginSuccess = useCallback(() => {
+    setAuthenticated(true);
+  }, []);
+
   // Sync i18n language with persisted settings on mount
   useEffect(() => {
     if (language && language !== i18n.language) {
@@ -153,6 +179,25 @@ function App() {
       root.classList.add(theme);
     }
   }, [theme]);
+
+  // Show nothing while checking auth
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Show login page if auth required and not authenticated
+  if (authRequired && !authenticated) {
+    return (
+      <ErrorBoundary>
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
+        <Toaster position="bottom-right" richColors closeButton />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
