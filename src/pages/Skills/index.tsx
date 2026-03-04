@@ -938,14 +938,17 @@ export function Skills() {
   }, [installSkill, enableSkill, installedSlugs]);
 
   const handleOpenSkillsFolder = useCallback(async () => {
+    if (!window.electron?.ipcRenderer) {
+      toast.info('Skills folder can only be opened in desktop mode.');
+      return;
+    }
     try {
       const skillsDir = await window.electron.ipcRenderer.invoke('openclaw:getSkillsDir') as string;
       if (!skillsDir) {
         throw new Error('Skills directory not available');
       }
       const result = await window.electron.ipcRenderer.invoke('shell:openPath', skillsDir) as string;
-      if (result) {
-        // shell.openPath returns an error string if the path doesn't exist
+      if (result && typeof result === 'string') {
         if (result.toLowerCase().includes('no such file') || result.toLowerCase().includes('not found') || result.toLowerCase().includes('failed to open')) {
           toast.error(t('toast.failedFolderNotFound'));
         } else {
