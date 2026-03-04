@@ -15,6 +15,11 @@ import {
   Copy,
   FileText,
   Globe,
+  Shield,
+  Loader2,
+  Eye,
+  EyeOff,
+  LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +44,129 @@ type ControlUiInfo = {
   token: string;
   port: number;
 };
+
+/** Security Settings — change password & logout */
+function SecuritySettings() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [authEnabled, setAuthEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/status')
+      .then(r => r.json())
+      .then(d => setAuthEnabled(d.authRequired))
+      .catch(() => { });
+  }, []);
+
+  if (!authEnabled) return null;
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (newPassword.length < 4) {
+      toast.error('Password must be at least 4 characters');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Password changed successfully');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        toast.error(data.error || 'Failed to change password');
+      }
+    } catch {
+      toast.error('Connection error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.reload();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          Security
+        </CardTitle>
+        <CardDescription>Change dashboard password or sign out</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form onSubmit={handleChangePassword} className="space-y-3">
+          <div className="space-y-2">
+            <Label>Current Password</Label>
+            <div className="relative">
+              <Input
+                type={showPasswords ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>New Password</Label>
+            <div className="relative">
+              <Input
+                type={showPasswords ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswords(!showPasswords)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Confirm New Password</Label>
+            <Input
+              type={showPasswords ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+            />
+          </div>
+          <Button type="submit" disabled={loading || !currentPassword || !newPassword || !confirmPassword} className="w-full">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Change Password
+          </Button>
+        </form>
+
+        <Separator />
+
+        <Button variant="outline" className="w-full" onClick={handleLogout}>
+          <LogOut className="w-4 h-4 mr-2" />
+          Sign Out
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function Settings() {
   const { t } = useTranslation('settings');
@@ -450,6 +578,11 @@ export function Settings() {
         </Card>
       )}
 
+
+      {/* Security — only in web mode when auth is enabled */}
+      {platform.isWeb && (
+        <SecuritySettings />
+      )}
 
       {/* About */}
       <Card>
