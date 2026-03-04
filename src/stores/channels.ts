@@ -212,8 +212,7 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
       } else {
         // Delete via REST API (web mode)
         await api.deleteChannelConfig(channelType);
-        // Restart OpenClaw so it picks up the removed channel
-        await api.restartOpenClaw().catch(() => { /* ignore restart errors */ });
+        // Gateway hot-reloads config automatically, no restart needed
       }
     } catch (error) {
       console.error('Failed to delete channel config:', error);
