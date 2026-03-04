@@ -883,8 +883,8 @@ function ProviderContent({
       }
 
       const effectiveModelId =
-        selectedProviderData?.defaultModelId ||
         modelId.trim() ||
+        selectedProviderData?.defaultModelId ||
         undefined;
 
       const providerIdForSave =
@@ -1057,8 +1057,28 @@ function ProviderContent({
             </div>
           )}
 
-          {/* Model ID field (for siliconflow etc.) */}
-          {showModelIdField && (
+          {/* Model selector — dropdown for providers with predefined models */}
+          {selectedProviderData?.models && selectedProviderData.models.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="modelSelect">{t('provider.modelId')}</Label>
+              <select
+                id="modelSelect"
+                value={modelId}
+                onChange={(e) => {
+                  setModelId(e.target.value);
+                  onConfiguredChange(false);
+                }}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {selectedProviderData.models.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Model ID text input — for providers without predefined model list */}
+          {showModelIdField && !(selectedProviderData?.models && selectedProviderData.models.length > 0) && (
             <div className="space-y-2">
               <Label htmlFor="modelId">{t('provider.modelId')}</Label>
               <Input
