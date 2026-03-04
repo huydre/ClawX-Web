@@ -579,10 +579,8 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
                     name: channelName || 'Zalo',
                   });
 
-                  try {
-                    await api.restartOpenClaw();
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
-                  } catch { /* ignore restart error */ }
+                  // Gateway hot-reloads config automatically
+                  await new Promise((resolve) => setTimeout(resolve, 2000));
 
                   onChannelAdded();
                 }
@@ -676,18 +674,11 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
           toast.info(t('toast.restartManual'));
         }
       } else {
-        // In web mode: restart OpenClaw then fetch real channel status
+        // In web mode: config saved, gateway hot-reloads automatically
         toast.success(t('toast.channelSaved', { name: meta.name }));
-
-        try {
-          await api.restartOpenClaw();
-          toast.success(t('toast.channelConnecting', { name: meta.name }));
-          // Wait for OpenClaw to restart and pick up new config
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        } catch (restartError) {
-          console.warn('OpenClaw restart after channel config:', restartError);
-          toast.info(t('toast.restartManual'));
-        }
+        toast.info(t('toast.channelConnecting', { name: meta.name }));
+        // Brief wait for gateway to pick up config change
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
       // Brief delay so user can see the success state before dialog closes
