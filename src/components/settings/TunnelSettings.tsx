@@ -81,20 +81,20 @@ export function TunnelSettings() {
       {(running || configured) && (
         <Card className={running ? "border-green-500/50 bg-green-500/5" : "border-gray-500/50 bg-gray-500/5"}>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-3 items-center flex-1">
-                <div className={`h-3 w-3 rounded-full ${running ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-                <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex gap-3 items-start sm:items-center flex-1 min-w-0">
+                <div className={`h-3 w-3 rounded-full shrink-0 mt-1.5 sm:mt-0 ${running ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                <div className="flex-1 min-w-0">
                   <p className="font-medium">
                     {running ? 'Tunnel Active' : 'Tunnel Configured'}
                   </p>
                   {publicUrl && (
                     <div className="flex items-center gap-2 mt-1">
-                      <p className="text-sm text-muted-foreground">{publicUrl}</p>
+                      <p className="text-sm text-muted-foreground truncate">{publicUrl}</p>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2"
+                        className="h-6 px-2 shrink-0"
                         onClick={() => handleCopyUrl(publicUrl)}
                       >
                         <Copy className="h-3 w-3" />
@@ -103,14 +103,14 @@ export function TunnelSettings() {
                   )}
                   {dashboardUrl && (
                     <div className="flex items-center gap-2 mt-1">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground truncate">
                         <span className="text-xs text-blue-500 mr-1">[Dashboard]</span>
                         {dashboardUrl}
                       </p>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2"
+                        className="h-6 px-2 shrink-0"
                         onClick={() => handleCopyUrl(dashboardUrl)}
                       >
                         <Copy className="h-3 w-3" />
@@ -118,7 +118,7 @@ export function TunnelSettings() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2"
+                        className="h-6 px-2 shrink-0"
                         onClick={() => window.open(dashboardUrl, '_blank')}
                       >
                         <ExternalLink className="h-3 w-3" />
@@ -127,7 +127,7 @@ export function TunnelSettings() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 {running && uptime !== undefined && (
                   <span className="text-sm text-muted-foreground">
                     {formatUptime(uptime)}
@@ -253,7 +253,7 @@ function QuickTunnelCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-lg">{t('tunnel.quick.title')}</CardTitle>
             <CardDescription>{t('tunnel.quick.description')}</CardDescription>
@@ -588,7 +588,7 @@ function NamedTunnelControlPanel({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-lg">{t('tunnel.named.title')}</CardTitle>
             <CardDescription>{t('tunnel.named.configured')}</CardDescription>
@@ -668,7 +668,7 @@ function NamedTunnelControlPanel({
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant="destructive"
                   onClick={handleTeardown}
