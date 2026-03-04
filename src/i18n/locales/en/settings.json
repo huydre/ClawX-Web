@@ -184,5 +184,27 @@
             "confirmTeardownDesc": "This will permanently remove your tunnel configuration. You'll need to set it up again to use it.",
             "confirmButton": "Yes, Remove Configuration"
         }
+    },
+    "security": {
+        "title": "Security",
+        "description": "Change dashboard password or sign out",
+        "currentPassword": "Current Password",
+        "currentPasswordPlaceholder": "Enter current password",
+        "newPassword": "New Password",
+        "newPasswordPlaceholder": "Enter new password",
+        "confirmPassword": "Confirm New Password",
+        "confirmPasswordPlaceholder": "Confirm new password",
+        "changePassword": "Change Password",
+        "signOut": "Sign Out",
+        "passwordChanged": "Password changed successfully",
+        "passwordMismatch": "New passwords do not match",
+        "passwordTooShort": "Password must be at least 4 characters",
+        "connectionError": "Connection error",
+        "loginTitle": "ClawX",
+        "loginSubtitle": "Enter password to continue",
+        "loginPlaceholder": "Password",
+        "loginButton": "Sign in",
+        "loginLoading": "Signing in...",
+        "loginFooter": "Protected by ClawX Auth"
     }
 }
