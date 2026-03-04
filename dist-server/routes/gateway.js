@@ -141,6 +141,19 @@ router.post('/restart-openclaw', async (_req, res) => {
         res.status(500).json({ success: false, error: String(error) });
     }
 });
+// GET /api/gateway/channels
+// Returns channel status from the gateway (used for polling login completion)
+router.get('/channels', async (_req, res) => {
+    try {
+        const result = await gatewayManager.rpc('channels.status', {});
+        res.json(result || { channels: {} });
+    }
+    catch (error) {
+        // Fallback: try to extract from last health event
+        logger.warn('channels.status RPC failed, returning empty', { error });
+        res.json({ channels: {} });
+    }
+});
 // GET /api/gateway/current-model
 // Reads ~/.openclaw/openclaw.json to detect the currently configured model
 router.get('/current-model', (_req, res) => {

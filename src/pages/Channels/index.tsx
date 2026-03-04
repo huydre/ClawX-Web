@@ -559,6 +559,43 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
           const data = await response.json();
           if (data.success && data.qrDataUrl) {
             setQrCode(data.qrDataUrl);
+
+            // Poll gateway health to detect when Zalo login completes
+            const pollInterval = setInterval(async () => {
+              try {
+                const statusRes = await fetch('/api/gateway/channels');
+                const statusData = await statusRes.json();
+                const zaloStatus = statusData?.channels?.openzalo;
+
+                if (zaloStatus?.configured || zaloStatus?.running) {
+                  clearInterval(pollInterval);
+                  setQrCode(null);
+                  setConnecting(false);
+                  toast.success('Zalo connected successfully!');
+
+                  // Save channel config and refresh
+                  await addChannel({
+                    type: 'openzalo',
+                    name: channelName || 'Zalo',
+                  });
+
+                  try {
+                    await api.restartOpenClaw();
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                  } catch { /* ignore restart error */ }
+
+                  onChannelAdded();
+                }
+              } catch { /* ignore poll errors */ }
+            }, 3000);
+
+            // Stop polling after 2 minutes (QR expires)
+            setTimeout(() => {
+              clearInterval(pollInterval);
+              setQrCode(null);
+              setConnecting(false);
+              toast.error('QR code expired. Please try again.');
+            }, 120000);
           } else {
             toast.error(data.error || 'Failed to generate QR code');
             setConnecting(false);
