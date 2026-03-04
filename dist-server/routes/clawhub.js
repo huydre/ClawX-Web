@@ -11,9 +11,34 @@ import fsp from 'fs/promises';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const router = Router();
-// Get ClawHub CLI path
+// Get ClawHub CLI path (search nvm, global npm, system PATH)
 const getClawHubCliPath = () => {
-    return path.join(__dirname, '../../node_modules/.bin/clawhub');
+    // 1. Check node_modules (dev mode)
+    const localPath = path.join(__dirname, '../../node_modules/.bin/clawhub');
+    if (fs.existsSync(localPath))
+        return localPath;
+    // 2. Check nvm paths
+    const home = homedir();
+    const nvmDir = path.join(home, '.nvm', 'versions', 'node');
+    if (fs.existsSync(nvmDir)) {
+        try {
+            const versions = fs.readdirSync(nvmDir);
+            for (const ver of versions.reverse()) {
+                const binPath = path.join(nvmDir, ver, 'bin', 'clawhub');
+                if (fs.existsSync(binPath))
+                    return binPath;
+            }
+        }
+        catch { /* ignore */ }
+    }
+    // 3. Check common system paths
+    for (const dir of ['/usr/local/bin', '/usr/bin']) {
+        const binPath = path.join(dir, 'clawhub');
+        if (fs.existsSync(binPath))
+            return binPath;
+    }
+    // 4. Fallback: assume it's in PATH
+    return 'clawhub';
 };
 // Strip ANSI codes from output
 const stripAnsi = (str) => {
