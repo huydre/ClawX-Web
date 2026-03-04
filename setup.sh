@@ -244,6 +244,82 @@ do_build() {
   fi
 }
 
+# ── Install OpenZalo channel ──────────────────────────────────────────────
+install_openzalo() {
+  step "Setting up OpenZalo channel"
+
+  local user_home
+  user_home=$(eval echo "~${CLAWX_USER}")
+  local npm_bin=""
+
+  # Find npm/npx binary
+  if command -v npm &>/dev/null; then
+    npm_bin=$(which npm)
+  elif [[ -f "${user_home}/.nvm/versions/node/$(ls ${user_home}/.nvm/versions/node/ 2>/dev/null | tail -1)/bin/npm" ]]; then
+    npm_bin="${user_home}/.nvm/versions/node/$(ls ${user_home}/.nvm/versions/node/ | tail -1)/bin/npm"
+  fi
+
+  if [[ -z "$npm_bin" ]]; then
+    warn "npm not found, skipping OpenZalo installation"
+    return
+  fi
+
+  local npm_dir
+  npm_dir=$(dirname "$npm_bin")
+
+  # 1. Install openzca CLI
+  if command -v openzca &>/dev/null || [[ -f "${npm_dir}/openzca" ]]; then
+    info "openzca CLI already installed"
+  else
+    info "Installing openzca CLI..."
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && npm install -g openzca" "$CLAWX_USER" 2>/dev/null || \
+        warn "Failed to install openzca (non-critical)"
+    else
+      "$npm_bin" install -g openzca 2>/dev/null || warn "Failed to install openzca (non-critical)"
+    fi
+  fi
+
+  # 2. Install @openclaw/openzalo plugin
+  local openclaw_bin=""
+  if command -v openclaw &>/dev/null; then
+    openclaw_bin=$(which openclaw)
+  elif [[ -f "${npm_dir}/openclaw" ]]; then
+    openclaw_bin="${npm_dir}/openclaw"
+  fi
+
+  if [[ -z "$openclaw_bin" ]]; then
+    warn "openclaw CLI not found, skipping OpenZalo plugin install"
+    return
+  fi
+
+  # Check if plugin already installed
+  local plugin_installed=false
+  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+    if su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw plugins list 2>/dev/null | grep -q openzalo" "$CLAWX_USER" 2>/dev/null; then
+      plugin_installed=true
+    fi
+  else
+    if "$openclaw_bin" plugins list 2>/dev/null | grep -q openzalo; then
+      plugin_installed=true
+    fi
+  fi
+
+  if [[ "$plugin_installed" == "true" ]]; then
+    info "OpenZalo plugin already installed"
+  else
+    info "Installing @openclaw/openzalo plugin..."
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw plugins install @openclaw/openzalo" "$CLAWX_USER" 2>/dev/null || \
+        warn "Failed to install OpenZalo plugin (non-critical)"
+    else
+      "$openclaw_bin" plugins install @openclaw/openzalo 2>/dev/null || warn "Failed to install OpenZalo plugin (non-critical)"
+    fi
+  fi
+
+  log "OpenZalo channel setup complete"
+}
+
 # ── Setup systemd ──────────────────────────────────────────────────────────
 setup_systemd() {
   step "Setting up systemd service"
@@ -379,6 +455,9 @@ cmd_install() {
 
   # Build
   do_build
+
+  # Install OpenZalo channel
+  install_openzalo
 
   # Setup systemd (only if root)
   if [[ $EUID -eq 0 ]]; then
