@@ -99,18 +99,9 @@ router.post('/update', async (_req, res) => {
 
     send('restarting');
 
-    // 4. Restart: try systemctl, fall back to process.exit
+    // 4. Restart: exit with non-zero so systemd Restart=on-failure restarts us
     setTimeout(() => {
-      try {
-        execSync('systemctl restart clawx', { stdio: 'ignore' });
-      } catch {
-        try {
-          execSync('sudo systemctl restart clawx', { stdio: 'ignore' });
-        } catch {
-          // Not in systemd — just exit and let process manager restart
-          process.exit(0);
-        }
-      }
+      process.exit(1);
     }, 1500);
 
     send('done');
