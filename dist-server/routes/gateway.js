@@ -3,11 +3,8 @@ import { z } from 'zod';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
 import { gatewayManager } from '../services/gateway-manager.js';
-const execAsync = promisify(exec);
 const router = Router();
 // GET /api/gateway/status
 router.get('/status', (_req, res) => {
@@ -44,97 +41,24 @@ router.post('/stop', async (_req, res) => {
     }
 });
 // POST /api/gateway/restart-openclaw
-// Restart the OpenClaw process (supports pm2, systemctl, or pkill on main process)
+// Reconnect to the OpenClaw gateway (managed by systemd/pm2 externally)
 router.post('/restart-openclaw', async (_req, res) => {
     try {
-        let method = 'unknown';
-        // Disconnect gateway manager before killing OpenClaw
+        // Disconnect existing connection
         try {
             await gatewayManager.stop();
         }
         catch { /* ignore */ }
-        // 1. Try PM2 (check multiple possible process names)
-        let pm2Success = false;
-        for (const name of ['openclaw', 'openclaw-gateway', 'oclaw']) {
-            try {
-                const { stdout } = await execAsync(`pm2 id ${name} 2>/dev/null`);
-                if (stdout && stdout.trim() !== '[]') {
-                    await execAsync(`pm2 restart ${name}`);
-                    method = `pm2:${name}`;
-                    pm2Success = true;
-                    logger.info(`OpenClaw restarted via PM2`, { name });
-                    break;
-                }
-            }
-            catch { /* try next */ }
+        // Wait briefly then reconnect
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            await gatewayManager.start();
+            logger.info('Gateway manager reconnected');
         }
-        if (!pm2Success) {
-            // 2. Try systemctl
-            let systemctlSuccess = false;
-            for (const name of ['openclaw', 'openclaw-gateway']) {
-                try {
-                    await execAsync(`systemctl is-active ${name}`);
-                    await execAsync(`systemctl restart ${name}`);
-                    method = `systemctl:${name}`;
-                    systemctlSuccess = true;
-                    logger.info(`OpenClaw restarted via systemctl`, { name });
-                    break;
-                }
-                catch { /* try next */ }
-            }
-            if (!systemctlSuccess) {
-                // 3. Kill and respawn openclaw process
-                try {
-                    // Kill existing process
-                    await execAsync('pkill -SIGTERM -x openclaw-gateway 2>/dev/null || pkill -SIGTERM -x openclaw 2>/dev/null || pkill -SIGTERM -f "openclaw" 2>/dev/null || true');
-                    method = 'respawn';
-                    logger.info('OpenClaw main process killed via SIGTERM');
-                    // Wait for process to fully exit
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    // Find openclaw entry point (resolve symlink to get actual .mjs path)
-                    const { spawn } = await import('child_process');
-                    const { realpathSync } = await import('fs');
-                    const { dirname } = await import('path');
-                    const openclawBin = '/opt/homebrew/bin/openclaw';
-                    let openclawScript;
-                    try {
-                        openclawScript = realpathSync(openclawBin); // resolves symlink → /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs
-                    }
-                    catch {
-                        throw new Error(`OpenClaw not found at ${openclawBin}`);
-                    }
-                    // Use the current Node.js binary (process.execPath) to run openclaw
-                    // This avoids "env: node: No such file or directory" in detached process
-                    const nodeBin = process.execPath;
-                    const nodeBinDir = dirname(nodeBin);
-                    // Ensure PATH includes node binary dir and homebrew
-                    const envPath = [nodeBinDir, '/opt/homebrew/bin', '/usr/local/bin', process.env.PATH || ''].join(':');
-                    const child = spawn(nodeBin, [openclawScript, 'gateway', '--verbose'], {
-                        cwd: homedir(),
-                        detached: true,
-                        stdio: 'ignore',
-                        env: { ...process.env, PATH: envPath },
-                    });
-                    child.unref();
-                    logger.info('OpenClaw respawned as background process', { pid: child.pid, cmd: `${nodeBin} ${openclawScript} gateway --verbose` });
-                }
-                catch (err) {
-                    throw new Error(`Could not restart OpenClaw: ${err instanceof Error ? err.message : String(err)}. Try manually: openclaw`);
-                }
-            }
+        catch (err) {
+            logger.warn('Gateway reconnect failed, will retry automatically', { err });
         }
-        // Reconnect gateway manager after OpenClaw restarts (give it time to boot)
-        const reconnectDelay = method === 'respawn' ? 8000 : 3000;
-        setTimeout(async () => {
-            try {
-                await gatewayManager.start();
-                logger.info('Gateway manager reconnected after OpenClaw restart');
-            }
-            catch (err) {
-                logger.warn('Gateway reconnect after restart failed, will retry automatically', { err });
-            }
-        }, reconnectDelay);
-        res.json({ success: true, method });
+        res.json({ success: true, method: 'reconnect' });
     }
     catch (error) {
         logger.error('Restart OpenClaw error:', error);
