@@ -829,12 +829,9 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
                           name: channelName || 'Zalo',
                         });
 
-                        // Restart gateway to pick up new config
-                        try {
-                          await api.restartOpenClaw();
-                          toast.success('Gateway restarting...');
-                          await new Promise((resolve) => setTimeout(resolve, 3000));
-                        } catch { /* ignore */ }
+                        // Gateway hot-reloads config automatically, just wait a moment
+                        toast.info('Waiting for gateway to pick up config...');
+                        await new Promise((resolve) => setTimeout(resolve, 3000));
 
                         onChannelAdded();
                       } else {
