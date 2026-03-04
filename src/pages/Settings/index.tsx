@@ -47,6 +47,7 @@ type ControlUiInfo = {
 
 /** Security Settings — change password & logout */
 function SecuritySettings() {
+  const { t } = useTranslation('settings');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -66,11 +67,11 @@ function SecuritySettings() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
+      toast.error(t('security.passwordMismatch'));
       return;
     }
     if (newPassword.length < 4) {
-      toast.error('Password must be at least 4 characters');
+      toast.error(t('security.passwordTooShort'));
       return;
     }
     setLoading(true);
@@ -82,7 +83,7 @@ function SecuritySettings() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Password changed successfully');
+        toast.success(t('security.passwordChanged'));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -90,7 +91,7 @@ function SecuritySettings() {
         toast.error(data.error || 'Failed to change password');
       }
     } catch {
-      toast.error('Connection error');
+      toast.error(t('security.connectionError'));
     } finally {
       setLoading(false);
     }
@@ -106,31 +107,31 @@ function SecuritySettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5" />
-          Security
+          {t('security.title')}
         </CardTitle>
-        <CardDescription>Change dashboard password or sign out</CardDescription>
+        <CardDescription>{t('security.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleChangePassword} className="space-y-3">
           <div className="space-y-2">
-            <Label>Current Password</Label>
+            <Label>{t('security.currentPassword')}</Label>
             <div className="relative">
               <Input
                 type={showPasswords ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
+                placeholder={t('security.currentPasswordPlaceholder')}
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label>New Password</Label>
+            <Label>{t('security.newPassword')}</Label>
             <div className="relative">
               <Input
                 type={showPasswords ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
+                placeholder={t('security.newPasswordPlaceholder')}
               />
               <button
                 type="button"
@@ -143,17 +144,17 @@ function SecuritySettings() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Confirm New Password</Label>
+            <Label>{t('security.confirmPassword')}</Label>
             <Input
               type={showPasswords ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
+              placeholder={t('security.confirmPasswordPlaceholder')}
             />
           </div>
           <Button type="submit" disabled={loading || !currentPassword || !newPassword || !confirmPassword} className="w-full">
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-            Change Password
+            {t('security.changePassword')}
           </Button>
         </form>
 
@@ -161,7 +162,7 @@ function SecuritySettings() {
 
         <Button variant="outline" className="w-full" onClick={handleLogout}>
           <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
+          {t('security.signOut')}
         </Button>
       </CardContent>
     </Card>

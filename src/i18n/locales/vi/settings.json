@@ -184,5 +184,27 @@
             "confirmTeardownDesc": "Thao tác này sẽ xóa vĩnh viễn cấu hình tunnel. Bạn sẽ cần thiết lập lại để sử dụng.",
             "confirmButton": "Vâng, xóa cấu hình"
         }
+    },
+    "security": {
+        "title": "Bảo mật",
+        "description": "Đổi mật khẩu dashboard hoặc đăng xuất",
+        "currentPassword": "Mật khẩu hiện tại",
+        "currentPasswordPlaceholder": "Nhập mật khẩu hiện tại",
+        "newPassword": "Mật khẩu mới",
+        "newPasswordPlaceholder": "Nhập mật khẩu mới",
+        "confirmPassword": "Xác nhận mật khẩu mới",
+        "confirmPasswordPlaceholder": "Xác nhận mật khẩu mới",
+        "changePassword": "Đổi mật khẩu",
+        "signOut": "Đăng xuất",
+        "passwordChanged": "Đổi mật khẩu thành công",
+        "passwordMismatch": "Mật khẩu mới không khớp",
+        "passwordTooShort": "Mật khẩu phải có ít nhất 4 ký tự",
+        "connectionError": "Lỗi kết nối",
+        "loginTitle": "ClawX",
+        "loginSubtitle": "Nhập mật khẩu để tiếp tục",
+        "loginPlaceholder": "Mật khẩu",
+        "loginButton": "Đăng nhập",
+        "loginLoading": "Đang đăng nhập...",
+        "loginFooter": "Được bảo vệ bởi ClawX Auth"
     }
 }

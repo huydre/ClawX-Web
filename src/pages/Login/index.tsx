@@ -4,12 +4,14 @@
  */
 import { useState, useCallback, useEffect } from 'react';
 import { Shield, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface LoginPageProps {
     onLoginSuccess: () => void;
 }
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
+    const { t } = useTranslation('settings');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -37,13 +39,12 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 setPassword('');
             }
         } catch {
-            setError('Connection error. Please try again.');
+            setError(t('security.connectionError'));
         } finally {
             setLoading(false);
         }
-    }, [password, loading, onLoginSuccess]);
+    }, [password, loading, onLoginSuccess, t]);
 
-    // Focus password input on mount
     useEffect(() => {
         const input = document.getElementById('login-password');
         if (input) input.focus();
@@ -52,16 +53,14 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
             <div className="w-full max-w-sm">
-                {/* Logo & Title */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
                         <Shield className="w-8 h-8 text-primary" />
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight">ClawX</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Enter password to continue</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{t('security.loginTitle')}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">{t('security.loginSubtitle')}</p>
                 </div>
 
-                {/* Login Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="relative">
                         <input
@@ -69,7 +68,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                            placeholder="Password"
+                            placeholder={t('security.loginPlaceholder')}
                             autoComplete="current-password"
                             disabled={loading}
                             className="w-full h-12 px-4 pr-12 rounded-xl bg-card border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50"
@@ -99,16 +98,16 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                         {loading ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Signing in...
+                                {t('security.loginLoading')}
                             </>
                         ) : (
-                            'Sign in'
+                            t('security.loginButton')
                         )}
                     </button>
                 </form>
 
                 <p className="text-xs text-muted-foreground text-center mt-6">
-                    Protected by ClawX Auth
+                    {t('security.loginFooter')}
                 </p>
             </div>
         </div>
