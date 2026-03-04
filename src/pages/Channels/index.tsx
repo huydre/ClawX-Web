@@ -809,7 +809,7 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
 
                       // Save channel config via API
                       const profile = configValues.profile?.trim() || 'default';
-                      const saveRes = await fetch('/api/channels', {
+                      const saveRes = await fetch('/api/channels/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -846,7 +846,7 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
                       setConnecting(false);
                     }
                   }}>
-                    ✅ {t('dialog.doneScan', { defaultValue: 'Done scanning' })}
+                    {t('dialog.doneScan', { defaultValue: 'Done scanning' })}
                   </Button>
                 )}
               </div>
