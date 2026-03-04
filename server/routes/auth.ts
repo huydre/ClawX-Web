@@ -4,6 +4,8 @@
  */
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
 import { isAuthEnabled, verifyPassword, createSessionToken, verifySessionToken } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 
@@ -78,8 +80,7 @@ router.post('/change-password', (req, res) => {
 
     // Update .env file
     try {
-        const envPath = require('path').join(process.cwd(), '.env');
-        const fs = require('fs');
+        const envPath = path.join(process.cwd(), '.env');
 
         let envContent = '';
         if (fs.existsSync(envPath)) {
