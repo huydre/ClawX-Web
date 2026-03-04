@@ -65,24 +65,40 @@ router.post('/update', async (_req, res) => {
         // 1. git pull
         send('pulling');
         await runStream('git', ['pull', 'origin', 'main'], cwd, send);
-        // 2. pnpm install
+        // 2. pnpm install (prod only — devDeps like tsc not needed for pre-built)
         send('installing');
-        await runStream('pnpm', ['install', '--frozen-lockfile'], cwd, send);
-        // 3. Build server
-        send('building_server');
-        await runStream('pnpm', ['build:server'], cwd, send);
-        // 4. Build frontend
-        send('building_frontend');
-        await runStream('pnpm', ['build'], cwd, send);
+        await runStream('pnpm', ['install', '--prod', '--frozen-lockfile'], cwd, send)
+            .catch(() => runStream('pnpm', ['install', '--prod'], cwd, send));
+        // 3. Check if pre-built dist exists (committed to repo)
+        const fs = await import('fs');
+        const hasPrebuilt = fs.existsSync(`${cwd}/dist/index.html`) && fs.existsSync(`${cwd}/dist-server/index.js`);
+        if (!hasPrebuilt) {
+            // No pre-built dist — need full build
+            send('installing_dev');
+            await runStream('pnpm', ['install', '--frozen-lockfile'], cwd, send)
+                .catch(() => runStream('pnpm', ['install'], cwd, send));
+            send('building_server');
+            await runStream('pnpm', ['build:server'], cwd, send);
+            send('building_frontend');
+            await runStream('pnpm', ['build'], cwd, send);
+        }
+        else {
+            send('log', { line: 'Pre-built dist found, skipping build' });
+        }
         send('restarting');
-        // 5. Restart: try systemctl, fall back to process.exit
+        // 4. Restart: try systemctl, fall back to process.exit
         setTimeout(() => {
             try {
-                execSync('sudo systemctl restart clawx', { stdio: 'ignore' });
+                execSync('systemctl restart clawx', { stdio: 'ignore' });
             }
             catch {
-                // Not in systemd — just exit and let process manager restart
-                process.exit(0);
+                try {
+                    execSync('sudo systemctl restart clawx', { stdio: 'ignore' });
+                }
+                catch {
+                    // Not in systemd — just exit and let process manager restart
+                    process.exit(0);
+                }
             }
         }, 1500);
         send('done');
@@ -92,7 +108,6 @@ router.post('/update', async (_req, res) => {
         send('rollback', { error: String(err) });
         try {
             execSync(`git reset --hard ${saveSha}`, { cwd, stdio: 'ignore' });
-            await runStream('pnpm', ['build:server'], cwd, send).catch(() => { });
             send('rollback_done');
         }
         catch (rollbackErr) {
