@@ -326,18 +326,57 @@ router.post('/openzalo/login', async (req, res) => {
         const { exec } = await import('child_process');
         const { promisify } = await import('util');
         const execAsync = promisify(exec);
-        // Check if openzca is installed
+        // Find openzca binary (may be in nvm path, not in system PATH)
+        const os = await import('os');
+        const fs = await import('fs');
+        const path = await import('path');
+        let openzcaBin = '';
         try {
-            await execAsync('which openzca');
+            const result = await execAsync('which openzca');
+            openzcaBin = result.stdout.trim();
         }
         catch {
+            // Not in PATH, search common locations
+            const home = os.homedir();
+            const searchPaths = [
+                path.join(home, '.nvm', 'versions', 'node'),
+                '/usr/local/bin',
+                '/usr/bin',
+            ];
+            for (const searchPath of searchPaths) {
+                if (searchPath.includes('.nvm') && fs.existsSync(searchPath)) {
+                    // Search nvm node versions
+                    try {
+                        const versions = fs.readdirSync(searchPath);
+                        for (const ver of versions.reverse()) {
+                            const binPath = path.join(searchPath, ver, 'bin', 'openzca');
+                            if (fs.existsSync(binPath)) {
+                                openzcaBin = binPath;
+                                break;
+                            }
+                        }
+                    }
+                    catch { /* ignore */ }
+                }
+                else {
+                    const binPath = path.join(searchPath, 'openzca');
+                    if (fs.existsSync(binPath)) {
+                        openzcaBin = binPath;
+                    }
+                }
+                if (openzcaBin)
+                    break;
+            }
+        }
+        if (!openzcaBin) {
             return res.status(400).json({
                 success: false,
                 error: 'openzca CLI not found. Install it: npm install -g openzca',
             });
         }
+        logger.info('Found openzca binary', { path: openzcaBin });
         // Run openzca auth login with --qr-base64 flag
-        const cmd = `openzca --profile ${profile.replace(/[^a-zA-Z0-9_-]/g, '')} auth login --qr-base64`;
+        const cmd = `${openzcaBin} --profile ${profile.replace(/[^a-zA-Z0-9_-]/g, '')} auth login --qr-base64`;
         logger.info('Running openzca login', { cmd });
         const { stdout, stderr } = await execAsync(cmd, { timeout: 30000 });
         // openzca --qr-base64 outputs the data URL on stdout
