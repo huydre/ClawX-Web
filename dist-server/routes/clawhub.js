@@ -200,6 +200,15 @@ router.post('/uninstall', async (req, res) => {
             await fsp.rm(workspaceSkillDir, { recursive: true, force: true });
             logger.info('Removed workspace skill copy', { slug, workspaceSkillDir });
         }
+        // 4. Notify gateway to unload the skill from memory
+        try {
+            const { gatewayManager } = await import('../services/gateway-manager.js');
+            await gatewayManager.rpc('skills.uninstall', { slug });
+            logger.info('Gateway notified to unload skill', { slug });
+        }
+        catch (rpcErr) {
+            logger.warn('Failed to notify gateway (skill files already removed)', { slug, error: String(rpcErr) });
+        }
         res.json({ success: true });
     }
     catch (error) {
