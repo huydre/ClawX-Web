@@ -1360,34 +1360,49 @@ function SetupChannelContent() {
       {/* Config fields */}
       {meta?.configFields.map((field: ChannelConfigField) => {
         const isPassword = field.type === 'password';
+        const isSelect = field.type === 'select';
         return (
           <div key={field.key} className="space-y-1.5">
             <Label htmlFor={`setup-${field.key}`} className="text-foreground">
               {t(field.label)}
               {field.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
-            <div className="flex gap-2">
-              <Input
+            {isSelect && field.options ? (
+              <select
                 id={`setup-${field.key}`}
-                type={isPassword && !showSecrets[field.key] ? 'password' : 'text'}
-                placeholder={field.placeholder ? t(field.placeholder) : undefined}
                 value={configValues[field.key] || ''}
                 onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                autoComplete="off"
-                className="font-mono text-sm bg-background border-input"
-              />
-              {isPassword && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => setShowSecrets((prev) => ({ ...prev, [field.key]: !prev[field.key] }))}
-                >
-                  {showSecrets[field.key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              )}
-            </div>
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">{field.placeholder ? t(field.placeholder) : '-- Select --'}</option>
+                {field.options.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  id={`setup-${field.key}`}
+                  type={isPassword && !showSecrets[field.key] ? 'password' : 'text'}
+                  placeholder={field.placeholder ? t(field.placeholder) : undefined}
+                  value={configValues[field.key] || ''}
+                  onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                  autoComplete="off"
+                  className="font-mono text-sm bg-background border-input"
+                />
+                {isPassword && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => setShowSecrets((prev) => ({ ...prev, [field.key]: !prev[field.key] }))}
+                  >
+                    {showSecrets[field.key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                )}
+              </div>
+            )}
             {field.description && (
               <p className="text-xs text-slate-500 mt-1">{t(field.description)}</p>
             )}
