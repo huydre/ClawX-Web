@@ -48,4 +48,45 @@ router.post('/logout', (_req, res) => {
     res.setHeader('Set-Cookie', 'clawx_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');
     res.json({ success: true });
 });
+// POST /api/auth/change-password
+router.post('/change-password', (req, res) => {
+    if (!isAuthEnabled()) {
+        return res.status(400).json({ success: false, error: 'Auth is not enabled' });
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !verifyPassword(currentPassword)) {
+        return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+    }
+    if (!newPassword || newPassword.trim().length < 4) {
+        return res.status(400).json({ success: false, error: 'New password must be at least 4 characters' });
+    }
+    // Update .env file
+    try {
+        const envPath = require('path').join(process.cwd(), '.env');
+        const fs = require('fs');
+        let envContent = '';
+        if (fs.existsSync(envPath)) {
+            envContent = fs.readFileSync(envPath, 'utf8');
+        }
+        // Replace or add CLAWX_AUTH_PASSWORD
+        if (envContent.includes('CLAWX_AUTH_PASSWORD=')) {
+            envContent = envContent.replace(/CLAWX_AUTH_PASSWORD=.*/g, `CLAWX_AUTH_PASSWORD=${newPassword.trim()}`);
+        }
+        else {
+            envContent += `\nCLAWX_AUTH_PASSWORD=${newPassword.trim()}\n`;
+        }
+        fs.writeFileSync(envPath, envContent, 'utf8');
+        // Update process.env immediately
+        process.env.CLAWX_AUTH_PASSWORD = newPassword.trim();
+        // Issue new session token with new secret
+        const token = createSessionToken();
+        res.setHeader('Set-Cookie', `clawx_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${7 * 24 * 60 * 60}`);
+        logger.info('Password changed successfully', { ip: req.ip });
+        res.json({ success: true });
+    }
+    catch (err) {
+        logger.error('Failed to change password', { error: String(err) });
+        res.status(500).json({ success: false, error: 'Failed to save new password' });
+    }
+});
 export default router;
