@@ -179,28 +179,25 @@ router.post('/approve', async (req, res) => {
             logger.info(`Pairing approved: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
             res.json({ success: true, method: 'cli', output: stdout.trim() });
         } catch (error: any) {
-            // openclaw CLI may exit non-zero even on success — check if it actually worked
-            const output = (error?.stdout || '') + (error?.stderr || '');
-            const looksSuccessful = output.toLowerCase().includes('approved') ||
-                output.toLowerCase().includes('success') ||
-                output.includes('✓') ||
-                output.includes('allowFrom');
+            // openclaw CLI exits non-zero even on success — only treat as error if we see real error keywords
+            const stdout = error?.stdout || '';
+            const stderr = error?.stderr || '';
+            const output = stdout + stderr;
+            const realErrorKeywords = ['not found', 'permission denied', 'enoent', 'no such file', 'invalid', 'unknown command'];
+            const hasRealError = realErrorKeywords.some(kw => output.toLowerCase().includes(kw));
 
-            // Also check if the pairing code was actually removed from the file
-            const remainingRequests = readPairingFile(channel);
-            const codeStillPending = remainingRequests.some(r => r.code === code);
-
-            if (looksSuccessful || !codeStillPending) {
-                logger.info(`Pairing approve succeeded despite non-zero exit: ${channel} ${code}`, { output: output.trim() });
-                res.json({ success: true, method: 'cli', output: output.trim() });
-            } else {
-                logger.error('Approve pairing error:', { error: error?.message, stderr: error?.stderr });
+            if (hasRealError) {
+                logger.error('Approve pairing error:', { error: error?.message, stderr });
                 res.status(500).json({
-                    error: `CLI failed: ${error?.stderr || error?.message || String(error)}`,
+                    error: `CLI failed: ${stderr || error?.message || String(error)}`,
                     hint: OWNER_USER
                         ? `Ensure sudoers: clawx ALL=(${OWNER_USER}) NOPASSWD: ALL`
                         : 'Could not detect openclaw owner user',
                 });
+            } else {
+                // No real error → assume success
+                logger.info(`Pairing approve OK (non-zero exit): ${channel} ${code}`, { output: output.trim() });
+                res.json({ success: true, method: 'cli', output: output.trim() });
             }
         }
     } catch (error) {
