@@ -209,6 +209,11 @@ cmd_update() {
 do_build() {
   cd "$CLAWX_DIR"
 
+  # Ensure the clawx user owns everything (git reset as root may change ownership)
+  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+    chown -R "$CLAWX_USER":"$CLAWX_USER" "$CLAWX_DIR"
+  fi
+
   # Check if pre-built dist exists (committed to repo)
   if [[ -d "$CLAWX_DIR/dist" && -d "$CLAWX_DIR/dist-server" ]]; then
     step "Installing production dependencies (pre-built mode)"
