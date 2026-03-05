@@ -1,51 +1,61 @@
 /**
  * Pairing Routes — /api/pairing
  * Manage DM pairing requests (approve/reject pending users)
+ * Uses openclaw CLI for approve (communicates directly with gateway)
  */
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
-import { gatewayManager } from '../services/gateway-manager.js';
 const router = Router();
 const execAsync = promisify(exec);
-/**
- * Find the actual .openclaw directory.
- * Service may run as 'clawx' user but OpenClaw data lives under another user.
- */
+/** Find the .openclaw dir (may be under a different user than who runs this service) */
 function findOpenClawDir() {
-    // 1. Check current user's home
     const defaultDir = join(homedir(), '.openclaw');
     if (existsSync(join(defaultDir, 'openclaw.json')))
         return defaultDir;
-    // 2. Check common home dirs for openclaw installations
-    const homeBase = '/home';
     try {
-        const users = readdirSync(homeBase);
-        for (const user of users) {
-            const candidate = join(homeBase, user, '.openclaw');
-            if (existsSync(join(candidate, 'openclaw.json'))) {
+        for (const user of readdirSync('/home')) {
+            const candidate = join('/home', user, '.openclaw');
+            if (existsSync(join(candidate, 'openclaw.json')))
                 return candidate;
-            }
         }
     }
-    catch { /* no /home access */ }
-    // 3. Check root
-    const rootDir = '/root/.openclaw';
-    if (existsSync(join(rootDir, 'openclaw.json')))
-        return rootDir;
+    catch { /* no access */ }
+    if (existsSync('/root/.openclaw/openclaw.json'))
+        return '/root/.openclaw';
     return defaultDir;
+}
+/** Read the .clawx-owner file to get the real user who installed openclaw */
+function getOwnerUser() {
+    try {
+        const ownerFile = join(process.cwd(), '.clawx-owner');
+        if (existsSync(ownerFile)) {
+            return readFileSync(ownerFile, 'utf-8').trim();
+        }
+    }
+    catch { /* ignore */ }
+    // Fallback: detect from openclaw dir path
+    const dir = findOpenClawDir();
+    const match = dir.match(/\/home\/([^/]+)\//);
+    return match?.[1] || null;
 }
 const OPENCLAW_DIR = findOpenClawDir();
 const CREDENTIALS_DIR = join(OPENCLAW_DIR, 'credentials');
-logger.info(`Pairing routes: using OpenClaw dir ${OPENCLAW_DIR}`);
-/**
- * Read pairing file in OpenClaw v1 format:
- * { "version": 1, "requests": [{ "id", "code", "createdAt", "meta": { "username", "firstName" } }] }
- */
+const OWNER_USER = getOwnerUser();
+logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, owner=${OWNER_USER}`);
+/** Build the CLI command, running as owner user if needed */
+function buildCmd(cmd) {
+    const currentUser = require('os').userInfo().username;
+    if (OWNER_USER && OWNER_USER !== currentUser) {
+        return `sudo -u ${OWNER_USER} ${cmd}`;
+    }
+    return cmd;
+}
+/** Parse OpenClaw v1 pairing file */
 function readPairingFile(channel) {
     const filePath = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
     try {
@@ -55,30 +65,14 @@ function readPairingFile(channel) {
         if (!raw || raw === '{}' || raw === '[]')
             return [];
         const data = JSON.parse(raw);
-        // OpenClaw v1 format: { version: 1, requests: [...] }
         if (data.requests && Array.isArray(data.requests)) {
             return data.requests.map((req) => ({
                 id: req.id || '',
                 code: req.code || '',
                 channel,
-                senderId: req.id || '',
                 senderName: req.meta?.firstName || req.meta?.displayName || '',
                 username: req.meta?.username || '',
                 createdAt: req.createdAt || '',
-            }));
-        }
-        // Fallback: Object format { "CODE": { ... } }
-        if (typeof data === 'object' && !Array.isArray(data)) {
-            return Object.entries(data)
-                .filter(([key]) => key !== 'version')
-                .map(([code, val]) => ({
-                id: val?.id || val?.senderId || '',
-                code,
-                channel,
-                senderId: val?.senderId || val?.id || '',
-                senderName: val?.senderName || val?.firstName || '',
-                username: val?.username || '',
-                createdAt: val?.createdAt || '',
             }));
         }
         return [];
@@ -91,10 +85,9 @@ function readPairingFile(channel) {
 // GET /api/pairing/pending
 router.get('/pending', (_req, res) => {
     try {
-        const channels = ['telegram', 'openzalo'];
         const pending = [];
-        for (const channel of channels) {
-            pending.push(...readPairingFile(channel));
+        for (const ch of ['telegram', 'openzalo']) {
+            pending.push(...readPairingFile(ch));
         }
         res.json({ pending });
     }
@@ -103,123 +96,58 @@ router.get('/pending', (_req, res) => {
         res.status(500).json({ error: String(error) });
     }
 });
-// POST /api/pairing/approve
+// POST /api/pairing/approve — uses CLI only
 router.post('/approve', async (req, res) => {
     try {
         const { channel, code } = req.body;
         if (!channel || !code) {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
-        // Method 1: Gateway RPC
-        try {
-            const result = await gatewayManager.rpc('pairing.approve', { channel, code }, 8000);
-            logger.info(`Pairing approved via RPC: ${channel} ${code}`, { result });
-            return res.json({ success: true, method: 'rpc' });
-        }
-        catch (rpcErr) {
-            logger.warn('RPC pairing.approve failed', { error: String(rpcErr) });
-        }
-        // Method 2: CLI (runs as current user or finds openclaw)
-        try {
-            const { stdout } = await execAsync(`openclaw pairing approve ${channel} ${code}`, { timeout: 15000, env: { ...process.env, CI: 'true' } });
-            logger.info(`Pairing approved via CLI: ${channel} ${code}`, { stdout: stdout.trim() });
-            return res.json({ success: true, method: 'cli', output: stdout.trim() });
-        }
-        catch (cliErr) {
-            logger.warn('CLI pairing approve failed', { error: String(cliErr) });
-        }
-        // Method 3: Try running as the user who owns the openclaw dir
-        try {
-            const ownerUser = OPENCLAW_DIR.match(/\/home\/([^/]+)\//)?.[1];
-            if (ownerUser && ownerUser !== 'clawx') {
-                const { stdout } = await execAsync(`sudo -u ${ownerUser} openclaw pairing approve ${channel} ${code}`, { timeout: 15000, env: { ...process.env, CI: 'true' } });
-                logger.info(`Pairing approved via sudo CLI: ${channel} ${code}`, { stdout: stdout.trim() });
-                return res.json({ success: true, method: 'sudo-cli', output: stdout.trim() });
-            }
-        }
-        catch (sudoErr) {
-            logger.warn('sudo CLI pairing approve failed', { error: String(sudoErr) });
-        }
-        // Method 4: Direct file edit
-        const filePath = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
-        if (!existsSync(filePath)) {
-            return res.status(500).json({ error: 'All approve methods failed' });
-        }
-        const raw = readFileSync(filePath, 'utf-8').trim();
-        const data = JSON.parse(raw);
-        // v1 format with requests array
-        if (data.requests && Array.isArray(data.requests)) {
-            const reqEntry = data.requests.find((r) => r.code === code);
-            if (!reqEntry) {
-                return res.status(404).json({ error: 'Pairing code not found' });
-            }
-            // Add sender to allowFrom
-            const allowPath = join(CREDENTIALS_DIR, `${channel}-allowFrom.json`);
-            let allowList = [];
-            if (existsSync(allowPath)) {
-                try {
-                    allowList = JSON.parse(readFileSync(allowPath, 'utf-8'));
-                }
-                catch {
-                    allowList = [];
-                }
-            }
-            if (!Array.isArray(allowList))
-                allowList = [];
-            const senderId = reqEntry.id;
-            if (senderId && !allowList.includes(senderId)) {
-                allowList.push(senderId);
-                writeFileSync(allowPath, JSON.stringify(allowList, null, 2), 'utf-8');
-            }
-            // Remove from requests
-            data.requests = data.requests.filter((r) => r.code !== code);
-            writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-            logger.info(`Pairing approved via file edit: ${channel} ${code}, senderId=${senderId}`);
-            // Signal gateway to reload (file edit alone won't notify the running process)
-            try {
-                await execAsync('pkill -HUP -f "openclaw" 2>/dev/null || true', { timeout: 3000 });
-                logger.info('Sent HUP signal to openclaw gateway');
-            }
-            catch { /* best effort */ }
-            // Also reconnect our gateway connection
-            try {
-                await gatewayManager.stop();
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                await gatewayManager.start();
-                logger.info('Gateway reconnected after file-based approve');
-            }
-            catch (reconnErr) {
-                logger.warn('Gateway reconnect after approve failed', { error: String(reconnErr) });
-            }
-            return res.json({ success: true, method: 'file' });
-        }
-        res.status(404).json({ error: 'Pairing code not found in file' });
+        const cmd = buildCmd(`openclaw pairing approve ${channel} ${code}`);
+        logger.info(`Pairing approve: running "${cmd}"`);
+        const { stdout, stderr } = await execAsync(cmd, {
+            timeout: 15000,
+            env: { ...process.env, CI: 'true' },
+        });
+        logger.info(`Pairing approved: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
+        res.json({ success: true, method: 'cli', output: stdout.trim() });
     }
     catch (error) {
-        logger.error('Approve pairing error:', error);
-        res.status(500).json({ error: String(error) });
+        logger.error('Approve pairing error:', { error: error?.message, stderr: error?.stderr });
+        res.status(500).json({
+            error: `CLI failed: ${error?.stderr || error?.message || String(error)}`,
+            hint: OWNER_USER
+                ? `Ensure sudoers: clawx ALL=(${OWNER_USER}) NOPASSWD: ALL`
+                : 'Could not detect openclaw owner user',
+        });
     }
 });
-// POST /api/pairing/reject
-router.post('/reject', (req, res) => {
+// POST /api/pairing/reject — uses CLI
+router.post('/reject', async (req, res) => {
     try {
         const { channel, code } = req.body;
         if (!channel || !code) {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
-        const filePath = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
-        if (!existsSync(filePath)) {
-            return res.status(404).json({ error: 'No pairing file found' });
+        const cmd = buildCmd(`openclaw pairing reject ${channel} ${code}`);
+        logger.info(`Pairing reject: running "${cmd}"`);
+        try {
+            const { stdout } = await execAsync(cmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
+            logger.info(`Pairing rejected: ${channel} ${code}`, { stdout: stdout.trim() });
+            res.json({ success: true });
         }
-        const raw = readFileSync(filePath, 'utf-8').trim();
-        const data = JSON.parse(raw);
-        if (data.requests && Array.isArray(data.requests)) {
-            data.requests = data.requests.filter((r) => r.code !== code);
-            writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-            logger.info(`Pairing rejected: ${channel} ${code}`);
-            return res.json({ success: true });
+        catch {
+            // Reject may not have CLI support — try with 'deny' alias
+            try {
+                const denyCmd = buildCmd(`openclaw pairing deny ${channel} ${code}`);
+                const { stdout } = await execAsync(denyCmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
+                res.json({ success: true, output: stdout.trim() });
+            }
+            catch (err2) {
+                logger.warn('CLI reject failed', { error: String(err2) });
+                res.status(500).json({ error: 'Reject CLI failed: ' + String(err2) });
+            }
         }
-        res.status(404).json({ error: 'Pairing code not found' });
     }
     catch (error) {
         logger.error('Reject pairing error:', error);

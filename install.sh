@@ -164,6 +164,18 @@ echo "$CLAWX_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart clawx" > "$SUDOERS_
 chmod 440 "$SUDOERS_FILE"
 log "Sudoers rule added: $CLAWX_USER can restart clawx service"
 
+# Allow clawx to run openclaw as the real user (for pairing approve etc.)
+REAL_USER="${SUDO_USER:-$(whoami)}"
+if [[ "$REAL_USER" != "root" && "$REAL_USER" != "$CLAWX_USER" ]]; then
+  SUDOERS_OPENCLAW="/etc/sudoers.d/clawx-openclaw"
+  echo "$CLAWX_USER ALL=($REAL_USER) NOPASSWD: ALL" > "$SUDOERS_OPENCLAW"
+  chmod 440 "$SUDOERS_OPENCLAW"
+  # Save the real user for the server to use
+  echo "$REAL_USER" > "$CLAWX_DIR/.clawx-owner"
+  chown "$CLAWX_USER":"$CLAWX_USER" "$CLAWX_DIR/.clawx-owner"
+  log "Sudoers rule added: $CLAWX_USER can run commands as $REAL_USER"
+fi
+
 # ── Step 7: Run setup ─────────────────────────────────────────────────────
 step "Running setup"
 
