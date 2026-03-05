@@ -42,6 +42,7 @@ import {
   type ChannelConfigField,
 } from '@/types/channel';
 import { toast } from 'sonner';
+import { PairingApprovals } from '@/components/channels/PairingApprovals';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/lib/platform';
 import { api } from '@/lib/api';
@@ -148,6 +149,9 @@ export function Channels() {
           </span>
         </div>
       )}
+
+      {/* Pending Pairing Approvals */}
+      <PairingApprovals />
 
       {/* Error Display */}
       {error && (

@@ -13,6 +13,7 @@ import clawhubRouter from './routes/clawhub.js';
 import tunnelRouter from './routes/tunnel.js';
 import channelsRouter from './routes/channels.js';
 import systemRouter from './routes/system.js';
+import pairingRouter from './routes/pairing.js';
 import authRouter from './routes/auth.js';
 import { authMiddleware } from './middleware/auth.js';
 
@@ -93,6 +94,7 @@ app.use('/api/clawhub', clawhubRouter);
 app.use('/api/tunnel', tunnelRouter);
 app.use('/api/channels', channelsRouter);
 app.use('/api/system', systemRouter);
+app.use('/api/pairing', pairingRouter);
 
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
