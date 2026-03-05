@@ -57,7 +57,7 @@ function findOpenClawBin() {
     // Also search in owner user's paths
     if (OWNER_USER) {
         const ownerHome = `/home/${OWNER_USER}`;
-        searchPaths.push(join(ownerHome, '.local', 'bin', 'openclaw'), join(ownerHome, '.openclaw', 'bin', 'openclaw'), join(ownerHome, '.nvm', 'current', 'bin', 'openclaw'), join(ownerHome, '.local', 'share', 'pnpm', 'openclaw'));
+        searchPaths.push(join(ownerHome, '.local', 'bin', 'openclaw'), join(ownerHome, '.openclaw', 'bin', 'openclaw'), join(ownerHome, '.npm-global', 'bin', 'openclaw'), join(ownerHome, '.nvm', 'current', 'bin', 'openclaw'), join(ownerHome, '.local', 'share', 'pnpm', 'openclaw'));
     }
     for (const p of searchPaths) {
         if (existsSync(p))
