@@ -146,21 +146,42 @@ router.post('/approve', async (req, res) => {
         }
         const cmd = buildCmd(`pairing approve ${channel} ${code}`);
         logger.info(`Pairing approve: running "${cmd}"`);
-        const { stdout, stderr } = await execAsync(cmd, {
-            timeout: 15000,
-            env: { ...process.env, CI: 'true' },
-        });
-        logger.info(`Pairing approved: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
-        res.json({ success: true, method: 'cli', output: stdout.trim() });
+        try {
+            const { stdout, stderr } = await execAsync(cmd, {
+                timeout: 15000,
+                env: { ...process.env, CI: 'true' },
+            });
+            logger.info(`Pairing approved: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
+            res.json({ success: true, method: 'cli', output: stdout.trim() });
+        }
+        catch (error) {
+            // openclaw CLI may exit non-zero even on success — check if it actually worked
+            const output = (error?.stdout || '') + (error?.stderr || '');
+            const looksSuccessful = output.toLowerCase().includes('approved') ||
+                output.toLowerCase().includes('success') ||
+                output.includes('✓') ||
+                output.includes('allowFrom');
+            // Also check if the pairing code was actually removed from the file
+            const remainingRequests = readPairingFile(channel);
+            const codeStillPending = remainingRequests.some(r => r.code === code);
+            if (looksSuccessful || !codeStillPending) {
+                logger.info(`Pairing approve succeeded despite non-zero exit: ${channel} ${code}`, { output: output.trim() });
+                res.json({ success: true, method: 'cli', output: output.trim() });
+            }
+            else {
+                logger.error('Approve pairing error:', { error: error?.message, stderr: error?.stderr });
+                res.status(500).json({
+                    error: `CLI failed: ${error?.stderr || error?.message || String(error)}`,
+                    hint: OWNER_USER
+                        ? `Ensure sudoers: clawx ALL=(${OWNER_USER}) NOPASSWD: ALL`
+                        : 'Could not detect openclaw owner user',
+                });
+            }
+        }
     }
     catch (error) {
-        logger.error('Approve pairing error:', { error: error?.message, stderr: error?.stderr });
-        res.status(500).json({
-            error: `CLI failed: ${error?.stderr || error?.message || String(error)}`,
-            hint: OWNER_USER
-                ? `Ensure sudoers: clawx ALL=(${OWNER_USER}) NOPASSWD: ALL`
-                : 'Could not detect openclaw owner user',
-        });
+        logger.error('Approve pairing unexpected error:', error);
+        res.status(500).json({ error: String(error) });
     }
 });
 // POST /api/pairing/reject — uses CLI
