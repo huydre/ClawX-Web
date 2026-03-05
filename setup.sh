@@ -402,38 +402,67 @@ EOF
   log "Systemd service configured and enabled"
 }
 
-# ── Configure OpenClaw exec tool ──────────────────────────────────────────
-configure_exec() {
-  step "Configuring OpenClaw exec tool"
+# ── Configure OpenClaw settings ───────────────────────────────────────────
+configure_openclaw() {
+  step "Configuring OpenClaw"
 
   local user_home
   user_home=$(eval echo "~${CLAWX_USER}")
   local config_file="${user_home}/.openclaw/openclaw.json"
 
   if [[ ! -f "$config_file" ]]; then
-    warn "OpenClaw config not found at $config_file, skipping exec setup"
-    warn "After installing OpenClaw, configure exec from the web dashboard Settings"
+    warn "OpenClaw config not found at $config_file, skipping"
+    warn "After installing OpenClaw, configure from the web dashboard Settings"
     return
   fi
 
-  # Use python3 to safely edit JSON (always available on Ubuntu/Debian)
+  # Read tunnel domain from .env if available
+  local tunnel_origins=""
+  if [[ -f "$ENV_FILE" ]]; then
+    local t_domain t_sub
+    t_domain=$(grep '^CLOUDFLARE_TUNNEL_DOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
+    t_sub=$(grep '^CLOUDFLARE_TUNNEL_SUBDOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
+    if [[ -n "$t_domain" && -n "$t_sub" ]]; then
+      tunnel_origins="https://${t_sub}.${t_domain},https://dashboard-${t_sub}.${t_domain}"
+    fi
+  fi
+
   python3 -c "
-import json, sys
+import json
 
 config_path = '${config_file}'
+tunnel_origins = '${tunnel_origins}'
+
 try:
     with open(config_path, 'r') as f:
         config = json.load(f)
 except:
     config = {}
 
-# Set tools.exec settings
+# 1. Gateway mode
+config.setdefault('gateway', {})
+config['gateway']['mode'] = 'local'
+
+# 2. Control UI allowed origins
+if tunnel_origins:
+    config['gateway'].setdefault('controlUi', {})
+    origins = [o.strip() for o in tunnel_origins.split(',') if o.strip()]
+    existing = config['gateway']['controlUi'].get('allowedOrigins', [])
+    if isinstance(existing, list):
+        for o in origins:
+            if o not in existing:
+                existing.append(o)
+        config['gateway']['controlUi']['allowedOrigins'] = existing
+    else:
+        config['gateway']['controlUi']['allowedOrigins'] = origins
+
+# 3. Exec tool settings
 config.setdefault('tools', {})
 config['tools'].setdefault('exec', {})
 config['tools']['exec']['host'] = 'gateway'
 config['tools']['exec']['security'] = 'full'
 
-# Remove exec/process from tools.deny if present
+# 4. Remove exec/process from tools.deny if present
 if 'deny' in config['tools'] and isinstance(config['tools']['deny'], list):
     config['tools']['deny'] = [t for t in config['tools']['deny'] if t not in ('exec', 'process')]
     if not config['tools']['deny']:
@@ -445,14 +474,14 @@ print('OK')
 " 2>/dev/null
 
   if [[ $? -eq 0 ]]; then
-    # Fix ownership
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
       chown "$CLAWX_USER":"$CLAWX_USER" "$config_file"
     fi
-    log "Exec tool configured: host=gateway, security=full"
+    log "OpenClaw configured: gateway.mode=local, exec=full"
+    [[ -n "$tunnel_origins" ]] && log "Allowed origins: $tunnel_origins"
   else
-    warn "Failed to configure exec tool automatically"
-    warn "Configure from web dashboard: Settings → Exec Tool"
+    warn "Failed to configure OpenClaw automatically"
+    warn "Configure from web dashboard: Settings"
   fi
 }
 
@@ -540,8 +569,8 @@ cmd_install() {
   # Install OpenZalo channel
   install_openzalo
 
-  # Configure OpenClaw exec tool
-  configure_exec
+  # Configure OpenClaw (gateway mode, exec, allowed origins)
+  configure_openclaw
 
   # Setup systemd (only if root)
   if [[ $EUID -eq 0 ]]; then

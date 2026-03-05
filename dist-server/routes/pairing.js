@@ -9,6 +9,7 @@ import { homedir } from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
+import { gatewayManager } from '../services/gateway-manager.js';
 const router = Router();
 const execAsync = promisify(exec);
 const CREDENTIALS_DIR = join(homedir(), '.openclaw', 'credentials');
@@ -64,55 +65,61 @@ router.get('/pending', (_req, res) => {
     }
 });
 // POST /api/pairing/approve
-// Approve a pairing request via openclaw CLI
+// Approve a pairing request — tries RPC first, then CLI, then file edit
 router.post('/approve', async (req, res) => {
     try {
         const { channel, code } = req.body;
         if (!channel || !code) {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
-        // Try openclaw CLI first
+        // Method 1: Try gateway RPC (best — notifies running gateway immediately)
         try {
-            const { stdout, stderr } = await execAsync(`openclaw pairing approve ${channel} ${code}`, { timeout: 10000, env: { ...process.env, CI: 'true' } });
-            logger.info(`Pairing approved via CLI: ${channel} ${code}`, { stdout, stderr });
-            res.json({ success: true, method: 'cli', output: stdout.trim() });
+            const result = await gatewayManager.rpc('pairing.approve', { channel, code }, 8000);
+            logger.info(`Pairing approved via RPC: ${channel} ${code}`, { result });
+            return res.json({ success: true, method: 'rpc' });
+        }
+        catch (rpcErr) {
+            logger.warn('RPC pairing.approve failed, trying CLI', { error: String(rpcErr) });
+        }
+        // Method 2: Try openclaw CLI
+        try {
+            const { stdout } = await execAsync(`openclaw pairing approve ${channel} ${code}`, { timeout: 10000, env: { ...process.env, CI: 'true' } });
+            logger.info(`Pairing approved via CLI: ${channel} ${code}`, { stdout: stdout.trim() });
+            return res.json({ success: true, method: 'cli', output: stdout.trim() });
         }
         catch (cliErr) {
-            // Fallback: try to remove from pairing file directly
-            logger.warn('CLI approve failed, trying direct file edit', { error: String(cliErr) });
-            const filePath = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
-            if (existsSync(filePath)) {
-                const raw = readFileSync(filePath, 'utf-8').trim();
-                const data = JSON.parse(raw);
-                if (typeof data === 'object' && !Array.isArray(data) && code in data) {
-                    // Move to allowFrom file
-                    const allowPath = join(CREDENTIALS_DIR, `${channel}-allowFrom.json`);
-                    let allowList = [];
-                    if (existsSync(allowPath)) {
-                        try {
-                            allowList = JSON.parse(readFileSync(allowPath, 'utf-8'));
-                        }
-                        catch {
-                            allowList = [];
-                        }
-                    }
-                    const senderId = data[code]?.senderId || data[code]?.sender || data[code]?.userId;
-                    if (senderId && !allowList.includes(senderId)) {
-                        allowList.push(senderId);
-                        writeFileSync(allowPath, JSON.stringify(allowList, null, 2), 'utf-8');
-                    }
-                    delete data[code];
-                    writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-                    logger.info(`Pairing approved via file edit: ${channel} ${code}`);
-                    res.json({ success: true, method: 'file' });
+            logger.warn('CLI pairing approve failed, trying file edit', { error: String(cliErr) });
+        }
+        // Method 3: Direct file edit (last resort — gateway may not pick up)
+        const filePath = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
+        if (!existsSync(filePath)) {
+            return res.status(500).json({ error: 'All approve methods failed' });
+        }
+        const raw = readFileSync(filePath, 'utf-8').trim();
+        const data = JSON.parse(raw);
+        if (typeof data === 'object' && !Array.isArray(data) && code in data) {
+            const allowPath = join(CREDENTIALS_DIR, `${channel}-allowFrom.json`);
+            let allowList = [];
+            if (existsSync(allowPath)) {
+                try {
+                    allowList = JSON.parse(readFileSync(allowPath, 'utf-8'));
                 }
-                else {
-                    res.status(404).json({ error: 'Pairing code not found' });
+                catch {
+                    allowList = [];
                 }
             }
-            else {
-                res.status(500).json({ error: 'CLI failed and no pairing file found: ' + String(cliErr) });
+            const senderId = data[code]?.senderId || data[code]?.sender || data[code]?.userId;
+            if (senderId && !allowList.includes(senderId)) {
+                allowList.push(senderId);
+                writeFileSync(allowPath, JSON.stringify(allowList, null, 2), 'utf-8');
             }
+            delete data[code];
+            writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+            logger.info(`Pairing approved via file edit: ${channel} ${code}`);
+            res.json({ success: true, method: 'file' });
+        }
+        else {
+            res.status(404).json({ error: 'Pairing code not found' });
         }
     }
     catch (error) {
