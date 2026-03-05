@@ -89,23 +89,41 @@ const parseSkillList = (output) => {
     }
     const lines = output.split('\n').filter(l => l.trim() && !l.includes('Searching') && !l.includes('Fetching'));
     return lines.map(line => {
-        const cleanLine = stripAnsi(line);
-        // Format: slug vversion description (score)
-        // Or: slug vversion time description (for explore)
-        const match = cleanLine.match(/^(\S+)\s+v?(\d+\.\S+)\s+(.+)$/);
-        if (match) {
-            const slug = match[1];
-            const version = match[2];
-            let description = match[3];
+        const cleanLine = stripAnsi(line).trim();
+        if (!cleanLine)
+            return null;
+        // Format 1 (explore): slug  vVersion  time  description
+        // e.g. "evolver  v1.27.2  just now  A self-evolution engine..."
+        const exploreMatch = cleanLine.match(/^(\S+)\s+v?(\d+\.\S+)\s+(.+)$/);
+        if (exploreMatch) {
+            const slug = exploreMatch[1];
+            const version = exploreMatch[2];
+            let description = exploreMatch[3];
+            // Clean up time prefix (for explore)
+            description = description.replace(/^(.+? ago|just now|yesterday)\s+/, '').trim();
             // Clean up score if present
             description = description.replace(/\(\d+\.\d+\)$/, '').trim();
-            // Clean up time if present (for explore)
-            description = description.replace(/^(.+? ago|just now|yesterday)\s+/, '').trim();
+            return { slug, name: slug, version, description };
+        }
+        // Format 2 (search): slug  Name  (score)
+        // e.g. "brave-search  Brave Search  (3.536)"
+        const searchMatch = cleanLine.match(/^(\S+)\s+(.+?)\s+\([\d.]+\)\s*$/);
+        if (searchMatch) {
             return {
-                slug,
-                name: slug,
-                version,
-                description,
+                slug: searchMatch[1],
+                name: searchMatch[2].trim(),
+                version: '',
+                description: searchMatch[2].trim(),
+            };
+        }
+        // Format 3 (search without score): slug  Name
+        const simpleMatch = cleanLine.match(/^(\S+)\s+(.+)$/);
+        if (simpleMatch) {
+            return {
+                slug: simpleMatch[1],
+                name: simpleMatch[2].trim(),
+                version: '',
+                description: simpleMatch[2].trim(),
             };
         }
         return null;
