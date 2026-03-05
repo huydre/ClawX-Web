@@ -36,6 +36,7 @@ import { ProvidersSettings } from '@/components/settings/ProvidersSettings';
 import { UpdateSettings } from '@/components/settings/UpdateSettings';
 import { WebUpdateSettings } from '@/components/settings/WebUpdateSettings';
 import { TunnelSettings } from '@/components/settings/TunnelSettings';
+import { ExecSettings } from '@/components/settings/ExecSettings';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { platform } from '@/lib/platform';
@@ -515,6 +516,22 @@ export function Settings() {
           <TunnelSettings />
         </CardContent>
       </Card>
+
+      {/* Exec Tool - Web/VPS mode */}
+      {platform.isWeb && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Terminal className="h-5 w-5" />
+              Exec Tool
+            </CardTitle>
+            <CardDescription>Cấu hình quyền chạy lệnh cho AI</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ExecSettings />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Updates - Web/VPS mode */}
       {platform.isWeb && (

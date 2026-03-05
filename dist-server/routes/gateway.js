@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
@@ -192,6 +192,58 @@ router.post('/send-with-media', async (req, res) => {
     }
     catch (error) {
         logger.error('Send with media error:', error);
+        res.status(500).json({ success: false, error: String(error) });
+    }
+});
+// GET /api/gateway/exec-config
+// Read exec tool configuration from ~/.openclaw/openclaw.json
+router.get('/exec-config', (_req, res) => {
+    try {
+        const configPath = join(homedir(), '.openclaw', 'openclaw.json');
+        if (!existsSync(configPath)) {
+            return res.json({ host: 'sandbox', security: 'deny', configured: false });
+        }
+        const config = JSON.parse(readFileSync(configPath, 'utf-8'));
+        const tools = config.tools;
+        const exec = tools?.exec;
+        res.json({
+            host: exec?.host ?? 'sandbox',
+            security: exec?.security ?? 'deny',
+            configured: !!(exec?.host),
+        });
+    }
+    catch (error) {
+        logger.error('Get exec config error:', error);
+        res.status(500).json({ error: String(error) });
+    }
+});
+// POST /api/gateway/exec-config
+// Update exec tool configuration in ~/.openclaw/openclaw.json
+router.post('/exec-config', (req, res) => {
+    try {
+        const { host, security } = req.body;
+        const configPath = join(homedir(), '.openclaw', 'openclaw.json');
+        let config = {};
+        if (existsSync(configPath)) {
+            config = JSON.parse(readFileSync(configPath, 'utf-8'));
+        }
+        // Ensure tools.exec path exists
+        if (!config.tools)
+            config.tools = {};
+        const tools = config.tools;
+        if (!tools.exec)
+            tools.exec = {};
+        const exec = tools.exec;
+        if (host !== undefined)
+            exec.host = host;
+        if (security !== undefined)
+            exec.security = security;
+        writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+        logger.info(`Exec config updated: host=${host}, security=${security}`);
+        res.json({ success: true, host: exec.host, security: exec.security });
+    }
+    catch (error) {
+        logger.error('Set exec config error:', error);
         res.status(500).json({ success: false, error: String(error) });
     }
 });
