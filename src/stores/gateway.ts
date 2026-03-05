@@ -150,8 +150,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   restart: async () => {
     try {
       set({ status: { ...get().status, state: 'starting' }, lastError: null });
-      await api.stopGateway();
-      await api.startGateway();
+      await api.restartOpenClaw();
     } catch (error) {
       set({
         status: { ...get().status, state: 'error', error: String(error) },

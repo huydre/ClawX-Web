@@ -44,7 +44,7 @@ router.post('/stop', async (_req, res) => {
 });
 
 // POST /api/gateway/restart-openclaw
-// Reconnect to the OpenClaw gateway (managed by systemd/pm2 externally)
+// Restart the OpenClaw gateway process, then reconnect
 router.post('/restart-openclaw', async (_req, res) => {
   try {
     // Disconnect existing connection
@@ -52,17 +52,44 @@ router.post('/restart-openclaw', async (_req, res) => {
       await gatewayManager.stop();
     } catch { /* ignore */ }
 
-    // Wait briefly then reconnect
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Try to restart via systemctl first, then fallback to pkill
+    const { exec: execCmd } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(execCmd);
 
+    let method = 'reconnect';
+
+    // Try systemctl restart (if openclaw-gateway or openclaw service exists)
     try {
-      await gatewayManager.start();
-      logger.info('Gateway manager reconnected');
-    } catch (err) {
-      logger.warn('Gateway reconnect failed, will retry automatically', { err });
+      await execAsync('systemctl restart openclaw-gateway 2>/dev/null || systemctl restart openclaw 2>/dev/null', { timeout: 15000 });
+      method = 'systemctl';
+      logger.info('OpenClaw restarted via systemctl');
+    } catch {
+      // Fallback: kill the process and let systemd/supervisor restart it
+      try {
+        await execAsync(
+          'pkill -SIGTERM -x openclaw-gateway 2>/dev/null || pkill -SIGTERM -x openclaw 2>/dev/null || pkill -SIGTERM -f "openclaw" 2>/dev/null || true',
+          { timeout: 5000 }
+        );
+        method = 'pkill';
+        logger.info('OpenClaw process killed, waiting for restart...');
+      } catch {
+        logger.warn('Could not kill OpenClaw process, attempting reconnect only');
+      }
     }
 
-    res.json({ success: true, method: 'reconnect' });
+    // Wait for process to restart
+    await new Promise(resolve => setTimeout(resolve, method === 'reconnect' ? 1000 : 3000));
+
+    // Reconnect
+    try {
+      await gatewayManager.start();
+      logger.info('Gateway manager reconnected after restart');
+    } catch (err) {
+      logger.warn('Gateway reconnect failed after restart, will retry automatically', { err });
+    }
+
+    res.json({ success: true, method });
   } catch (error) {
     logger.error('Restart OpenClaw error:', error);
     res.status(500).json({ success: false, error: String(error) });
