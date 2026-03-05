@@ -61,7 +61,7 @@ logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, owner=${OWNER_USER}`);
 
 /** Build the CLI command, running as owner user if needed */
 function buildCmd(cmd: string): string {
-    const currentUser = require('os').userInfo().username;
+    const currentUser = process.env.USER || process.env.LOGNAME || '';
     if (OWNER_USER && OWNER_USER !== currentUser) {
         return `sudo -u ${OWNER_USER} ${cmd}`;
     }
