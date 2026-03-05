@@ -94,7 +94,9 @@ logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, owner=$
 function buildCmd(args: string): string {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
     if (OWNER_USER && OWNER_USER !== currentUser) {
-        return `sudo -u ${OWNER_USER} bash -lc '${OPENCLAW_BIN} ${args}'`;
+        const ownerHome = `/home/${OWNER_USER}`;
+        const nvmInit = `export NVM_DIR="${ownerHome}/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`;
+        return `sudo -u ${OWNER_USER} bash -c '${nvmInit} ; ${OPENCLAW_BIN} ${args}'`;
     }
     return `${OPENCLAW_BIN} ${args}`;
 }
