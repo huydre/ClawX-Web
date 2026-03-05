@@ -339,6 +339,20 @@ setup_systemd() {
   local user_home
   user_home=$(eval echo "~${CLAWX_USER}")
 
+  # Build a comprehensive PATH for exec tool support
+  local exec_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  # Add user-level paths if they exist
+  [[ -d "${user_home}/.local/bin" ]] && exec_path="${user_home}/.local/bin:${exec_path}"
+  [[ -d "${user_home}/.nvm/versions" ]] && {
+    local nvm_node_dir
+    nvm_node_dir=$(ls -d "${user_home}/.nvm/versions/node/"* 2>/dev/null | tail -1)
+    [[ -n "$nvm_node_dir" ]] && exec_path="${nvm_node_dir}/bin:${exec_path}"
+  }
+  # Add node binary directory
+  local node_dir
+  node_dir=$(dirname "$node_path")
+  exec_path="${node_dir}:${exec_path}"
+
   cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=ClawX-Web Dashboard
@@ -360,15 +374,14 @@ StartLimitBurst=3
 # Environment
 Environment=NODE_ENV=production
 Environment=HOME=${user_home}
+Environment=PATH=${exec_path}
 EnvironmentFile=${ENV_FILE}
 
-# Security hardening
-NoNewPrivileges=true
-ProtectSystem=strict
+# Security (relaxed for OpenClaw exec tool support)
+NoNewPrivileges=false
 ReadWritePaths=${CLAWX_DIR}
-ReadWritePaths=${user_home}/.openclaw
-ReadWritePaths=${user_home}/.clawx-device-identity.json
-PrivateTmp=true
+ReadWritePaths=${user_home}
+ReadWritePaths=/tmp
 
 # Logging
 StandardOutput=journal
@@ -382,6 +395,48 @@ EOF
   systemctl daemon-reload
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1
   log "Systemd service configured and enabled"
+}
+
+# ── Configure OpenClaw exec tool ──────────────────────────────────────────
+configure_exec() {
+  step "Configuring OpenClaw exec tool"
+
+  local user_home
+  user_home=$(eval echo "~${CLAWX_USER}")
+
+  local openclaw_bin=""
+  if command -v openclaw &>/dev/null; then
+    openclaw_bin=$(which openclaw)
+  else
+    # Try common locations
+    for p in "${user_home}/.local/bin/openclaw" "/usr/local/bin/openclaw" "${user_home}/.nvm/versions/node/"*/bin/openclaw; do
+      if [[ -f "$p" ]]; then
+        openclaw_bin="$p"
+        break
+      fi
+    done
+  fi
+
+  if [[ -z "$openclaw_bin" ]]; then
+    warn "OpenClaw CLI not found, skipping exec configuration"
+    warn "After installing OpenClaw, run manually:"
+    warn "  openclaw config set tools.exec.host gateway"
+    warn "  openclaw config set tools.exec.security full"
+    return
+  fi
+
+  local npm_dir
+  npm_dir=$(dirname "$openclaw_bin")
+
+  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+    su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw config set tools.exec.host gateway 2>/dev/null" "$CLAWX_USER" || true
+    su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw config set tools.exec.security full 2>/dev/null" "$CLAWX_USER" || true
+  else
+    "$openclaw_bin" config set tools.exec.host gateway 2>/dev/null || true
+    "$openclaw_bin" config set tools.exec.security full 2>/dev/null || true
+  fi
+
+  log "Exec tool configured: host=gateway, security=full"
 }
 
 # ── Generate .env ──────────────────────────────────────────────────────────
@@ -467,6 +522,9 @@ cmd_install() {
 
   # Install OpenZalo channel
   install_openzalo
+
+  # Configure OpenClaw exec tool
+  configure_exec
 
   # Setup systemd (only if root)
   if [[ $EUID -eq 0 ]]; then
