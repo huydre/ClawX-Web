@@ -51,7 +51,8 @@ logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, owner=${OWNER_USER}`);
 function buildCmd(cmd) {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
     if (OWNER_USER && OWNER_USER !== currentUser) {
-        return `sudo -u ${OWNER_USER} ${cmd}`;
+        // Use -i for login shell so PATH includes openclaw binary location
+        return `sudo -i -u ${OWNER_USER} -- ${cmd}`;
     }
     return cmd;
 }
