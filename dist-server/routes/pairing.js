@@ -175,6 +175,22 @@ router.post('/approve', async (req, res) => {
             data.requests = data.requests.filter((r) => r.code !== code);
             writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
             logger.info(`Pairing approved via file edit: ${channel} ${code}, senderId=${senderId}`);
+            // Signal gateway to reload (file edit alone won't notify the running process)
+            try {
+                await execAsync('pkill -HUP -f "openclaw" 2>/dev/null || true', { timeout: 3000 });
+                logger.info('Sent HUP signal to openclaw gateway');
+            }
+            catch { /* best effort */ }
+            // Also reconnect our gateway connection
+            try {
+                await gatewayManager.stop();
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                await gatewayManager.start();
+                logger.info('Gateway reconnected after file-based approve');
+            }
+            catch (reconnErr) {
+                logger.warn('Gateway reconnect after approve failed', { error: String(reconnErr) });
+            }
             return res.json({ success: true, method: 'file' });
         }
         res.status(404).json({ error: 'Pairing code not found in file' });
