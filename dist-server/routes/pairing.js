@@ -46,15 +46,35 @@ function getOwnerUser() {
 const OPENCLAW_DIR = findOpenClawDir();
 const CREDENTIALS_DIR = join(OPENCLAW_DIR, 'credentials');
 const OWNER_USER = getOwnerUser();
-logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, owner=${OWNER_USER}`);
+/** Find the actual openclaw binary path */
+function findOpenClawBin() {
+    const searchPaths = [
+        '/usr/local/bin/openclaw',
+        '/usr/bin/openclaw',
+        join(homedir(), '.local', 'bin', 'openclaw'),
+        join(homedir(), '.openclaw', 'bin', 'openclaw'),
+    ];
+    // Also search in owner user's paths
+    if (OWNER_USER) {
+        const ownerHome = `/home/${OWNER_USER}`;
+        searchPaths.push(join(ownerHome, '.local', 'bin', 'openclaw'), join(ownerHome, '.openclaw', 'bin', 'openclaw'), join(ownerHome, '.nvm', 'current', 'bin', 'openclaw'), join(ownerHome, '.local', 'share', 'pnpm', 'openclaw'));
+    }
+    for (const p of searchPaths) {
+        if (existsSync(p))
+            return p;
+    }
+    // Last resort: use just 'openclaw' and hope PATH works
+    return 'openclaw';
+}
+const OPENCLAW_BIN = findOpenClawBin();
+logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, owner=${OWNER_USER}`);
 /** Build the CLI command, running as owner user if needed */
-function buildCmd(cmd) {
+function buildCmd(args) {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
     if (OWNER_USER && OWNER_USER !== currentUser) {
-        // Use -i for login shell so PATH includes openclaw binary location
-        return `sudo -i -u ${OWNER_USER} -- ${cmd}`;
+        return `sudo -u ${OWNER_USER} ${OPENCLAW_BIN} ${args}`;
     }
-    return cmd;
+    return `${OPENCLAW_BIN} ${args}`;
 }
 /** Parse OpenClaw v1 pairing file */
 function readPairingFile(channel) {
@@ -104,7 +124,7 @@ router.post('/approve', async (req, res) => {
         if (!channel || !code) {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
-        const cmd = buildCmd(`openclaw pairing approve ${channel} ${code}`);
+        const cmd = buildCmd(`pairing approve ${channel} ${code}`);
         logger.info(`Pairing approve: running "${cmd}"`);
         const { stdout, stderr } = await execAsync(cmd, {
             timeout: 15000,
@@ -130,7 +150,7 @@ router.post('/reject', async (req, res) => {
         if (!channel || !code) {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
-        const cmd = buildCmd(`openclaw pairing reject ${channel} ${code}`);
+        const cmd = buildCmd(`pairing reject ${channel} ${code}`);
         logger.info(`Pairing reject: running "${cmd}"`);
         try {
             const { stdout } = await execAsync(cmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
@@ -140,7 +160,7 @@ router.post('/reject', async (req, res) => {
         catch {
             // Reject may not have CLI support — try with 'deny' alias
             try {
-                const denyCmd = buildCmd(`openclaw pairing deny ${channel} ${code}`);
+                const denyCmd = buildCmd(`pairing deny ${channel} ${code}`);
                 const { stdout } = await execAsync(denyCmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
                 res.json({ success: true, output: stdout.trim() });
             }
