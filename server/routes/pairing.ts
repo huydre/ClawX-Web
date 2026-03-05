@@ -4,7 +4,7 @@
  * Uses openclaw CLI for approve (communicates directly with gateway)
  */
 import { Router } from 'express';
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { exec } from 'child_process';
@@ -88,15 +88,33 @@ function findOpenClawBin(): string {
 }
 
 const OPENCLAW_BIN = findOpenClawBin();
-logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, owner=${OWNER_USER}`);
 
-/** Build the CLI command, running as owner user if needed */
+/** Resolve openclaw binary to its actual .mjs entry point */
+function resolveOpenClawMjs(): string | null {
+    try {
+        return realpathSync(OPENCLAW_BIN);
+    } catch {
+        // Try common pattern: ~/.npm-global/lib/node_modules/openclaw/openclaw.mjs
+        if (OWNER_USER) {
+            const mjs = join(`/home/${OWNER_USER}`, '.npm-global', 'lib', 'node_modules', 'openclaw', 'openclaw.mjs');
+            if (existsSync(mjs)) return mjs;
+        }
+        return null;
+    }
+}
+
+const OPENCLAW_MJS = resolveOpenClawMjs();
+logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, mjs=${OPENCLAW_MJS}, owner=${OWNER_USER}`);
+
+/** Build CLI command: source nvm + run node openclaw.mjs (bypasses shebang) */
 function buildCmd(args: string): string {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
     if (OWNER_USER && OWNER_USER !== currentUser) {
         const ownerHome = `/home/${OWNER_USER}`;
         const nvmInit = `export NVM_DIR="${ownerHome}/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`;
-        return `sudo -u ${OWNER_USER} bash -c '${nvmInit} ; ${OPENCLAW_BIN} ${args}'`;
+        const entry = OPENCLAW_MJS || OPENCLAW_BIN;
+        // Run via 'node <mjs>' to bypass shebang (which would use system node v20)
+        return `sudo -u ${OWNER_USER} bash -c '${nvmInit} && node ${entry} ${args}'`;
     }
     return `${OPENCLAW_BIN} ${args}`;
 }
