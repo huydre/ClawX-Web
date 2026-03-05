@@ -73,6 +73,7 @@ function findOpenClawBin(): string {
         searchPaths.push(
             join(ownerHome, '.local', 'bin', 'openclaw'),
             join(ownerHome, '.openclaw', 'bin', 'openclaw'),
+            join(ownerHome, '.npm-global', 'bin', 'openclaw'),
             join(ownerHome, '.nvm', 'current', 'bin', 'openclaw'),
             join(ownerHome, '.local', 'share', 'pnpm', 'openclaw'),
         );
