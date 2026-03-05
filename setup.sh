@@ -73,7 +73,7 @@ prompt() {
     echo -en "  ${prompt_text}: "
   fi
 
-  read -r result
+  read -r result < /dev/tty
   result="${result:-$default_val}"
   eval "$var_name='$result'"
 }
@@ -91,7 +91,7 @@ prompt_secret() {
     echo -en "  ${prompt_text} ${DIM}[skip]${NC}: "
   fi
 
-  read -r result
+  read -r result < /dev/tty
   result="${result:-$default_val}"
   eval "$var_name='$result'"
 }
@@ -103,7 +103,7 @@ prompt_yn() {
   local result
 
   echo -en "  ${prompt_text} ${DIM}[${default_val}]${NC}: "
-  read -r result
+  read -r result < /dev/tty
   result="${result:-$default_val}"
   result=$(echo "$result" | tr '[:upper:]' '[:lower:]')
   eval "$var_name='$result'"
