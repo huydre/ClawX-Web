@@ -238,8 +238,27 @@ router.post('/exec-config', (req, res) => {
             exec.host = host;
         if (security !== undefined)
             exec.security = security;
+        // Manage tools.deny list — remove 'exec' and 'process' when enabling
+        const execTools = ['exec', 'process'];
+        if (security && security !== 'deny') {
+            // Remove exec/process from deny list if present
+            if (Array.isArray(tools.deny)) {
+                tools.deny = tools.deny.filter(t => !execTools.includes(t));
+                if (tools.deny.length === 0)
+                    delete tools.deny;
+            }
+        }
+        else if (security === 'deny') {
+            // Add exec/process to deny list
+            const deny = Array.isArray(tools.deny) ? tools.deny : [];
+            for (const t of execTools) {
+                if (!deny.includes(t))
+                    deny.push(t);
+            }
+            tools.deny = deny;
+        }
         writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
-        logger.info(`Exec config updated: host=${host}, security=${security}`);
+        logger.info(`Exec config updated: host=${exec.host}, security=${exec.security}, deny=${JSON.stringify(tools.deny)}`);
         res.json({ success: true, host: exec.host, security: exec.security });
     }
     catch (error) {

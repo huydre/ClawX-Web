@@ -408,40 +408,52 @@ configure_exec() {
 
   local user_home
   user_home=$(eval echo "~${CLAWX_USER}")
+  local config_file="${user_home}/.openclaw/openclaw.json"
 
-  local openclaw_bin=""
-  if command -v openclaw &>/dev/null; then
-    openclaw_bin=$(which openclaw)
-  else
-    # Try common locations
-    for p in "${user_home}/.local/bin/openclaw" "/usr/local/bin/openclaw" "${user_home}/.nvm/versions/node/"*/bin/openclaw; do
-      if [[ -f "$p" ]]; then
-        openclaw_bin="$p"
-        break
-      fi
-    done
-  fi
-
-  if [[ -z "$openclaw_bin" ]]; then
-    warn "OpenClaw CLI not found, skipping exec configuration"
-    warn "After installing OpenClaw, run manually:"
-    warn "  openclaw config set tools.exec.host gateway"
-    warn "  openclaw config set tools.exec.security full"
+  if [[ ! -f "$config_file" ]]; then
+    warn "OpenClaw config not found at $config_file, skipping exec setup"
+    warn "After installing OpenClaw, configure exec from the web dashboard Settings"
     return
   fi
 
-  local npm_dir
-  npm_dir=$(dirname "$openclaw_bin")
+  # Use python3 to safely edit JSON (always available on Ubuntu/Debian)
+  python3 -c "
+import json, sys
 
-  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-    su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw config set tools.exec.host gateway 2>/dev/null" "$CLAWX_USER" || true
-    su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw config set tools.exec.security full 2>/dev/null" "$CLAWX_USER" || true
+config_path = '${config_file}'
+try:
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+except:
+    config = {}
+
+# Set tools.exec settings
+config.setdefault('tools', {})
+config['tools'].setdefault('exec', {})
+config['tools']['exec']['host'] = 'gateway'
+config['tools']['exec']['security'] = 'full'
+
+# Remove exec/process from tools.deny if present
+if 'deny' in config['tools'] and isinstance(config['tools']['deny'], list):
+    config['tools']['deny'] = [t for t in config['tools']['deny'] if t not in ('exec', 'process')]
+    if not config['tools']['deny']:
+        del config['tools']['deny']
+
+with open(config_path, 'w') as f:
+    json.dump(config, f, indent=2)
+print('OK')
+" 2>/dev/null
+
+  if [[ $? -eq 0 ]]; then
+    # Fix ownership
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      chown "$CLAWX_USER":"$CLAWX_USER" "$config_file"
+    fi
+    log "Exec tool configured: host=gateway, security=full"
   else
-    "$openclaw_bin" config set tools.exec.host gateway 2>/dev/null || true
-    "$openclaw_bin" config set tools.exec.security full 2>/dev/null || true
+    warn "Failed to configure exec tool automatically"
+    warn "Configure from web dashboard: Settings → Exec Tool"
   fi
-
-  log "Exec tool configured: host=gateway, security=full"
 }
 
 # ── Generate .env ──────────────────────────────────────────────────────────
