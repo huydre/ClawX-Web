@@ -94,7 +94,7 @@ logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, owner=$
 function buildCmd(args: string): string {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
     if (OWNER_USER && OWNER_USER !== currentUser) {
-        return `sudo -i -u ${OWNER_USER} ${OPENCLAW_BIN} ${args}`;
+        return `sudo -u ${OWNER_USER} bash -lc '${OPENCLAW_BIN} ${args}'`;
     }
     return `${OPENCLAW_BIN} ${args}`;
 }
