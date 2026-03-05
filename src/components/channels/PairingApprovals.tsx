@@ -11,12 +11,13 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PairingRequest {
+    id: string;
     code: string;
     channel: string;
     senderId: string;
     senderName: string;
+    username: string;
     createdAt: string;
-    expiresAt: string;
 }
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -143,9 +144,9 @@ export function PairingApprovals() {
                                                     </Badge>
                                                     <code className="text-sm font-bold tracking-wider">{req.code}</code>
                                                 </div>
-                                                {(req.senderName || req.senderId) && (
+                                                {(req.senderName || req.username || req.senderId) && (
                                                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                                        {req.senderName || req.senderId}
+                                                        {req.senderName}{req.username ? ` @${req.username}` : ''}{!req.senderName && !req.username ? req.senderId : ''}
                                                     </p>
                                                 )}
                                             </div>
