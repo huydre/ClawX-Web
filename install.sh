@@ -17,7 +17,7 @@ NC='\033[0m'
 CLAWX_DIR="/opt/clawx-web"
 CLAWX_REPO="https://github.com/huydre/ClawX-Web.git"
 CLAWX_USER="clawx"
-NODE_MAJOR=20
+NODE_MAJOR=22
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 log()   { echo -e "${GREEN}[✓]${NC} $*"; }
@@ -66,7 +66,7 @@ log "System packages ready"
 # ── Step 2: Node.js ────────────────────────────────────────────────────────
 step "Checking Node.js"
 
-NODE_VERSION="20.18.1"
+NODE_VERSION="22.14.0"
 
 install_nodejs() {
   # Direct binary download from nodejs.org (bypasses all APT repo conflicts)
