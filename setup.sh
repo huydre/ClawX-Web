@@ -221,9 +221,9 @@ do_build() {
 
     # Only install production deps (much faster, less RAM)
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-      su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod" "$CLAWX_USER"
+      su -s /bin/bash -c "cd '$CLAWX_DIR' && CI=true pnpm install --prod --frozen-lockfile 2>/dev/null || CI=true pnpm install --prod" "$CLAWX_USER"
     else
-      pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod
+      CI=true pnpm install --prod --frozen-lockfile 2>/dev/null || CI=true pnpm install --prod
     fi
     log "Production dependencies installed"
   else
@@ -231,9 +231,9 @@ do_build() {
     step "Installing dependencies"
 
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-      su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm install --frozen-lockfile 2>/dev/null || pnpm install" "$CLAWX_USER"
+      su -s /bin/bash -c "cd '$CLAWX_DIR' && CI=true pnpm install --frozen-lockfile 2>/dev/null || CI=true pnpm install" "$CLAWX_USER"
     else
-      pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+      CI=true pnpm install --frozen-lockfile 2>/dev/null || CI=true pnpm install
     fi
     log "Dependencies installed"
 

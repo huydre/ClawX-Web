@@ -107,7 +107,7 @@ router.post('/update', async (_req, res) => {
 /** Run a command and stream stdout/stderr lines to the broadcast */
 function runStream(cmd, args, cwd, send) {
     return new Promise((resolve, reject) => {
-        const child = spawn(cmd, args, { cwd, shell: false });
+        const child = spawn(cmd, args, { cwd, shell: false, env: { ...process.env, CI: 'true' } });
         child.stdout.on('data', (d) => {
             send('log', { line: d.toString().trimEnd() });
         });

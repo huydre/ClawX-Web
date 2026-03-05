@@ -126,7 +126,7 @@ function runStream(
   send: (step: string, data?: Record<string, unknown>) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, shell: false });
+    const child = spawn(cmd, args, { cwd, shell: false, env: { ...process.env, CI: 'true' } });
 
     child.stdout.on('data', (d: Buffer) => {
       send('log', { line: d.toString().trimEnd() });
