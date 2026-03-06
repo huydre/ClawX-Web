@@ -275,8 +275,13 @@ install_openzalo() {
   npm_dir=$(dirname "$npm_bin")
 
   # 1. Install openzca CLI
-  if command -v openzca &>/dev/null || [[ -f "${npm_dir}/openzca" ]]; then
-    info "openzca CLI already installed"
+  local openzca_path=""
+  if command -v openzca &>/dev/null; then
+    openzca_path=$(which openzca)
+    info "openzca CLI already installed at $openzca_path"
+  elif [[ -f "${npm_dir}/openzca" ]]; then
+    openzca_path="${npm_dir}/openzca"
+    info "openzca CLI found at $openzca_path"
   else
     info "Installing openzca CLI..."
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
@@ -284,6 +289,35 @@ install_openzalo() {
         warn "Failed to install openzca (non-critical)"
     else
       "$npm_bin" install -g openzca 2>/dev/null || warn "Failed to install openzca (non-critical)"
+    fi
+    # Find installed path
+    if command -v openzca &>/dev/null; then
+      openzca_path=$(which openzca)
+    elif [[ -f "${npm_dir}/openzca" ]]; then
+      openzca_path="${npm_dir}/openzca"
+    elif [[ -f "${user_home}/.npm-global/bin/openzca" ]]; then
+      openzca_path="${user_home}/.npm-global/bin/openzca"
+    fi
+  fi
+
+  # Symlink openzca to /usr/local/bin so all users can find it
+  if [[ -n "$openzca_path" ]] && [[ $EUID -eq 0 ]]; then
+    ln -sf "$openzca_path" /usr/local/bin/openzca 2>/dev/null && \
+      info "Symlinked openzca → /usr/local/bin/openzca"
+  fi
+
+  # Set zcaBinary in openclaw config as fallback
+  if [[ -n "$openzca_path" ]]; then
+    local config_file="${user_home}/.openclaw/openclaw.json"
+    if [[ -f "$config_file" ]]; then
+      python3 -c "
+import json
+with open('${config_file}', 'r') as f:
+    c = json.load(f)
+c.setdefault('channels', {}).setdefault('openzalo', {})['zcaBinary'] = '${openzca_path}'
+with open('${config_file}', 'w') as f:
+    json.dump(c, f, indent=2)
+" 2>/dev/null && info "Set channels.openzalo.zcaBinary=${openzca_path}"
     fi
   fi
 
