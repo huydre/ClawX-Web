@@ -259,7 +259,7 @@ install_openzalo() {
   user_home=$(eval echo "~${CLAWX_USER}")
   local npm_bin=""
 
-  # Find npm/npx binary
+  # Find npm binary
   if command -v npm &>/dev/null; then
     npm_bin=$(which npm)
   elif [[ -f "${user_home}/.nvm/versions/node/$(ls ${user_home}/.nvm/versions/node/ 2>/dev/null | tail -1)/bin/npm" ]]; then
@@ -287,7 +287,7 @@ install_openzalo() {
     fi
   fi
 
-  # 2. Install @openclaw/openzalo plugin
+  # 2. Install @openclaw/openzalo plugin from GitHub
   local openclaw_bin=""
   if command -v openclaw &>/dev/null; then
     openclaw_bin=$(which openclaw)
@@ -320,6 +320,26 @@ install_openzalo() {
     git clone --depth 1 https://github.com/darkamenosa/openzalo "$tmp_dir" 2>/dev/null
 
     if [[ -d "$tmp_dir" ]]; then
+      # Install npm dependencies
+      cd "$tmp_dir" && npm install --production 2>/dev/null
+      cd - >/dev/null
+
+      # Patch package.json with openclaw.extensions if missing
+      python3 -c "
+import json
+pkg_path = '${tmp_dir}/package.json'
+with open(pkg_path, 'r') as f:
+    pkg = json.load(f)
+if 'openclaw' not in pkg or 'extensions' not in pkg.get('openclaw', {}):
+    pkg.setdefault('openclaw', {})['extensions'] = {'channels': ['openzalo']}
+    with open(pkg_path, 'w') as f:
+        json.dump(pkg, f, indent=2)
+    print('Patched openclaw.extensions')
+else:
+    print('openclaw.extensions already present')
+" 2>/dev/null
+
+      # Install plugin
       if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
         chown -R "$CLAWX_USER":"$CLAWX_USER" "$tmp_dir"
         su -s /bin/bash -c "export PATH='${npm_dir}:\$PATH' && openclaw plugins install '$tmp_dir'" "$CLAWX_USER" 2>/dev/null || \
