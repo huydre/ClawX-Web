@@ -458,8 +458,9 @@ if tunnel_origins:
     else:
         config['gateway']['controlUi']['allowedOrigins'] = origins
 
-# 3. Exec tool settings
+# 3. Tools profile + exec settings
 config.setdefault('tools', {})
+config['tools']['profile'] = 'full'
 config['tools'].setdefault('exec', {})
 config['tools']['exec']['host'] = 'gateway'
 config['tools']['exec']['security'] = 'full'
