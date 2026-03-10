@@ -109,17 +109,14 @@ logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, mjs=${O
 /** Build CLI command: source nvm + run node openclaw.mjs (bypasses shebang) */
 function buildCmd(args: string): string {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
-    const ownerHome = OWNER_USER ? `/home/${OWNER_USER}` : homedir();
-    const nvmInit = `export NVM_DIR="${ownerHome}/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`;
-    const entry = OPENCLAW_MJS || OPENCLAW_BIN;
-
     if (OWNER_USER && OWNER_USER !== currentUser) {
-        // Different user: use sudo with NVM
+        const ownerHome = `/home/${OWNER_USER}`;
+        const nvmInit = `export NVM_DIR="${ownerHome}/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`;
+        const entry = OPENCLAW_MJS || OPENCLAW_BIN;
+        // Run via 'node <mjs>' to bypass shebang (which would use system node v20)
         return `sudo -u ${OWNER_USER} bash -c '${nvmInit} && node ${entry} ${args}'`;
     }
-
-    // Same user but running under systemd: still need NVM for correct Node version
-    return `bash -c '${nvmInit} && node ${entry} ${args}'`;
+    return `${OPENCLAW_BIN} ${args}`;
 }
 
 /** Parse OpenClaw v1 pairing file */
