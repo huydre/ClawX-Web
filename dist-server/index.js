@@ -168,10 +168,27 @@ async function start() {
                     }
                     // Ensure dashboard DNS record
                     await ensureDnsRecord(dashboardFullDomain, dashboardDnsSubdomain);
-                    // Set tunnel ingress rules via API so both hostnames route to the right service
+                    // Set up terminal (ttyd) subdomain for remote support
+                    const ttydPort = process.env.TTYD_PORT || '7681';
+                    const terminalSubdomain = `terminal-${subdomain}`;
+                    const terminalFullDomain = `${terminalSubdomain}.${envDomain}`;
+                    let terminalDnsSubdomain;
+                    if (envDomain === zoneName) {
+                        terminalDnsSubdomain = terminalSubdomain;
+                    }
+                    else {
+                        const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
+                        terminalDnsSubdomain = `${terminalSubdomain}.${subdomainPrefix}`;
+                    }
+                    // Ensure terminal DNS record
+                    await ensureDnsRecord(terminalFullDomain, terminalDnsSubdomain);
+                    const terminalUrl = `https://${terminalFullDomain}`;
+                    logger.info('Terminal tunnel ingress configured', { terminalUrl });
+                    // Set tunnel ingress rules via API so all hostnames route to the right service
                     await cfApi.updateTunnelConfig(accountId, tunnel.id, [
                         { hostname: fullDomain, service: `http://localhost:${PORT}` },
                         { hostname: dashboardFullDomain, service: `http://localhost:${dashboardPort}` },
+                        { hostname: terminalFullDomain, service: `http://localhost:${ttydPort}` },
                         { service: 'http_status:404' },
                     ]);
                     // Build dashboard URL with gateway auth token so users can open it directly
@@ -191,6 +208,7 @@ async function start() {
                         domain: fullDomain,
                         publicUrl,
                         dashboardUrl,
+                        terminalUrl,
                         useIngressConfig: false,
                     });
                     // Use --url pointing to ClawX (port 2003).
