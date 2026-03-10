@@ -4,7 +4,7 @@
  * Uses openclaw CLI for approve (communicates directly with gateway)
  */
 import { Router } from 'express';
-import { readFileSync, existsSync, readdirSync, realpathSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { exec } from 'child_process';
@@ -146,6 +146,28 @@ function readPairingFile(channel: string): PairingRequest[] {
     }
 }
 
+/** Remove a pairing entry from the credentials file after approve/reject */
+function removePairingEntry(channel: string, code: string): void {
+    const filePath = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
+    try {
+        if (!existsSync(filePath)) return;
+        const raw = readFileSync(filePath, 'utf-8').trim();
+        if (!raw || raw === '{}' || raw === '[]') return;
+
+        const data = JSON.parse(raw);
+        if (data.requests && Array.isArray(data.requests)) {
+            const before = data.requests.length;
+            data.requests = data.requests.filter((req: any) => req.code !== code);
+            if (data.requests.length < before) {
+                writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+                logger.info(`Removed pairing entry from file`, { channel, code, removed: before - data.requests.length });
+            }
+        }
+    } catch (err) {
+        logger.warn(`Failed to clean up pairing file for ${channel}`, { error: String(err) });
+    }
+}
+
 // GET /api/pairing/pending
 router.get('/pending', (_req, res) => {
     try {
@@ -177,6 +199,7 @@ router.post('/approve', async (req, res) => {
                 env: { ...process.env, CI: 'true' },
             });
             logger.info(`Pairing approved: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
+            removePairingEntry(channel, code);
             res.json({ success: true, method: 'cli', output: stdout.trim() });
         } catch (error: any) {
             // openclaw CLI exits non-zero even on success — only treat as error if we see real error keywords
@@ -197,6 +220,7 @@ router.post('/approve', async (req, res) => {
             } else {
                 // No real error → assume success
                 logger.info(`Pairing approve OK (non-zero exit): ${channel} ${code}`, { output: output.trim() });
+                removePairingEntry(channel, code);
                 res.json({ success: true, method: 'cli', output: output.trim() });
             }
         }
@@ -220,12 +244,14 @@ router.post('/reject', async (req, res) => {
         try {
             const { stdout } = await execAsync(cmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
             logger.info(`Pairing rejected: ${channel} ${code}`, { stdout: stdout.trim() });
+            removePairingEntry(channel, code);
             res.json({ success: true });
         } catch {
             // Reject may not have CLI support — try with 'deny' alias
             try {
                 const denyCmd = buildCmd(`pairing deny ${channel} ${code}`);
                 const { stdout } = await execAsync(denyCmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
+                removePairingEntry(channel, code);
                 res.json({ success: true, output: stdout.trim() });
             } catch (err2) {
                 logger.warn('CLI reject failed', { error: String(err2) });
