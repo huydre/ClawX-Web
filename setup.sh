@@ -19,18 +19,19 @@ NC='\033[0m'
 CLAWX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Auto-detect the user who installed OpenClaw
-# Priority: 1) owner of openclaw-gateway process, 2) SUDO_USER, 3) current user
+# Priority: 1) owner of openclaw-gateway process, 2) SUDO_USER, 3) scan /home, 4) current user
 detect_clawx_user() {
   # Try to find user running openclaw-gateway
+  # NOTE: ps -eo user truncates to 8 chars by default, use user:32 for long usernames
   local gw_user
-  gw_user=$(ps -eo user,comm 2>/dev/null | grep -i 'openclaw' | head -1 | awk '{print $1}' || true)
-  if [[ -n "$gw_user" && "$gw_user" != "root" ]]; then
+  gw_user=$(ps -eo user:32,comm 2>/dev/null | grep -i 'openclaw' | head -1 | awk '{print $1}' || true)
+  if [[ -n "$gw_user" && "$gw_user" != "root" && ! "$gw_user" =~ \+ ]] && id "$gw_user" &>/dev/null; then
     echo "$gw_user"
     return
   fi
 
   # Try SUDO_USER (the real user who ran sudo)
-  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]] && id "$SUDO_USER" &>/dev/null; then
     echo "$SUDO_USER"
     return
   fi
@@ -38,8 +39,12 @@ detect_clawx_user() {
   # Scan /home for .openclaw directory
   for home_dir in /home/*/; do
     if [[ -f "${home_dir}.openclaw/openclaw.json" ]]; then
-      basename "$home_dir"
-      return
+      local found_user
+      found_user=$(basename "$home_dir")
+      if id "$found_user" &>/dev/null; then
+        echo "$found_user"
+        return
+      fi
     fi
   done
 
