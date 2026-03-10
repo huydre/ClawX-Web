@@ -182,7 +182,7 @@ router.get('/pending', (_req, res) => {
     }
 });
 
-// POST /api/pairing/approve — uses CLI only
+// POST /api/pairing/approve — tries gateway RPC first, falls back to CLI
 router.post('/approve', async (req, res) => {
     try {
         const { channel, code } = req.body as { channel: string; code: string };
@@ -190,19 +190,32 @@ router.post('/approve', async (req, res) => {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
 
+        // Strategy 1: Try gateway RPC directly (most reliable)
+        try {
+            const { gatewayManager } = await import('../services/gateway-manager.js');
+            if (gatewayManager.isConnected()) {
+                const result = await gatewayManager.rpc('pairing.approve', { channel, code }, 15000);
+                logger.info(`Pairing approved via RPC: ${channel} ${code}`, { result });
+                removePairingEntry(channel, code);
+                return res.json({ success: true, method: 'rpc', output: JSON.stringify(result) });
+            }
+        } catch (rpcErr) {
+            logger.warn('Pairing RPC approve failed, trying CLI fallback', { error: String(rpcErr) });
+        }
+
+        // Strategy 2: Fall back to CLI
         const cmd = buildCmd(`pairing approve ${channel} ${code}`);
-        logger.info(`Pairing approve: running "${cmd}"`);
+        logger.info(`Pairing approve via CLI: running "${cmd}"`);
 
         try {
             const { stdout, stderr } = await execAsync(cmd, {
                 timeout: 15000,
                 env: { ...process.env, CI: 'true' },
             });
-            logger.info(`Pairing approved: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
+            logger.info(`Pairing approved via CLI: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
             removePairingEntry(channel, code);
             res.json({ success: true, method: 'cli', output: stdout.trim() });
         } catch (error: any) {
-            // openclaw CLI exits non-zero even on success — only treat as error if we see real error keywords
             const stdout = error?.stdout || '';
             const stderr = error?.stderr || '';
             const output = stdout + stderr;
@@ -218,7 +231,6 @@ router.post('/approve', async (req, res) => {
                         : 'Could not detect openclaw owner user',
                 });
             } else {
-                // No real error → assume success
                 logger.info(`Pairing approve OK (non-zero exit): ${channel} ${code}`, { output: output.trim() });
                 removePairingEntry(channel, code);
                 res.json({ success: true, method: 'cli', output: output.trim() });
