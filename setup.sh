@@ -272,7 +272,7 @@ install_openzalo() {
   step "Setting up OpenZalo channel"
 
   local user_home
-  user_home=$(eval echo "~${CLAWX_USER}")
+  user_home=$(getent passwd "${CLAWX_USER}" | cut -d: -f6)
   local npm_bin=""
 
   # Find npm binary
@@ -464,7 +464,7 @@ setup_systemd() {
   node_path=$(which node)
 
   local user_home
-  user_home=$(eval echo "~${CLAWX_USER}")
+  user_home=$(getent passwd "${CLAWX_USER}" | cut -d: -f6)
 
   # Build a comprehensive PATH for exec tool support
   local exec_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -529,7 +529,7 @@ configure_openclaw() {
   step "Configuring OpenClaw"
 
   local user_home
-  user_home=$(eval echo "~${CLAWX_USER}")
+  user_home=$(getent passwd "${CLAWX_USER}" | cut -d: -f6)
   local config_file="${user_home}/.openclaw/openclaw.json"
 
   if [[ ! -f "$config_file" ]]; then
