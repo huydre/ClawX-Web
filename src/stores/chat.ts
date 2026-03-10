@@ -1092,7 +1092,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // ── Load chat history ──
 
   loadHistory: async (quiet = false) => {
-    const { currentSessionKey } = get();
+    const { currentSessionKey, sending, lastUserMessageAt } = get();
     if (!quiet) set({ loading: true, error: null });
 
     try {
@@ -1101,22 +1101,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (result.success && result.result) {
         const data = result.result;
         const rawMessages = Array.isArray(data.messages) ? data.messages as RawMessage[] : [];
-        // Before filtering: attach images/files from tool_result messages to the next assistant message
+        // Enrich tool result files before filtering
         const messagesWithToolImages = enrichWithToolResultFiles(rawMessages);
         const filteredMessages = messagesWithToolImages.filter((msg) => !isToolResultRole(msg.role));
         // Restore file attachments for user/assistant messages (from cache + text patterns)
         const enrichedMessages = enrichWithCachedImages(filteredMessages);
+
+        // If we're currently sending a message, the gateway history may not yet
+        // include our optimistic user message. Preserve it to prevent "disappearing message".
+        let finalMessages = enrichedMessages;
+        if (sending && lastUserMessageAt) {
+          const currentMessages = get().messages;
+          const optimisticUserMsg = currentMessages.find(
+            (m) => m.role === 'user' && m.timestamp === lastUserMessageAt
+          );
+          if (optimisticUserMsg) {
+            const alreadyInHistory = enrichedMessages.some(
+              (m) => m.role === 'user' && m.id === optimisticUserMsg.id
+            );
+            if (!alreadyInHistory) {
+              // Append the optimistic user message to the loaded history
+              finalMessages = [...enrichedMessages, optimisticUserMsg];
+            }
+          }
+        }
+
         const thinkingLevel = data.thinkingLevel ? String(data.thinkingLevel) : null;
-        set({ messages: enrichedMessages, thinkingLevel, loading: false });
+        set({ messages: finalMessages, thinkingLevel, loading: false });
 
         // Async: load missing image previews from disk (updates in background)
-        loadMissingPreviews(enrichedMessages).then((updated) => {
+        loadMissingPreviews(finalMessages).then((updated) => {
           if (updated) {
             // Create new object references so React.memo detects changes.
             // loadMissingPreviews mutates AttachedFileMeta in place, so we
             // must produce fresh message + file references for each affected msg.
             set({
-              messages: enrichedMessages.map(msg =>
+              messages: finalMessages.map(msg =>
                 msg._attachedFiles
                   ? { ...msg, _attachedFiles: msg._attachedFiles.map(f => ({ ...f })) }
                   : msg
@@ -1124,12 +1144,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
             });
           }
         });
-        const { pendingFinal, lastUserMessageAt } = get();
+        const { pendingFinal, lastUserMessageAt: currentLastUserAt } = get();
         if (pendingFinal) {
           const recentAssistant = [...filteredMessages].reverse().find((msg) => {
             if (msg.role !== 'assistant') return false;
             if (!hasNonToolAssistantContent(msg)) return false;
-            if (lastUserMessageAt && msg.timestamp && msg.timestamp < lastUserMessageAt) return false;
+            if (currentLastUserAt && msg.timestamp && msg.timestamp < currentLastUserAt) return false;
             return true;
           });
           if (recentAssistant) {
