@@ -336,9 +336,13 @@ router.post('/rpc', async (req, res) => {
   try {
     const { method, params, timeoutMs } = rpcSchema.parse(req.body);
 
-    // Retry logic for RPC calls (max 3 attempts)
+    // chat.send is fire-and-forget: response comes via streaming events
+    // Use generous timeout and no retries to avoid duplicate sends
+    const isChatSend = method === 'chat.send';
+    const effectiveTimeout = timeoutMs || (isChatSend ? 120000 : 10000);
+    const maxRetries = isChatSend ? 0 : 2;
+
     let lastError: Error | null = null;
-    const maxRetries = 2;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -354,8 +358,7 @@ router.post('/rpc', async (req, res) => {
           throw new Error('Gateway not connected after waiting');
         }
 
-        // Use shorter timeout (10s) to fail fast and retry
-        const result = await gatewayManager.rpc(method, params, timeoutMs || 10000);
+        const result = await gatewayManager.rpc(method, params, effectiveTimeout);
         res.json({ success: true, result });
         return;
       } catch (error) {
