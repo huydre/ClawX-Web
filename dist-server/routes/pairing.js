@@ -181,58 +181,55 @@ router.get('/pending', (_req, res) => {
         res.status(500).json({ error: String(error) });
     }
 });
-// POST /api/pairing/approve — tries gateway RPC first, falls back to CLI
+/** Write sender ID to the allowFrom credentials file (same as what CLI does) */
+function approveSenderDirect(channel, code) {
+    // 1. Find the sender ID from the pairing request
+    const pairingFile = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
+    if (!existsSync(pairingFile)) {
+        throw new Error(`Pairing file not found: ${pairingFile}`);
+    }
+    const pairingData = JSON.parse(readFileSync(pairingFile, 'utf-8'));
+    const requests = pairingData.requests || [];
+    const request = requests.find((r) => r.code === code);
+    if (!request) {
+        throw new Error(`Pairing request not found for code: ${code}`);
+    }
+    const senderId = String(request.id);
+    const accountId = request.meta?.accountId || 'default';
+    // 2. Write sender to allowFrom file (merge with existing)
+    const allowFile = join(CREDENTIALS_DIR, `${channel}-${accountId}-allowFrom.json`);
+    let allowData = { version: 1, allowFrom: [] };
+    try {
+        if (existsSync(allowFile)) {
+            allowData = JSON.parse(readFileSync(allowFile, 'utf-8'));
+        }
+    }
+    catch { /* start fresh */ }
+    if (!allowData.allowFrom.includes(senderId)) {
+        allowData.allowFrom.push(senderId);
+    }
+    writeFileSync(allowFile, JSON.stringify(allowData, null, 2), 'utf-8');
+    logger.info(`Written sender ${senderId} to ${allowFile}`);
+    // 3. Remove the request from pairing file
+    pairingData.requests = requests.filter((r) => r.code !== code);
+    writeFileSync(pairingFile, JSON.stringify(pairingData, null, 2), 'utf-8');
+    return { senderId };
+}
+// POST /api/pairing/approve — writes directly to credentials files
 router.post('/approve', async (req, res) => {
     try {
         const { channel, code } = req.body;
         if (!channel || !code) {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
-        // Strategy 1: Try gateway RPC directly (most reliable)
         try {
-            const { gatewayManager } = await import('../services/gateway-manager.js');
-            if (gatewayManager.isConnected()) {
-                const result = await gatewayManager.rpc('pairing.approve', { channel, code }, 15000);
-                logger.info(`Pairing approved via RPC: ${channel} ${code}`, { result });
-                removePairingEntry(channel, code);
-                return res.json({ success: true, method: 'rpc', output: JSON.stringify(result) });
-            }
+            const { senderId } = approveSenderDirect(channel, code);
+            logger.info(`Pairing approved (direct file): ${channel} ${code} → sender ${senderId}`);
+            res.json({ success: true, method: 'direct', output: `Approved ${channel} sender ${senderId}` });
         }
-        catch (rpcErr) {
-            logger.warn('Pairing RPC approve failed, trying CLI fallback', { error: String(rpcErr) });
-        }
-        // Strategy 2: Fall back to CLI
-        const cmd = buildCmd(`pairing approve ${channel} ${code}`);
-        logger.info(`Pairing approve via CLI: running "${cmd}"`);
-        try {
-            const { stdout, stderr } = await execAsync(cmd, {
-                timeout: 15000,
-                env: { ...process.env, CI: 'true' },
-            });
-            logger.info(`Pairing approved via CLI: ${channel} ${code}`, { stdout: stdout.trim(), stderr: stderr.trim() });
-            removePairingEntry(channel, code);
-            res.json({ success: true, method: 'cli', output: stdout.trim() });
-        }
-        catch (error) {
-            const stdout = error?.stdout || '';
-            const stderr = error?.stderr || '';
-            const output = stdout + stderr;
-            const realErrorKeywords = ['not found', 'permission denied', 'enoent', 'no such file', 'invalid', 'unknown command'];
-            const hasRealError = realErrorKeywords.some(kw => output.toLowerCase().includes(kw));
-            if (hasRealError) {
-                logger.error('Approve pairing error:', { error: error?.message, stderr });
-                res.status(500).json({
-                    error: `CLI failed: ${stderr || error?.message || String(error)}`,
-                    hint: OWNER_USER
-                        ? `Ensure sudoers: clawx ALL=(${OWNER_USER}) NOPASSWD: ALL`
-                        : 'Could not detect openclaw owner user',
-                });
-            }
-            else {
-                logger.info(`Pairing approve OK (non-zero exit): ${channel} ${code}`, { output: output.trim() });
-                removePairingEntry(channel, code);
-                res.json({ success: true, method: 'cli', output: output.trim() });
-            }
+        catch (directErr) {
+            logger.error('Direct approve failed:', { error: String(directErr) });
+            res.status(500).json({ error: String(directErr) });
         }
     }
     catch (error) {
