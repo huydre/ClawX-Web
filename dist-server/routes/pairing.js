@@ -82,19 +82,38 @@ function resolveOpenClawMjs() {
         return null;
     }
 }
+/** Find NVM node binary (highest version) for a given home dir */
+function findNvmNode(userHome) {
+    try {
+        const versionsDir = join(userHome, '.nvm', 'versions', 'node');
+        if (!existsSync(versionsDir))
+            return null;
+        const versions = readdirSync(versionsDir).sort();
+        if (versions.length === 0)
+            return null;
+        const latest = versions[versions.length - 1];
+        const nodeBin = join(versionsDir, latest, 'bin', 'node');
+        return existsSync(nodeBin) ? nodeBin : null;
+    }
+    catch {
+        return null;
+    }
+}
 const OPENCLAW_MJS = resolveOpenClawMjs();
-logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, mjs=${OPENCLAW_MJS}, owner=${OWNER_USER}`);
-/** Build CLI command: source nvm + run node openclaw.mjs (bypasses shebang) */
+const OWNER_HOME = OWNER_USER ? `/home/${OWNER_USER}` : homedir();
+const NVM_NODE = findNvmNode(OWNER_HOME);
+logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, mjs=${OPENCLAW_MJS}, owner=${OWNER_USER}, nvmNode=${NVM_NODE}`);
+/** Build CLI command: always use NVM node + openclaw.mjs to bypass shebang version issues */
 function buildCmd(args) {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
+    const entry = OPENCLAW_MJS || OPENCLAW_BIN;
+    const nodeCmd = NVM_NODE || 'node';
     if (OWNER_USER && OWNER_USER !== currentUser) {
-        const ownerHome = `/home/${OWNER_USER}`;
-        const nvmInit = `export NVM_DIR="${ownerHome}/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"`;
-        const entry = OPENCLAW_MJS || OPENCLAW_BIN;
-        // Run via 'node <mjs>' to bypass shebang (which would use system node v20)
-        return `sudo -u ${OWNER_USER} bash -c '${nvmInit} && node ${entry} ${args}'`;
+        // Different user: use sudo
+        return `sudo -u ${OWNER_USER} ${nodeCmd} ${entry} ${args}`;
     }
-    return `${OPENCLAW_BIN} ${args}`;
+    // Same user: run node directly (bypasses shebang which may use old system node)
+    return `${nodeCmd} ${entry} ${args}`;
 }
 /** Parse OpenClaw v1 pairing file */
 function readPairingFile(channel) {
