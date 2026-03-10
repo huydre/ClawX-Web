@@ -125,6 +125,7 @@ load_existing_env() {
   EXISTING_CF_DOMAIN=""
   EXISTING_CF_SUBDOMAIN=""
   EXISTING_AUTH_PASSWORD=""
+  EXISTING_TTYD_PORT=""
 
   if [[ -f "$ENV_FILE" ]]; then
     EXISTING_GATEWAY_PORT=$(grep -oP 'OPENCLAW_GATEWAY_PORT=\K.*' "$ENV_FILE" 2>/dev/null || echo "")
@@ -132,6 +133,7 @@ load_existing_env() {
     EXISTING_CF_DOMAIN=$(grep -oP 'CLOUDFLARE_TUNNEL_DOMAIN=\K.*' "$ENV_FILE" 2>/dev/null || echo "")
     EXISTING_CF_SUBDOMAIN=$(grep -oP 'CLOUDFLARE_TUNNEL_SUBDOMAIN=\K.*' "$ENV_FILE" 2>/dev/null || echo "")
     EXISTING_AUTH_PASSWORD=$(grep -oP 'CLAWX_AUTH_PASSWORD=\K.*' "$ENV_FILE" 2>/dev/null || echo "")
+    EXISTING_TTYD_PORT=$(grep -oP 'TTYD_PORT=\K.*' "$ENV_FILE" 2>/dev/null || echo "")
   fi
 }
 
@@ -170,6 +172,7 @@ cmd_status() {
       echo -e "    Local:     ${CYAN}http://localhost:${DEFAULT_PORT}${NC}"
       echo -e "    Dashboard: ${CYAN}https://${subdomain}.${domain}${NC}"
       echo -e "    Gateway:   ${CYAN}https://dashboard-${subdomain}.${domain}${NC}"
+      echo -e "    Terminal:  ${CYAN}https://terminal-${subdomain}.${domain}${NC}"
     else
       echo -e "\n  ${BOLD}URL:${NC}  ${CYAN}http://localhost:${DEFAULT_PORT}${NC}"
     fi
@@ -390,6 +393,56 @@ else:
   log "OpenZalo channel setup complete"
 }
 
+# ── Install ttyd ───────────────────────────────────────────────────────────
+install_ttyd() {
+  step "Setting up ttyd web terminal"
+
+  local ttyd_port="${CFG_TTYD_PORT:-7681}"
+  local ttyd_password="${CFG_AUTH_PASSWORD:-ClawX2026}"
+
+  # Install ttyd
+  if command -v ttyd &>/dev/null; then
+    info "ttyd already installed: $(ttyd --version 2>&1 | head -1)"
+  else
+    info "Installing ttyd..."
+    apt-get install -y ttyd >/dev/null 2>&1 || {
+      warn "Failed to install ttyd via apt, trying snap..."
+      snap install ttyd --classic 2>/dev/null || {
+        warn "Failed to install ttyd (non-critical, skip)"
+        return
+      }
+    }
+    log "ttyd installed"
+  fi
+
+  # Create systemd service
+  cat > /etc/systemd/system/ttyd.service <<EOF
+[Unit]
+Description=ttyd - Web Terminal for ClawX Support
+After=network.target
+
+[Service]
+Type=simple
+User=${CLAWX_USER}
+ExecStart=$(which ttyd) --port ${ttyd_port} --credential support:${ttyd_password} --writable bash
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable ttyd >/dev/null 2>&1
+  systemctl restart ttyd
+
+  if systemctl is-active --quiet ttyd; then
+    log "ttyd running on port ${ttyd_port} (user: support, pass: ${ttyd_password})"
+  else
+    warn "ttyd may have failed to start. Check: journalctl -u ttyd -n 10"
+  fi
+}
+
 # ── Setup systemd ──────────────────────────────────────────────────────────
 setup_systemd() {
   step "Setting up systemd service"
@@ -558,6 +611,9 @@ OPENCLAW_GATEWAY_PORT=${CFG_GATEWAY_PORT}
 CLOUDFLARE_API_TOKEN=${CFG_CF_TOKEN}
 CLOUDFLARE_TUNNEL_DOMAIN=${CFG_CF_DOMAIN}
 CLOUDFLARE_TUNNEL_SUBDOMAIN=${CFG_CF_SUBDOMAIN}
+
+# ttyd Web Terminal
+TTYD_PORT=${CFG_TTYD_PORT}
 EOF
 
   # Set ownership
@@ -614,14 +670,23 @@ cmd_install() {
     "Dashboard password" \
     "${default_password}"
 
+  # ttyd port
+  echo ""
+  echo -e "  ${DIM}─── ttyd Web Terminal (remote support) ───${NC}"
+  prompt CFG_TTYD_PORT \
+    "ttyd port" \
+    "${EXISTING_TTYD_PORT:-7681}"
+
   # Summary
   echo ""
   echo -e "  ${BOLD}Configuration Summary:${NC}"
   echo -e "    Dashboard Password: ${CYAN}${CFG_AUTH_PASSWORD}${NC}"
   echo -e "    Gateway Port:   ${CYAN}${CFG_GATEWAY_PORT}${NC}"
+  echo -e "    ttyd Port:      ${CYAN}${CFG_TTYD_PORT}${NC}"
   if [[ -n "$CFG_CF_TOKEN" ]]; then
     echo -e "    Tunnel Domain:  ${CYAN}${CFG_CF_SUBDOMAIN}.${CFG_CF_DOMAIN}${NC}"
     echo -e "    Dashboard URL:  ${CYAN}https://dashboard-${CFG_CF_SUBDOMAIN}.${CFG_CF_DOMAIN}${NC}"
+    echo -e "    Terminal URL:   ${CYAN}https://terminal-${CFG_CF_SUBDOMAIN}.${CFG_CF_DOMAIN}${NC}"
   else
     echo -e "    Tunnel:         ${DIM}disabled${NC}"
   fi
@@ -641,6 +706,13 @@ cmd_install() {
 
   # Install OpenZalo channel
   install_openzalo
+
+  # Install ttyd web terminal
+  if [[ $EUID -eq 0 ]]; then
+    install_ttyd
+  else
+    warn "Skipping ttyd setup (requires root)"
+  fi
 
   # Configure OpenClaw (gateway mode, exec, allowed origins)
   configure_openclaw
