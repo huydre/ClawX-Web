@@ -30,14 +30,20 @@ async function waitForGatewayConnected(timeoutMs = 15000): Promise<boolean> {
 }
 
 // Helper function to call gateway RPC (works in both Electron and Web mode)
-async function gatewayRpc(method: string, params?: any, retries = 2): Promise<{ success: boolean; result?: any; error?: string }> {
+async function gatewayRpc(method: string, params?: any, retries = 2, timeoutMs?: number): Promise<{ success: boolean; result?: any; error?: string }> {
   if (platform.isElectron) {
     return await window.electron.ipcRenderer.invoke('gateway:rpc', method, params);
   } else {
     // Web mode: wait for gateway to be connected, then use gateway store with retry logic
     const { useGatewayStore } = await import('./gateway');
 
-    for (let attempt = 0; attempt <= retries; attempt++) {
+    // chat.send can take a long time (AI thinking + tool use), use generous timeout
+    const isChatSend = method === 'chat.send';
+    const rpcTimeout = timeoutMs ?? (isChatSend ? 120000 : 10000);
+    // Don't retry chat.send — it's fire-and-forget (streaming events arrive separately)
+    const maxRetries = isChatSend ? 0 : retries;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         // Wait for gateway to be connected before making RPC call
         const isConnected = await waitForGatewayConnected();
@@ -45,14 +51,13 @@ async function gatewayRpc(method: string, params?: any, retries = 2): Promise<{ 
           throw new Error('Gateway not connected');
         }
 
-        // Use shorter timeout (10s) to fail fast and retry
-        const result = await useGatewayStore.getState().rpc(method, params, 10000);
+        const result = await useGatewayStore.getState().rpc(method, params, rpcTimeout);
         return { success: true, result };
       } catch (error) {
         const errorMsg = String(error);
 
         // If this is the last attempt, return the error
-        if (attempt === retries) {
+        if (attempt === maxRetries) {
           return { success: false, error: errorMsg };
         }
 
@@ -1252,17 +1257,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // No runId from gateway; keep sending state and wait for events.
       }
 
-      // Safety timeout: if we're still in "sending" state after 30s without
-      // receiving any streaming event, the run likely failed silently.
+      // Safety timeout: if we're still in "sending" state after 120s without
+      // receiving any streaming event (including tool events), the run likely failed silently.
       if (result.success) {
         const sentAt = Date.now();
-        const SAFETY_TIMEOUT_MS = 30_000;
+        const SAFETY_TIMEOUT_MS = 120_000;
         const checkStuck = () => {
           const state = get();
           if (!state.sending) return;
-          if (state.streamingMessage || state.streamingText) return;
+          // Check for ANY streaming activity: text, message, OR tool events
+          if (state.streamingMessage || state.streamingText || state.streamingTools.length > 0) return;
           if (Date.now() - sentAt < SAFETY_TIMEOUT_MS) {
-            setTimeout(checkStuck, 5_000);
+            setTimeout(checkStuck, 10_000);
             return;
           }
           set({
@@ -1273,7 +1279,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             lastFailedMessage: { text: trimmed, attachments },
           });
         };
-        setTimeout(checkStuck, 10_000);
+        setTimeout(checkStuck, 15_000);
       }
     } catch (err) {
       const friendlyError = parseErrorMessage(String(err));
