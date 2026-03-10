@@ -126,13 +126,15 @@ function buildCmd(args: string): string {
     const currentUser = process.env.USER || process.env.LOGNAME || '';
     const entry = OPENCLAW_MJS || OPENCLAW_BIN;
     const nodeCmd = NVM_NODE || 'node';
+    // Embed HOME and CI directly in command to ensure they're available under systemd
+    const envPrefix = `HOME=${OWNER_HOME} CI=true`;
 
     if (OWNER_USER && OWNER_USER !== currentUser) {
-        // Different user: use sudo
-        return `sudo -u ${OWNER_USER} ${nodeCmd} ${entry} ${args}`;
+        // Different user: use sudo with env preservation
+        return `sudo -u ${OWNER_USER} env ${envPrefix} ${nodeCmd} ${entry} ${args}`;
     }
     // Same user: run node directly (bypasses shebang which may use old system node)
-    return `${nodeCmd} ${entry} ${args}`;
+    return `env ${envPrefix} ${nodeCmd} ${entry} ${args}`;
 }
 
 /** Parse OpenClaw v1 pairing file */
