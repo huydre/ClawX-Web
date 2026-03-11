@@ -7,7 +7,7 @@ import { Router } from 'express';
 import { readFileSync, writeFileSync, existsSync, readdirSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
 
@@ -58,6 +58,18 @@ const OPENCLAW_DIR = findOpenClawDir();
 const CREDENTIALS_DIR = join(OPENCLAW_DIR, 'credentials');
 const OWNER_USER = getOwnerUser();
 
+/** Resolve the actual home directory for a user via getent passwd (works with any username) */
+function resolveUserHome(username: string): string {
+    try {
+        const passwd = execSync(`getent passwd ${username}`, { encoding: 'utf-8' }).trim();
+        const homeDir = passwd.split(':')[5];
+        if (homeDir && existsSync(homeDir)) return homeDir;
+    } catch { /* getent failed, use fallback */ }
+    return `/home/${username}`;
+}
+
+const OWNER_HOME = OWNER_USER ? resolveUserHome(OWNER_USER) : homedir();
+
 /** Find the actual openclaw binary path */
 function findOpenClawBin(): string {
     const searchPaths = [
@@ -69,7 +81,7 @@ function findOpenClawBin(): string {
 
     // Also search in owner user's paths
     if (OWNER_USER) {
-        const ownerHome = `/home/${OWNER_USER}`;
+        const ownerHome = OWNER_HOME;
         searchPaths.push(
             join(ownerHome, '.local', 'bin', 'openclaw'),
             join(ownerHome, '.openclaw', 'bin', 'openclaw'),
@@ -96,7 +108,7 @@ function resolveOpenClawMjs(): string | null {
     } catch {
         // Try common pattern: ~/.npm-global/lib/node_modules/openclaw/openclaw.mjs
         if (OWNER_USER) {
-            const mjs = join(`/home/${OWNER_USER}`, '.npm-global', 'lib', 'node_modules', 'openclaw', 'openclaw.mjs');
+            const mjs = join(OWNER_HOME, '.npm-global', 'lib', 'node_modules', 'openclaw', 'openclaw.mjs');
             if (existsSync(mjs)) return mjs;
         }
         return null;
@@ -117,7 +129,7 @@ function findNvmNode(userHome: string): string | null {
 }
 
 const OPENCLAW_MJS = resolveOpenClawMjs();
-const OWNER_HOME = OWNER_USER ? `/home/${OWNER_USER}` : homedir();
+// OWNER_HOME already defined above via resolveUserHome()
 const NVM_NODE = findNvmNode(OWNER_HOME);
 logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, mjs=${OPENCLAW_MJS}, owner=${OWNER_USER}, nvmNode=${NVM_NODE}`);
 
