@@ -16,7 +16,18 @@ NC='\033[0m'
 
 SERVICE_NAME="clawx"
 CLAWX_DIR="/opt/clawx-web"
-CLAWX_USER="clawx"
+
+# Auto-detect user: read from .clawx-owner, fall back to SUDO_USER, then "clawx"
+if [[ -f "$CLAWX_DIR/.clawx-owner" ]]; then
+    CLAWX_USER=$(cat "$CLAWX_DIR/.clawx-owner" 2>/dev/null | tr -d '[:space:]')
+fi
+if [[ -z "${CLAWX_USER:-}" ]]; then
+    if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+        CLAWX_USER="$SUDO_USER"
+    else
+        CLAWX_USER="clawx"
+    fi
+fi
 
 log()   { echo -e "${GREEN}[✓]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
@@ -73,10 +84,10 @@ if [[ -d "$CLAWX_DIR" ]]; then
   log "Removed $CLAWX_DIR"
 fi
 
-# ── Remove user (optional) ────────────────────────────────────────────────
-if id "$CLAWX_USER" &>/dev/null; then
+# ── Remove user (only for dedicated 'clawx' user) ────────────────────────
+if [[ "$CLAWX_USER" == "clawx" ]] && id "$CLAWX_USER" &>/dev/null; then
   echo ""
-  echo -en "  Remove user '${CLAWX_USER}'? ${DIM}[y/N]${NC}: "
+  echo -en "  Remove dedicated user '${CLAWX_USER}'? ${DIM}[y/N]${NC}: "
   read -r REMOVE_USER
   REMOVE_USER=$(echo "${REMOVE_USER:-n}" | tr '[:upper:]' '[:lower:]')
 

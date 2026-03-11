@@ -16,7 +16,12 @@ NC='\033[0m'
 
 CLAWX_DIR="/opt/clawx-web"
 CLAWX_REPO="https://github.com/huydre/ClawX-Web.git"
-CLAWX_USER="clawx"
+# Auto-detect: use the real user who ran sudo, fallback to creating 'clawx'
+if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]] && id "$SUDO_USER" &>/dev/null; then
+    CLAWX_USER="$SUDO_USER"
+else
+    CLAWX_USER="clawx"
+fi
 NODE_MAJOR=22
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -146,35 +151,33 @@ else
   log "Repository cloned to $CLAWX_DIR"
 fi
 
-# ── Step 6: Create service user ────────────────────────────────────────────
-step "Creating service user"
+# ── Step 6: Setup service user ─────────────────────────────────────────────
+step "Setting up service user: $CLAWX_USER"
 
-if id "$CLAWX_USER" &>/dev/null; then
-  log "User '$CLAWX_USER' already exists"
+if [[ "$CLAWX_USER" == "clawx" ]]; then
+  # Dedicated service user — create if needed
+  if id "$CLAWX_USER" &>/dev/null; then
+    log "User '$CLAWX_USER' already exists"
+  else
+    useradd -r -s /bin/false -d "$CLAWX_DIR" -m "$CLAWX_USER" 2>/dev/null || true
+    log "User '$CLAWX_USER' created"
+  fi
 else
-  useradd -r -s /bin/false -d "$CLAWX_DIR" -m "$CLAWX_USER" 2>/dev/null || true
-  log "User '$CLAWX_USER' created"
+  log "Using existing user '$CLAWX_USER' (detected from SUDO_USER)"
 fi
 
 chown -R "$CLAWX_USER":"$CLAWX_USER" "$CLAWX_DIR"
 
-# Allow clawx user to restart its own service (for auto-update)
+# Allow service user to restart its own service (for auto-update)
 SUDOERS_FILE="/etc/sudoers.d/clawx-restart"
 echo "$CLAWX_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart clawx" > "$SUDOERS_FILE"
 chmod 440 "$SUDOERS_FILE"
 log "Sudoers rule added: $CLAWX_USER can restart clawx service"
 
-# Allow clawx to run openclaw as the real user (for pairing approve etc.)
-REAL_USER="${SUDO_USER:-$(whoami)}"
-if [[ "$REAL_USER" != "root" && "$REAL_USER" != "$CLAWX_USER" ]]; then
-  SUDOERS_OPENCLAW="/etc/sudoers.d/clawx-openclaw"
-  echo "$CLAWX_USER ALL=($REAL_USER) NOPASSWD: ALL" > "$SUDOERS_OPENCLAW"
-  chmod 440 "$SUDOERS_OPENCLAW"
-  # Save the real user for the server to use
-  echo "$REAL_USER" > "$CLAWX_DIR/.clawx-owner"
-  chown "$CLAWX_USER":"$CLAWX_USER" "$CLAWX_DIR/.clawx-owner"
-  log "Sudoers rule added: $CLAWX_USER can run commands as $REAL_USER"
-fi
+# Save the owner user for the server to use
+echo "$CLAWX_USER" > "$CLAWX_DIR/.clawx-owner"
+chown "$CLAWX_USER":"$CLAWX_USER" "$CLAWX_DIR/.clawx-owner"
+log "Owner user saved: $CLAWX_USER"
 
 # ── Step 7: Run setup ─────────────────────────────────────────────────────
 step "Running setup"
