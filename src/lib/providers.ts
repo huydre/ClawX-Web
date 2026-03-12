@@ -8,6 +8,7 @@
 export const PROVIDER_TYPES = [
   'anthropic',
   'openai',
+  'codex',
   'google',
   'openrouter',
   'moonshot',
@@ -55,6 +56,8 @@ export interface ProviderTypeInfo {
   models?: { id: string; name: string }[];
   /** Whether models can be auto-fetched from API */
   canFetchModels?: boolean;
+  /** Whether this provider uses OAuth instead of API key */
+  useOAuth?: boolean;
 }
 
 import { providerIcons } from '@/assets/providers';
@@ -81,6 +84,16 @@ export const PROVIDER_TYPE_INFO: ProviderTypeInfo[] = [
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
       { id: 'o3', name: 'o3' },
       { id: 'o4-mini', name: 'o4 Mini' },
+    ],
+  },
+  {
+    id: 'codex', name: 'Codex (OpenAI)', icon: '🧠', placeholder: 'Connect via OAuth', model: 'Codex',
+    requiresApiKey: false, useOAuth: true,
+    defaultModelId: 'codex-mini',
+    models: [
+      { id: 'codex-mini', name: 'Codex Mini' },
+      { id: 'o4-mini', name: 'o4 Mini (Codex)' },
+      { id: 'gpt-5.4', name: 'GPT 5.4 (Codex)' },
     ],
   },
   {

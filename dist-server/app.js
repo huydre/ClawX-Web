@@ -15,6 +15,7 @@ import channelsRouter from './routes/channels.js';
 import systemRouter from './routes/system.js';
 import pairingRouter from './routes/pairing.js';
 import authRouter from './routes/auth.js';
+import oauthRouter from './routes/oauth.js';
 import { authMiddleware } from './middleware/auth.js';
 const app = express();
 // ============================================================================
@@ -72,6 +73,8 @@ app.get('/health', (_req, res) => {
 });
 // Auth routes (before auth middleware so login endpoints are accessible)
 app.use('/api/auth', authRouter);
+// OAuth callback must be before auth middleware (OpenAI redirects here)
+app.use('/api/oauth', oauthRouter);
 // Password gate — all routes below require authentication
 app.use(authMiddleware);
 // API routes

@@ -16,6 +16,7 @@ import {
   Key,
   Download,
   RotateCcw,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -656,6 +657,7 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [customModel, setCustomModel] = useState(false);
+  const [oauthConnecting, setOauthConnecting] = useState(false);
 
   const typeInfo = PROVIDER_TYPE_INFO.find((t) => t.id === selectedType);
 
@@ -819,35 +821,86 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">{t('aiProviders.dialog.apiKey')}</Label>
-                <div className="relative">
-                  <Input
-                    id="apiKey"
-                    type={showKey ? 'text' : 'password'}
-                    placeholder={typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : typeInfo?.placeholder}
-                    value={apiKey}
-                    onChange={(e) => {
-                      setApiKey(e.target.value);
+              {typeInfo?.useOAuth ? (
+                /* OAuth flow — show connect button instead of API key input */
+                <div className="space-y-2">
+                  <Label>Authentication</Label>
+                  <Button
+                    className="w-full"
+                    disabled={oauthConnecting}
+                    onClick={async () => {
+                      setOauthConnecting(true);
                       setValidationError(null);
+                      try {
+                        const resp = await fetch('/api/oauth/codex/start');
+                        const data = await resp.json();
+                        if (data.authUrl) {
+                          // Open OAuth in new tab
+                          window.open(data.authUrl, '_blank');
+                          // Add the provider entry now (token will be saved by callback)
+                          const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+                          await onAdd(
+                            selectedType!,
+                            name || typeInfo?.name || selectedType!,
+                            '', // no API key
+                            { model: finalModel || undefined }
+                          );
+                        } else {
+                          setValidationError(data.error || 'Failed to start OAuth');
+                        }
+                      } catch (err) {
+                        setValidationError(String(err));
+                      } finally {
+                        setOauthConnecting(false);
+                      }
                     }}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                    {oauthConnecting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                    )}
+                    Connect with OpenAI
+                  </Button>
+                  {validationError && (
+                    <p className="text-xs text-destructive">{validationError}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Opens OpenAI login in a new tab. After approving, tokens are saved automatically.
+                  </p>
                 </div>
-                {validationError && (
-                  <p className="text-xs text-destructive">{validationError}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {t('aiProviders.dialog.apiKeyStored')}
-                </p>
-              </div>
+              ) : (
+                /* Standard API key input */
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">{t('aiProviders.dialog.apiKey')}</Label>
+                  <div className="relative">
+                    <Input
+                      id="apiKey"
+                      type={showKey ? 'text' : 'password'}
+                      placeholder={typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : typeInfo?.placeholder}
+                      value={apiKey}
+                      onChange={(e) => {
+                        setApiKey(e.target.value);
+                        setValidationError(null);
+                      }}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {validationError && (
+                    <p className="text-xs text-destructive">{validationError}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('aiProviders.dialog.apiKeyStored')}
+                  </p>
+                </div>
+              )}
 
               {/* Model Selection */}
               {(hasModelDropdown || typeInfo?.canFetchModels) && (
@@ -943,15 +996,17 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
             <Button variant="outline" onClick={onClose}>
               {t('aiProviders.dialog.cancel')}
             </Button>
-            <Button
-              onClick={handleAdd}
-              disabled={!selectedType || saving || ((typeInfo?.showModelId ?? false) && modelId.trim().length === 0)}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              {t('aiProviders.dialog.add')}
-            </Button>
+            {!typeInfo?.useOAuth && (
+              <Button
+                onClick={handleAdd}
+                disabled={!selectedType || saving || ((typeInfo?.showModelId ?? false) && modelId.trim().length === 0)}
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                {t('aiProviders.dialog.add')}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
