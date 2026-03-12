@@ -22,6 +22,7 @@ interface AuthProfileOAuth {
   access: string;
   refresh: string;
   expires: number; // Unix timestamp in ms
+  savedAt?: number; // Unix timestamp when token was saved
   accountId?: string;
 }
 
@@ -400,6 +401,7 @@ export function saveOAuthTokenToOpenClaw(
       access: tokens.access,
       refresh: tokens.refresh,
       expires: tokens.expires,
+      savedAt: Date.now(),
       accountId: tokens.accountId,
     };
 
@@ -426,6 +428,7 @@ export function getOAuthTokenFromOpenClaw(provider: string): {
   access: string;
   refresh: string;
   expires: number;
+  savedAt?: number;
   accountId?: string;
 } | null {
   try {
@@ -436,6 +439,7 @@ export function getOAuthTokenFromOpenClaw(provider: string): {
         access: profile.access,
         refresh: profile.refresh,
         expires: profile.expires,
+        savedAt: profile.savedAt,
         accountId: profile.accountId,
       };
     }

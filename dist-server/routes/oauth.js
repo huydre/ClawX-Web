@@ -388,6 +388,7 @@ router.get('/codex/status', (_req, res) => {
             expired,
             expiresIn,
             expiresAt: token.expires,
+            savedAt: token.savedAt || 0,
             accountId: token.accountId,
             email,
         });
