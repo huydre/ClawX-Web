@@ -222,7 +222,7 @@ router.get('/codex/start', async (_req, res) => {
                 accountId,
             });
             // Set default model
-            setOpenClawDefaultModel('openai-codex', 'codex-mini');
+            setOpenClawDefaultModel('openai-codex', 'codex-mini-latest');
             logger.info('Codex OAuth complete', { accountId, expiresAt: new Date(expiresAt).toISOString() });
         })
             .catch((err) => {
