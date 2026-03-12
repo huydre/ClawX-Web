@@ -125,31 +125,54 @@ router.get('/models/:type', async (req, res) => {
         }
       } catch { /* API not reachable */ }
     } else if (providerType === 'codex') {
-      // Codex: read models from OpenClaw config (openai-codex provider)
-      const codexCfg = getProviderConfigFromOpenClaw('openai-codex');
-      if (codexCfg?.models && codexCfg.models.length > 0) {
-        for (const m of codexCfg.models) {
-          models.push({ id: m.id, name: m.name || m.id });
-        }
-      } else {
-        // Fallback: try OpenAI /v1/models with OAuth token
-        const oauthToken = getOAuthTokenFromOpenClaw('openai-codex');
-        if (oauthToken?.access) {
-          try {
-            const resp = await fetch('https://api.openai.com/v1/models', {
-              headers: { Authorization: `Bearer ${oauthToken.access}` },
-              signal: AbortSignal.timeout(8000),
-            });
-            if (resp.ok) {
-              const data = await resp.json() as { data?: { id: string }[] };
-              if (data.data) {
-                for (const m of data.data) {
-                  models.push({ id: m.id, name: m.id });
-                }
-                models.sort((a, b) => a.id.localeCompare(b.id));
+      // Codex: try OpenAI API first, then OpenClaw config, then hardcoded fallback
+      let fetched = false;
+
+      // 1. Try OpenAI /v1/models with OAuth token
+      const oauthToken = getOAuthTokenFromOpenClaw('openai-codex');
+      if (oauthToken?.access) {
+        try {
+          const resp = await fetch('https://api.openai.com/v1/models', {
+            headers: { Authorization: `Bearer ${oauthToken.access}` },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (resp.ok) {
+            const data = await resp.json() as { data?: { id: string }[] };
+            if (data.data && data.data.length > 0) {
+              for (const m of data.data) {
+                models.push({ id: m.id, name: m.id });
               }
+              models.sort((a, b) => a.id.localeCompare(b.id));
+              fetched = true;
             }
-          } catch { /* API not reachable */ }
+          }
+        } catch { /* API not reachable */ }
+      }
+
+      // 2. Fallback: read from OpenClaw config (strip cx/ prefix)
+      if (!fetched) {
+        const codexCfg = getProviderConfigFromOpenClaw('openai-codex');
+        if (codexCfg?.models && codexCfg.models.length > 0) {
+          for (const m of codexCfg.models) {
+            const id = m.id.replace(/^cx\//, '');
+            models.push({ id, name: m.name?.replace(/^cx\//, '') || id });
+          }
+          fetched = true;
+        }
+      }
+
+      // 3. Hardcoded fallback (no prefix)
+      if (!fetched) {
+        const fallback = [
+          'codex-mini-latest', 'codex-mini', 'gpt-5.4',
+          'gpt-5.3-codex', 'gpt-5.3-codex-xhigh', 'gpt-5.3-codex-high',
+          'gpt-5.3-codex-low', 'gpt-5.3-codex-none', 'gpt-5.3-codex-spark',
+          'gpt-5.2-codex', 'gpt-5.2', 'gpt-5.1-codex-mini', 'gpt-5.1-codex-mini-high',
+          'gpt-5.1-codex-max', 'gpt-5.1-codex', 'gpt-5.1',
+          'gpt-5-codex', 'gpt-5-codex-mini',
+        ];
+        for (const id of fallback) {
+          models.push({ id, name: id });
         }
       }
     } else if (apiKey) {
