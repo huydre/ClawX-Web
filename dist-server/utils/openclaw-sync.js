@@ -56,6 +56,14 @@ const REGISTRY = {
             apiKeyEnv: 'NINEROUTER_API_KEY',
         },
     },
+    'openai-codex': {
+        defaultModel: 'openai-codex/codex-mini',
+        providerConfig: {
+            baseUrl: 'https://api.openai.com/v1',
+            api: 'openai-responses',
+            apiKeyEnv: 'OPENAI_API_KEY',
+        },
+    },
 };
 function getAuthProfilesPath(agentId = 'main') {
     return join(homedir(), '.openclaw', 'agents', agentId, 'agent', 'auth-profiles.json');
@@ -96,13 +104,22 @@ export function getProviderKeyFromOpenClaw(provider) {
         if (!store.profiles)
             return null;
         // Exact match: "openrouter:default"
-        const exact = store.profiles[`${provider}:default`]?.key;
-        if (exact)
-            return exact;
+        const profile = store.profiles[`${provider}:default`];
+        if (profile) {
+            if (profile.type === 'api_key')
+                return profile.key;
+            if (profile.type === 'oauth')
+                return profile.access;
+        }
         // Prefix match: any profile starting with "openrouter:"
         const prefixMatch = Object.entries(store.profiles).find(([id]) => id.startsWith(`${provider}:`));
-        if (prefixMatch)
-            return prefixMatch[1].key ?? null;
+        if (prefixMatch) {
+            const p = prefixMatch[1];
+            if (p.type === 'api_key')
+                return p.key;
+            if (p.type === 'oauth')
+                return p.access;
+        }
         return null;
     }
     catch {
@@ -288,4 +305,57 @@ export function setOpenClawDefaultModel(provider, modelOverride, runtimeOverride
         mkdirSync(dir, { recursive: true });
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
     logger.info('Synced default model to OpenClaw', { provider, model });
+}
+/**
+ * Save OAuth tokens (access, refresh, expires) to OpenClaw auth-profiles.json
+ */
+export function saveOAuthTokenToOpenClaw(provider, tokens) {
+    try {
+        const store = readAuthProfiles();
+        const profileId = `${provider}:default`;
+        store.profiles[profileId] = {
+            type: 'oauth',
+            provider,
+            access: tokens.access,
+            refresh: tokens.refresh,
+            expires: tokens.expires,
+            accountId: tokens.accountId,
+        };
+        if (!store.order)
+            store.order = {};
+        if (!store.order[provider])
+            store.order[provider] = [];
+        if (!store.order[provider].includes(profileId)) {
+            store.order[provider].push(profileId);
+        }
+        if (!store.lastGood)
+            store.lastGood = {};
+        store.lastGood[provider] = profileId;
+        writeAuthProfiles(store);
+        logger.info('Saved OAuth token to OpenClaw', { provider });
+    }
+    catch (err) {
+        logger.warn('Failed to save OAuth token to OpenClaw', { provider, err });
+    }
+}
+/**
+ * Read OAuth tokens from OpenClaw auth-profiles.json
+ */
+export function getOAuthTokenFromOpenClaw(provider) {
+    try {
+        const store = readAuthProfiles();
+        const profile = store.profiles[`${provider}:default`];
+        if (profile?.type === 'oauth') {
+            return {
+                access: profile.access,
+                refresh: profile.refresh,
+                expires: profile.expires,
+                accountId: profile.accountId,
+            };
+        }
+        return null;
+    }
+    catch {
+        return null;
+    }
 }
