@@ -106,9 +106,21 @@ router.get('/models/:type', async (req, res) => {
             catch { /* API not reachable */ }
         }
         else if (providerType === 'codex') {
-            // Codex: try OpenAI API first, then OpenClaw config, then hardcoded fallback
-            let fetched = false;
-            // 1. Try OpenAI /v1/models with OAuth token
+            // Codex: start with hardcoded list, then merge API/config models
+            const knownModels = [
+                'codex-mini-latest', 'codex-mini', 'gpt-5.4',
+                'gpt-5.3-codex', 'gpt-5.3-codex-xhigh', 'gpt-5.3-codex-high',
+                'gpt-5.3-codex-low', 'gpt-5.3-codex-none', 'gpt-5.3-codex-spark',
+                'gpt-5.2-codex', 'gpt-5.2', 'gpt-5.1-codex-mini', 'gpt-5.1-codex-mini-high',
+                'gpt-5.1-codex-max', 'gpt-5.1-codex', 'gpt-5.1',
+                'gpt-5-codex', 'gpt-5-codex-mini',
+            ];
+            const seen = new Set();
+            for (const id of knownModels) {
+                models.push({ id, name: id });
+                seen.add(id);
+            }
+            // Try OpenAI API for additional models
             const oauthToken = getOAuthTokenFromOpenClaw('openai-codex');
             if (oauthToken?.access) {
                 try {
@@ -118,40 +130,27 @@ router.get('/models/:type', async (req, res) => {
                     });
                     if (resp.ok) {
                         const data = await resp.json();
-                        if (data.data && data.data.length > 0) {
+                        if (data.data) {
                             for (const m of data.data) {
-                                models.push({ id: m.id, name: m.id });
+                                if (!seen.has(m.id)) {
+                                    models.push({ id: m.id, name: m.id });
+                                    seen.add(m.id);
+                                }
                             }
-                            models.sort((a, b) => a.id.localeCompare(b.id));
-                            fetched = true;
                         }
                     }
                 }
                 catch { /* API not reachable */ }
             }
-            // 2. Fallback: read from OpenClaw config (strip cx/ prefix)
-            if (!fetched) {
-                const codexCfg = getProviderConfigFromOpenClaw('openai-codex');
-                if (codexCfg?.models && codexCfg.models.length > 0) {
-                    for (const m of codexCfg.models) {
-                        const id = m.id.replace(/^cx\//, '');
+            // Merge OpenClaw config models (strip cx/ prefix)
+            const codexCfg = getProviderConfigFromOpenClaw('openai-codex');
+            if (codexCfg?.models) {
+                for (const m of codexCfg.models) {
+                    const id = m.id.replace(/^cx\//, '');
+                    if (!seen.has(id)) {
                         models.push({ id, name: m.name?.replace(/^cx\//, '') || id });
+                        seen.add(id);
                     }
-                    fetched = true;
-                }
-            }
-            // 3. Hardcoded fallback (no prefix)
-            if (!fetched) {
-                const fallback = [
-                    'codex-mini-latest', 'codex-mini', 'gpt-5.4',
-                    'gpt-5.3-codex', 'gpt-5.3-codex-xhigh', 'gpt-5.3-codex-high',
-                    'gpt-5.3-codex-low', 'gpt-5.3-codex-none', 'gpt-5.3-codex-spark',
-                    'gpt-5.2-codex', 'gpt-5.2', 'gpt-5.1-codex-mini', 'gpt-5.1-codex-mini-high',
-                    'gpt-5.1-codex-max', 'gpt-5.1-codex', 'gpt-5.1',
-                    'gpt-5-codex', 'gpt-5-codex-mini',
-                ];
-                for (const id of fallback) {
-                    models.push({ id, name: id });
                 }
             }
         }
