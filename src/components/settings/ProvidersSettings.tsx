@@ -830,7 +830,7 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                   <Label>Authentication</Label>
                   <Button
                     className="w-full"
-                    disabled={oauthConnecting}
+                    disabled={oauthConnecting || showPasteCallback}
                     onClick={async () => {
                       setOauthConnecting(true);
                       setValidationError(null);
@@ -841,14 +841,26 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                         if (data.authUrl) {
                           window.open(data.authUrl, '_blank');
                           setShowPasteCallback(true);
-                          // Add the provider entry
-                          const finalModel = modelId.trim() || typeInfo?.defaultModelId;
-                          await onAdd(
-                            selectedType!,
-                            name || typeInfo?.name || selectedType!,
-                            '',
-                            { model: finalModel || undefined }
-                          );
+                          // Start polling for auto-completion (localhost:1455 callback)
+                          const pollInterval = setInterval(async () => {
+                            try {
+                              const statusResp = await fetch('/api/oauth/codex/status');
+                              const statusData = await statusResp.json();
+                              if (statusData.connected && !statusData.expired) {
+                                clearInterval(pollInterval);
+                                setShowPasteCallback(false);
+                                const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+                                await onAdd(
+                                  selectedType!,
+                                  name || typeInfo?.name || selectedType!,
+                                  '',
+                                  { model: finalModel || undefined }
+                                );
+                              }
+                            } catch { /* ignore */ }
+                          }, 3000);
+                          // Stop polling after 5 min
+                          setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
                         } else {
                           setValidationError(data.error || 'Failed to start OAuth');
                         }
@@ -864,7 +876,7 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                     ) : (
                       <ExternalLink className="h-4 w-4 mr-2" />
                     )}
-                    Connect with OpenAI
+                    {showPasteCallback ? 'Waiting for login...' : 'Connect with OpenAI'}
                   </Button>
 
                   {showPasteCallback && (
@@ -896,7 +908,14 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                               if (data.success) {
                                 setShowPasteCallback(false);
                                 setCallbackUrl('');
-                                onClose();
+                                // Now add the provider
+                                const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+                                await onAdd(
+                                  selectedType!,
+                                  name || typeInfo?.name || selectedType!,
+                                  '',
+                                  { model: finalModel || undefined }
+                                );
                               } else {
                                 setValidationError(data.error || 'Exchange failed');
                               }
