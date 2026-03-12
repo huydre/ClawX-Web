@@ -43,6 +43,8 @@ interface ProviderModelEntry {
 interface ProviderBackendMeta {
   envVar?: string;
   defaultModel?: string;
+  /** OpenClaw provider ID if different from ClawX type (e.g. 'codex' → 'openai-codex') */
+  openclawId?: string;
   providerConfig?: {
     baseUrl: string;
     api: string;
@@ -100,6 +102,16 @@ const REGISTRY: Record<string, ProviderBackendMeta> = {
     },
   },
   'openai-codex': {
+    defaultModel: 'openai-codex/codex-mini-latest',
+    providerConfig: {
+      baseUrl: 'https://api.openai.com/v1',
+      api: 'openai-responses',
+      apiKeyEnv: 'OPENAI_API_KEY',
+    },
+  },
+  // Alias: UI uses 'codex' but OpenClaw uses 'openai-codex'
+  codex: {
+    openclawId: 'openai-codex',
     defaultModel: 'openai-codex/codex-mini-latest',
     providerConfig: {
       baseUrl: 'https://api.openai.com/v1',
@@ -297,9 +309,12 @@ export function setOpenClawDefaultModel(
     return;
   }
 
+  // Use openclawId if provider name differs between ClawX and OpenClaw
+  const openclawProvider = meta?.openclawId || provider;
+
   // Ensure model string is in "provider/modelId" format for openclaw config
-  const model = rawModel.startsWith(`${provider}/`) ? rawModel : `${provider}/${rawModel}`;
-  const modelId = model.slice(provider.length + 1);
+  const model = rawModel.startsWith(`${openclawProvider}/`) ? rawModel : `${openclawProvider}/${rawModel}`;
+  const modelId = model.slice(openclawProvider.length + 1);
 
   // Set agents.defaults.model
   const agents = (config.agents || {}) as Record<string, unknown>;
@@ -315,8 +330,8 @@ export function setOpenClawDefaultModel(
   if (providerCfg) {
     const models = (config.models || {}) as Record<string, unknown>;
     const providers = (models.providers || {}) as Record<string, unknown>;
-    const existingProvider = (providers[provider] && typeof providers[provider] === 'object')
-      ? (providers[provider] as Record<string, unknown>)
+    const existingProvider = (providers[openclawProvider] && typeof providers[openclawProvider] === 'object')
+      ? (providers[openclawProvider] as Record<string, unknown>)
       : {};
 
     const existingModels = Array.isArray(existingProvider.models)
@@ -333,7 +348,7 @@ export function setOpenClawDefaultModel(
       mergedModels.push({ id: modelId, name: modelId });
     }
 
-    providers[provider] = {
+    providers[openclawProvider] = {
       ...existingProvider,
       baseUrl: providerCfg.baseUrl,
       api: providerCfg.api,
@@ -350,8 +365,8 @@ export function setOpenClawDefaultModel(
     // Built-in provider: remove stale override if any
     const models = (config.models || {}) as Record<string, unknown>;
     const providers = (models.providers || {}) as Record<string, unknown>;
-    if (providers[provider]) {
-      delete providers[provider];
+    if (providers[openclawProvider]) {
+      delete providers[openclawProvider];
       models.providers = providers;
       config.models = models;
     }
