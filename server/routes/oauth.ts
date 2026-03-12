@@ -2,11 +2,15 @@
  * OAuth Routes — /api/oauth
  * Handle OAuth flows for providers that use OAuth instead of API keys.
  * Currently supports: OpenAI Codex
+ *
+ * Uses a temporary HTTP server on port 1455 for the OAuth callback
+ * (same as Codex CLI — this is the only redirect_uri whitelisted by OpenAI).
  */
 import { Router } from 'express';
+import http from 'http';
 import crypto from 'crypto';
+import { URL } from 'url';
 import { logger } from '../utils/logger.js';
-import { getCloudflareSettings } from '../services/storage.js';
 import {
   saveOAuthTokenToOpenClaw,
   getOAuthTokenFromOpenClaw,
@@ -22,6 +26,9 @@ const CODEX_CONFIG = {
   tokenUrl: 'https://auth.openai.com/oauth/token',
   scope: 'openid profile email offline_access',
   codeChallengeMethod: 'S256' as const,
+  callbackPort: 1455,
+  // Must match exactly what's registered with OpenAI
+  redirectUri: 'http://localhost:1455/auth/callback',
   extraParams: {
     id_token_add_organizations: 'true',
     codex_cli_simplified_flow: 'true',
@@ -42,47 +49,183 @@ function generateState(): string {
   return crypto.randomBytes(16).toString('hex');
 }
 
-// In-memory store for PKCE state (TTL 5 min)
-const pendingFlows = new Map<string, { codeVerifier: string; createdAt: number }>();
+// Active OAuth flow state
+let activeFlow: {
+  state: string;
+  codeVerifier: string;
+  server: http.Server;
+  resolve: (tokens: OAuthTokens) => void;
+  reject: (err: Error) => void;
+  timeout: ReturnType<typeof setTimeout>;
+} | null = null;
 
-function cleanupExpiredFlows(): void {
-  const now = Date.now();
-  for (const [state, flow] of pendingFlows) {
-    if (now - flow.createdAt > 5 * 60 * 1000) {
-      pendingFlows.delete(state);
+interface OAuthTokens {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  id_token?: string;
+}
+
+/**
+ * Start a temporary HTTP server on port 1455 to receive the OAuth callback.
+ * Returns a promise that resolves with the tokens.
+ */
+function startCallbackServer(codeVerifier: string, state: string): Promise<OAuthTokens> {
+  return new Promise((resolve, reject) => {
+    // Clean up any previous flow
+    if (activeFlow) {
+      clearTimeout(activeFlow.timeout);
+      try { activeFlow.server.close(); } catch { /* ignore */ }
+      activeFlow = null;
     }
-  }
+
+    const server = http.createServer(async (req, res) => {
+      const url = new URL(req.url || '/', `http://localhost:${CODEX_CONFIG.callbackPort}`);
+
+      if (url.pathname !== '/auth/callback') {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+      }
+
+      const code = url.searchParams.get('code');
+      const returnedState = url.searchParams.get('state');
+      const error = url.searchParams.get('error');
+      const errorDesc = url.searchParams.get('error_description');
+
+      if (error) {
+        // Show error page
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`
+          <html><body style="font-family:system-ui;text-align:center;padding:60px">
+            <h2>❌ OAuth Failed</h2>
+            <p>${errorDesc || error}</p>
+            <p style="color:#666">You can close this tab.</p>
+          </body></html>
+        `);
+        cleanup();
+        reject(new Error(errorDesc || error));
+        return;
+      }
+
+      if (!code || returnedState !== state) {
+        res.writeHead(400, { 'Content-Type': 'text/html' });
+        res.end(`
+          <html><body style="font-family:system-ui;text-align:center;padding:60px">
+            <h2>❌ Invalid callback</h2>
+            <p>Missing code or state mismatch.</p>
+          </body></html>
+        `);
+        cleanup();
+        reject(new Error('Invalid callback: missing code or state mismatch'));
+        return;
+      }
+
+      try {
+        // Exchange code for tokens
+        const tokenBody = new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: CODEX_CONFIG.clientId,
+          code,
+          redirect_uri: CODEX_CONFIG.redirectUri,
+          code_verifier: codeVerifier,
+        });
+
+        const tokenResp = await fetch(CODEX_CONFIG.tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+          body: tokenBody,
+        });
+
+        if (!tokenResp.ok) {
+          const errText = await tokenResp.text();
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(`
+            <html><body style="font-family:system-ui;text-align:center;padding:60px">
+              <h2>❌ Token Exchange Failed</h2>
+              <p>${errText}</p>
+            </body></html>
+          `);
+          cleanup();
+          reject(new Error('Token exchange failed: ' + errText));
+          return;
+        }
+
+        const tokens = await tokenResp.json() as OAuthTokens;
+
+        // Show success page
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`
+          <html><body style="font-family:system-ui;text-align:center;padding:60px">
+            <h2>✅ OpenAI Connected!</h2>
+            <p>Tokens saved successfully. You can close this tab.</p>
+            <script>setTimeout(()=>window.close(),2000)</script>
+          </body></html>
+        `);
+
+        cleanup();
+        resolve(tokens);
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'text/html' });
+        res.end(`
+          <html><body style="font-family:system-ui;text-align:center;padding:60px">
+            <h2>❌ Error</h2>
+            <p>${String(err)}</p>
+          </body></html>
+        `);
+        cleanup();
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('OAuth timeout (5 minutes)'));
+    }, 5 * 60 * 1000);
+
+    function cleanup() {
+      if (activeFlow?.timeout) clearTimeout(activeFlow.timeout);
+      try { server.close(); } catch { /* ignore */ }
+      activeFlow = null;
+    }
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        reject(new Error(`Port ${CODEX_CONFIG.callbackPort} is already in use. Close any running Codex CLI first.`));
+      } else {
+        reject(err);
+      }
+    });
+
+    server.listen(CODEX_CONFIG.callbackPort, '127.0.0.1', () => {
+      activeFlow = { state, codeVerifier, server, resolve, reject, timeout };
+      logger.info(`OAuth callback server started on port ${CODEX_CONFIG.callbackPort}`);
+    });
+  });
 }
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
 /**
  * GET /api/oauth/codex/start
- * Generate PKCE + auth URL. Frontend opens this URL in a new tab.
+ * Generate PKCE + auth URL + start temp callback server.
+ * Frontend opens the returned auth URL in a new tab.
  */
-router.get('/codex/start', async (req, res) => {
+router.get('/codex/start', async (_req, res) => {
   try {
-    cleanupExpiredFlows();
-
-    // Build callback URL using tunnel domain or request host
-    const cf = await getCloudflareSettings();
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = cf?.domain || req.headers.host || 'localhost:2003';
-    const redirectUri = `${protocol}://${host}/api/oauth/codex/callback`;
-
     // Generate PKCE
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = generateCodeChallenge(codeVerifier);
     const state = generateState();
 
-    // Store verifier for callback
-    pendingFlows.set(state, { codeVerifier, createdAt: Date.now() });
-
     // Build auth URL manually (encode spaces as %20, not +)
     const params: Record<string, string> = {
       response_type: 'code',
       client_id: CODEX_CONFIG.clientId,
-      redirect_uri: redirectUri,
+      redirect_uri: CODEX_CONFIG.redirectUri,
       scope: CODEX_CONFIG.scope,
       code_challenge: codeChallenge,
       code_challenge_method: CODEX_CONFIG.codeChallengeMethod,
@@ -96,102 +239,41 @@ router.get('/codex/start', async (req, res) => {
 
     const authUrl = `${CODEX_CONFIG.authorizeUrl}?${queryString}`;
 
-    logger.info('Codex OAuth started', { redirectUri, state });
+    // Start callback server and handle token exchange in background
+    startCallbackServer(codeVerifier, state)
+      .then(async (tokens) => {
+        // Extract accountId from JWT payload
+        let accountId: string | undefined;
+        try {
+          const payloadB64 = tokens.access_token.split('.')[1];
+          const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+          accountId = payload?.['https://api.openai.com/auth']?.chatgpt_account_id;
+        } catch { /* ignore */ }
+
+        const expiresAt = Date.now() + (tokens.expires_in * 1000);
+
+        // Save to OpenClaw auth-profiles.json
+        saveOAuthTokenToOpenClaw('openai-codex', {
+          access: tokens.access_token,
+          refresh: tokens.refresh_token,
+          expires: expiresAt,
+          accountId,
+        });
+
+        // Set default model
+        setOpenClawDefaultModel('openai-codex', 'codex-mini');
+
+        logger.info('Codex OAuth complete', { accountId, expiresAt: new Date(expiresAt).toISOString() });
+      })
+      .catch((err) => {
+        logger.error('Codex OAuth flow failed', { error: String(err) });
+      });
+
+    logger.info('Codex OAuth started', { redirectUri: CODEX_CONFIG.redirectUri, state });
     res.json({ authUrl, state });
   } catch (error) {
     logger.error('Codex OAuth start error:', error);
     res.status(500).json({ error: String(error) });
-  }
-});
-
-/**
- * GET /api/oauth/codex/callback
- * OpenAI redirects here after user approves. Exchange code for tokens.
- */
-router.get('/codex/callback', async (req, res) => {
-  try {
-    const { code, state, error: oauthError, error_description } = req.query;
-
-    if (oauthError) {
-      logger.error('Codex OAuth error from provider', { oauthError, error_description });
-      return res.redirect(`/?oauth=error&message=${encodeURIComponent(String(error_description || oauthError))}`);
-    }
-
-    if (!code || !state) {
-      return res.redirect('/?oauth=error&message=Missing+code+or+state');
-    }
-
-    // Validate state
-    const flow = pendingFlows.get(String(state));
-    if (!flow) {
-      return res.redirect('/?oauth=error&message=Invalid+or+expired+state');
-    }
-    pendingFlows.delete(String(state));
-
-    // Build redirect URI (must match the one used in /start)
-    const cf = await getCloudflareSettings();
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = cf?.domain || req.headers.host || 'localhost:2003';
-    const redirectUri = `${protocol}://${host}/api/oauth/codex/callback`;
-
-    // Exchange code for tokens
-    const tokenBody = new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: CODEX_CONFIG.clientId,
-      code: String(code),
-      redirect_uri: redirectUri,
-      code_verifier: flow.codeVerifier,
-    });
-
-    const tokenResp = await fetch(CODEX_CONFIG.tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
-      },
-      body: tokenBody,
-    });
-
-    if (!tokenResp.ok) {
-      const errText = await tokenResp.text();
-      logger.error('Codex token exchange failed', { status: tokenResp.status, error: errText });
-      return res.redirect(`/?oauth=error&message=${encodeURIComponent('Token exchange failed: ' + errText)}`);
-    }
-
-    const tokens = await tokenResp.json() as {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
-      id_token?: string;
-    };
-
-    // Extract accountId from JWT payload (if present)
-    let accountId: string | undefined;
-    try {
-      const payloadB64 = tokens.access_token.split('.')[1];
-      const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
-      accountId = payload?.['https://api.openai.com/auth']?.chatgpt_account_id;
-    } catch { /* ignore JWT parse errors */ }
-
-    // Calculate expiry timestamp (ms)
-    const expiresAt = Date.now() + (tokens.expires_in * 1000);
-
-    // Save to OpenClaw auth-profiles.json
-    saveOAuthTokenToOpenClaw('openai-codex', {
-      access: tokens.access_token,
-      refresh: tokens.refresh_token,
-      expires: expiresAt,
-      accountId,
-    });
-
-    // Set default model in openclaw.json
-    setOpenClawDefaultModel('openai-codex', 'codex-mini');
-
-    logger.info('Codex OAuth complete', { accountId, expiresAt: new Date(expiresAt).toISOString() });
-    res.redirect('/?oauth=success&provider=codex');
-  } catch (error) {
-    logger.error('Codex OAuth callback error:', error);
-    res.redirect(`/?oauth=error&message=${encodeURIComponent(String(error))}`);
   }
 });
 
