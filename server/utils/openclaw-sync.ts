@@ -100,7 +100,7 @@ const REGISTRY: Record<string, ProviderBackendMeta> = {
     },
   },
   'openai-codex': {
-    defaultModel: 'openai-codex/codex-mini',
+    defaultModel: 'openai-codex/codex-mini-latest',
     providerConfig: {
       baseUrl: 'https://api.openai.com/v1',
       api: 'openai-responses',
