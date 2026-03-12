@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { getAllProviders, getProvider, saveProvider, deleteProvider, setDefaultProvider, getDefaultProvider, getApiKey, } from '../services/storage.js';
 import { logger } from '../utils/logger.js';
-import { saveProviderKeyToOpenClaw, removeProviderKeyFromOpenClaw, setOpenClawDefaultModel, getProviderKeyFromOpenClaw, getProviderKeyFromEnv, getProviderConfigFromOpenClaw, } from '../utils/openclaw-sync.js';
+import { saveProviderKeyToOpenClaw, removeProviderKeyFromOpenClaw, setOpenClawDefaultModel, getProviderKeyFromOpenClaw, getProviderKeyFromEnv, getProviderConfigFromOpenClaw, getOAuthTokenFromOpenClaw, } from '../utils/openclaw-sync.js';
 const router = Router();
 // GET /api/providers
 router.get('/', async (_req, res) => {
@@ -104,6 +104,37 @@ router.get('/models/:type', async (req, res) => {
                 }
             }
             catch { /* API not reachable */ }
+        }
+        else if (providerType === 'codex') {
+            // Codex: read models from OpenClaw config (openai-codex provider)
+            const codexCfg = getProviderConfigFromOpenClaw('openai-codex');
+            if (codexCfg?.models && codexCfg.models.length > 0) {
+                for (const m of codexCfg.models) {
+                    models.push({ id: m.id, name: m.name || m.id });
+                }
+            }
+            else {
+                // Fallback: try OpenAI /v1/models with OAuth token
+                const oauthToken = getOAuthTokenFromOpenClaw('openai-codex');
+                if (oauthToken?.access) {
+                    try {
+                        const resp = await fetch('https://api.openai.com/v1/models', {
+                            headers: { Authorization: `Bearer ${oauthToken.access}` },
+                            signal: AbortSignal.timeout(8000),
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data.data) {
+                                for (const m of data.data) {
+                                    models.push({ id: m.id, name: m.id });
+                                }
+                                models.sort((a, b) => a.id.localeCompare(b.id));
+                            }
+                        }
+                    }
+                    catch { /* API not reachable */ }
+                }
+            }
         }
         else if (apiKey) {
             // OpenAI-compatible /v1/models (OpenAI, OpenRouter, Moonshot, 9Router, etc.)
