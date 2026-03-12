@@ -88,7 +88,7 @@ export const PROVIDER_TYPE_INFO: ProviderTypeInfo[] = [
   },
   {
     id: 'codex', name: 'Codex (OpenAI)', icon: '🧠', placeholder: 'Connect via OAuth', model: 'Codex',
-    requiresApiKey: false, useOAuth: true,
+    requiresApiKey: false, useOAuth: true, canFetchModels: true,
     defaultModelId: 'codex-mini-latest',
     models: [
       { id: 'codex-mini-latest', name: 'Codex Mini (Latest)' },
