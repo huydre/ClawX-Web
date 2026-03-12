@@ -658,6 +658,9 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
   const [validationError, setValidationError] = useState<string | null>(null);
   const [customModel, setCustomModel] = useState(false);
   const [oauthConnecting, setOauthConnecting] = useState(false);
+  const [callbackUrl, setCallbackUrl] = useState('');
+  const [showPasteCallback, setShowPasteCallback] = useState(false);
+  const [exchanging, setExchanging] = useState(false);
 
   const typeInfo = PROVIDER_TYPE_INFO.find((t) => t.id === selectedType);
 
@@ -831,18 +834,19 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                     onClick={async () => {
                       setOauthConnecting(true);
                       setValidationError(null);
+                      setShowPasteCallback(false);
                       try {
                         const resp = await fetch('/api/oauth/codex/start');
                         const data = await resp.json();
                         if (data.authUrl) {
-                          // Open OAuth in new tab
                           window.open(data.authUrl, '_blank');
-                          // Add the provider entry now (token will be saved by callback)
+                          setShowPasteCallback(true);
+                          // Add the provider entry
                           const finalModel = modelId.trim() || typeInfo?.defaultModelId;
                           await onAdd(
                             selectedType!,
                             name || typeInfo?.name || selectedType!,
-                            '', // no API key
+                            '',
                             { model: finalModel || undefined }
                           );
                         } else {
@@ -862,6 +866,53 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                     )}
                     Connect with OpenAI
                   </Button>
+
+                  {showPasteCallback && (
+                    <div className="space-y-2 mt-3 p-3 rounded-md border border-dashed border-muted-foreground/30">
+                      <Label className="text-xs">Paste callback URL (for remote access)</Label>
+                      <p className="text-xs text-muted-foreground">
+                        If the page didn't auto-close, copy the URL from the browser tab and paste it here.
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="http://localhost:1455/auth/callback?code=..."
+                          value={callbackUrl}
+                          onChange={(e) => setCallbackUrl(e.target.value)}
+                          className="text-xs"
+                        />
+                        <Button
+                          size="sm"
+                          disabled={!callbackUrl.trim() || exchanging}
+                          onClick={async () => {
+                            setExchanging(true);
+                            setValidationError(null);
+                            try {
+                              const resp = await fetch('/api/oauth/codex/exchange', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ callbackUrl: callbackUrl.trim() }),
+                              });
+                              const data = await resp.json();
+                              if (data.success) {
+                                setShowPasteCallback(false);
+                                setCallbackUrl('');
+                                onClose();
+                              } else {
+                                setValidationError(data.error || 'Exchange failed');
+                              }
+                            } catch (err) {
+                              setValidationError(String(err));
+                            } finally {
+                              setExchanging(false);
+                            }
+                          }}
+                        >
+                          {exchanging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {validationError && (
                     <p className="text-xs text-destructive">{validationError}</p>
                   )}

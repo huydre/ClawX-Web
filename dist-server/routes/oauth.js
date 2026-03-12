@@ -237,6 +237,88 @@ router.get('/codex/start', async (_req, res) => {
     }
 });
 /**
+ * POST /api/oauth/codex/exchange
+ * Accept a callback URL pasted by the user (for remote tunnel access
+ * where localhost:1455 can't reach the browser).
+ * Body: { callbackUrl: "http://localhost:1455/auth/callback?code=...&state=..." }
+ */
+router.post('/codex/exchange', async (req, res) => {
+    try {
+        const { callbackUrl } = req.body;
+        if (!callbackUrl) {
+            return res.status(400).json({ error: 'Missing callbackUrl' });
+        }
+        // Parse the callback URL to extract code and state
+        const url = new URL(callbackUrl);
+        const code = url.searchParams.get('code');
+        const state = url.searchParams.get('state');
+        if (!code) {
+            return res.status(400).json({ error: 'No code found in callback URL' });
+        }
+        if (!state) {
+            return res.status(400).json({ error: 'No state found in callback URL' });
+        }
+        // Find active flow matching this state
+        if (!activeFlow || activeFlow.state !== state) {
+            return res.status(400).json({ error: 'No matching OAuth flow found. Start a new flow first.' });
+        }
+        const codeVerifier = activeFlow.codeVerifier;
+        // Clean up the active flow
+        clearTimeout(activeFlow.timeout);
+        try {
+            activeFlow.server.close();
+        }
+        catch { /* ignore */ }
+        activeFlow = null;
+        // Exchange code for tokens
+        const tokenBody = new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: CODEX_CONFIG.clientId,
+            code,
+            redirect_uri: CODEX_CONFIG.redirectUri,
+            code_verifier: codeVerifier,
+        });
+        const tokenResp = await fetch(CODEX_CONFIG.tokenUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+            },
+            body: tokenBody,
+        });
+        if (!tokenResp.ok) {
+            const errText = await tokenResp.text();
+            logger.error('Codex token exchange failed (manual)', { error: errText });
+            return res.status(400).json({ error: 'Token exchange failed: ' + errText });
+        }
+        const tokens = await tokenResp.json();
+        // Extract accountId from JWT payload
+        let accountId;
+        try {
+            const payloadB64 = tokens.access_token.split('.')[1];
+            const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+            accountId = payload?.['https://api.openai.com/auth']?.chatgpt_account_id;
+        }
+        catch { /* ignore */ }
+        const expiresAt = Date.now() + (tokens.expires_in * 1000);
+        // Save to OpenClaw auth-profiles.json
+        saveOAuthTokenToOpenClaw('openai-codex', {
+            access: tokens.access_token,
+            refresh: tokens.refresh_token,
+            expires: expiresAt,
+            accountId,
+        });
+        // Set default model
+        setOpenClawDefaultModel('openai-codex', 'codex-mini-latest');
+        logger.info('Codex OAuth complete (manual exchange)', { accountId, expiresAt: new Date(expiresAt).toISOString() });
+        res.json({ success: true, accountId, expiresAt });
+    }
+    catch (error) {
+        logger.error('Codex manual exchange error:', error);
+        res.status(500).json({ error: String(error) });
+    }
+});
+/**
  * POST /api/oauth/codex/refresh
  * Refresh an expired access token using the stored refresh token.
  */
