@@ -145,8 +145,9 @@ export function getProviderIconUrl(type: ProviderType | string): string | undefi
   return providerIcons[type];
 }
 
-/** Whether a provider's logo needs CSS invert in dark mode (all logos are monochrome) */
+/** Whether a provider's logo needs CSS invert in dark mode (monochrome SVGs only) */
 export function shouldInvertInDark(_type: ProviderType | string): boolean {
+  if (_type === 'codex') return false; // Color PNG
   return true;
 }
 

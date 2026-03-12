@@ -7,6 +7,7 @@ import siliconflow from './siliconflow.svg';
 import ollama from './ollama.svg';
 import custom from './custom.svg';
 import nineRouter from './9router.svg';
+import codex from './codex.png';
 
 export const providerIcons: Record<string, string> = {
     anthropic,
@@ -18,4 +19,5 @@ export const providerIcons: Record<string, string> = {
     ollama,
     custom,
     '9router': nineRouter,
+    codex,
 };
