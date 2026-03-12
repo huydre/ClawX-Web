@@ -331,6 +331,7 @@ export function saveOAuthTokenToOpenClaw(provider, tokens) {
             access: tokens.access,
             refresh: tokens.refresh,
             expires: tokens.expires,
+            savedAt: Date.now(),
             accountId: tokens.accountId,
         };
         if (!store.order)
@@ -362,6 +363,7 @@ export function getOAuthTokenFromOpenClaw(provider) {
                 access: profile.access,
                 refresh: profile.refresh,
                 expires: profile.expires,
+                savedAt: profile.savedAt,
                 accountId: profile.accountId,
             };
         }

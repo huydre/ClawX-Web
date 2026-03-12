@@ -848,8 +848,8 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                             try {
                               const statusResp = await fetch('/api/oauth/codex/status');
                               const statusData = await statusResp.json();
-                              // Only accept NEW tokens (expiresAt must be after flow started)
-                              if (statusData.connected && !statusData.expired && statusData.expiresAt > flowStartedAt) {
+                              // Only accept NEW tokens (savedAt must be after flow started)
+                              if (statusData.connected && !statusData.expired && statusData.savedAt > flowStartedAt) {
                                 clearInterval(pollInterval);
                                 setShowPasteCallback(false);
                                 const finalModel = modelId.trim() || typeInfo?.defaultModelId;
