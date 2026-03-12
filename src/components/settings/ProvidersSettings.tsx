@@ -841,12 +841,15 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                         if (data.authUrl) {
                           window.open(data.authUrl, '_blank');
                           setShowPasteCallback(true);
+                          // Record when flow started to ignore stale tokens
+                          const flowStartedAt = Date.now();
                           // Start polling for auto-completion (localhost:1455 callback)
                           const pollInterval = setInterval(async () => {
                             try {
                               const statusResp = await fetch('/api/oauth/codex/status');
                               const statusData = await statusResp.json();
-                              if (statusData.connected && !statusData.expired) {
+                              // Only accept NEW tokens (expiresAt must be after flow started)
+                              if (statusData.connected && !statusData.expired && statusData.expiresAt > flowStartedAt) {
                                 clearInterval(pollInterval);
                                 setShowPasteCallback(false);
                                 const finalModel = modelId.trim() || typeInfo?.defaultModelId;
