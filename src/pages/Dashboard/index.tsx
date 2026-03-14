@@ -115,7 +115,7 @@ export function Dashboard() {
     <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
       {/* Gateway Dashboard Recommendation Banner */}
       {!bannerDismissed && (
-        <div className="relative overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 md:p-5">
+        <div className="relative overflow-hidden rounded-lg border border-primary/20 bg-primary/5 p-4 md:p-5">
           <button
             onClick={dismissBanner}
             className="absolute top-2 right-3 text-muted-foreground hover:text-foreground transition-colors text-lg leading-none"
@@ -124,9 +124,8 @@ export function Dashboard() {
             ×
           </button>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
-            <div className="flex items-center gap-2 text-2xl">
-              <span>✨</span>
-              <MessageSquare className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-sm md:text-base">
