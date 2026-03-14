@@ -86,8 +86,8 @@ const REGISTRY: Record<string, ProviderBackendMeta> = {
     envVar: 'MOONSHOT_API_KEY',
     defaultModel: 'kimi-coding/kimi-k2.5',
     providerConfig: {
-      baseUrl: 'https://api.moonshot.ai/v1',
-      api: 'openai-completions',
+      baseUrl: 'https://api.kimi.com/coding/v1',
+      api: 'anthropic',
       apiKeyEnv: 'MOONSHOT_API_KEY',
       models: [
         { id: 'kimi-k2.5', name: 'Kimi K2.5' },
