@@ -36,14 +36,15 @@ const REGISTRY = {
         },
     },
     moonshot: {
+        openclawId: 'kimi-coding',
         envVar: 'MOONSHOT_API_KEY',
-        defaultModel: 'moonshot/kimi-k2.5',
+        defaultModel: 'kimi-coding/k2p5',
         providerConfig: {
-            baseUrl: 'https://api.moonshot.ai/v1',
+            baseUrl: 'https://api.kimi.com/coding/',
             api: 'openai-completions',
             apiKeyEnv: 'MOONSHOT_API_KEY',
             models: [
-                { id: 'kimi-k2.5', name: 'Kimi K2.5' },
+                { id: 'k2p5', name: 'Kimi for Coding' },
             ],
         },
     },
@@ -113,16 +114,19 @@ export function getProviderKeyFromOpenClaw(provider) {
         const store = JSON.parse(readFileSync(filePath, 'utf-8'));
         if (!store.profiles)
             return null;
-        // Exact match: "openrouter:default"
-        const profile = store.profiles[`${provider}:default`];
+        // Resolve openclawId if available (e.g., moonshot → kimi-coding)
+        const meta = REGISTRY[provider];
+        const openclawProvider = meta?.openclawId || provider;
+        // Exact match: "kimi-coding:default" or "openrouter:default"
+        const profile = store.profiles[`${openclawProvider}:default`];
         if (profile) {
             if (profile.type === 'api_key')
                 return profile.key;
             if (profile.type === 'oauth')
                 return profile.access;
         }
-        // Prefix match: any profile starting with "openrouter:"
-        const prefixMatch = Object.entries(store.profiles).find(([id]) => id.startsWith(`${provider}:`));
+        // Prefix match: any profile starting with "kimi-coding:"
+        const prefixMatch = Object.entries(store.profiles).find(([id]) => id.startsWith(`${openclawProvider}:`));
         if (prefixMatch) {
             const p = prefixMatch[1];
             if (p.type === 'api_key')
@@ -188,21 +192,23 @@ export function getProviderConfigFromOpenClaw(providerType) {
  */
 export function saveProviderKeyToOpenClaw(provider, apiKey) {
     try {
+        const meta = REGISTRY[provider];
+        const openclawProvider = meta?.openclawId || provider;
         const store = readAuthProfiles();
-        const profileId = `${provider}:default`;
-        store.profiles[profileId] = { type: 'api_key', provider, key: apiKey };
+        const profileId = `${openclawProvider}:default`;
+        store.profiles[profileId] = { type: 'api_key', provider: openclawProvider, key: apiKey };
         if (!store.order)
             store.order = {};
-        if (!store.order[provider])
-            store.order[provider] = [];
-        if (!store.order[provider].includes(profileId)) {
-            store.order[provider].push(profileId);
+        if (!store.order[openclawProvider])
+            store.order[openclawProvider] = [];
+        if (!store.order[openclawProvider].includes(profileId)) {
+            store.order[openclawProvider].push(profileId);
         }
         if (!store.lastGood)
             store.lastGood = {};
-        store.lastGood[provider] = profileId;
+        store.lastGood[openclawProvider] = profileId;
         writeAuthProfiles(store);
-        logger.info('Synced API key to OpenClaw', { provider });
+        logger.info('Synced API key to OpenClaw', { provider, openclawProvider });
     }
     catch (err) {
         logger.warn('Failed to sync API key to OpenClaw', { provider, err });
@@ -213,16 +219,18 @@ export function saveProviderKeyToOpenClaw(provider, apiKey) {
  */
 export function removeProviderKeyFromOpenClaw(provider) {
     try {
+        const meta = REGISTRY[provider];
+        const openclawProvider = meta?.openclawId || provider;
         const store = readAuthProfiles();
-        const profileId = `${provider}:default`;
+        const profileId = `${openclawProvider}:default`;
         delete store.profiles[profileId];
-        if (store.order?.[provider]) {
-            store.order[provider] = store.order[provider].filter((id) => id !== profileId);
-            if (store.order[provider].length === 0)
-                delete store.order[provider];
+        if (store.order?.[openclawProvider]) {
+            store.order[openclawProvider] = store.order[openclawProvider].filter((id) => id !== profileId);
+            if (store.order[openclawProvider].length === 0)
+                delete store.order[openclawProvider];
         }
-        if (store.lastGood?.[provider] === profileId) {
-            delete store.lastGood[provider];
+        if (store.lastGood?.[openclawProvider] === profileId) {
+            delete store.lastGood[openclawProvider];
         }
         writeAuthProfiles(store);
         logger.info('Removed API key from OpenClaw', { provider });
