@@ -132,6 +132,7 @@ export const PROVIDER_TYPE_INFO: ProviderTypeInfo[] = [
     canFetchModels: false,
     models: [
       { id: 'kimi-for-coding', name: 'Kimi For Coding' },
+      { id: 'kimi-k2.5', name: 'Kimi K2.5' },
     ],
   },
   {
