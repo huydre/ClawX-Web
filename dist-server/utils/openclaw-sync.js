@@ -38,13 +38,13 @@ const REGISTRY = {
     moonshot: {
         openclawId: 'kimi-coding',
         envVar: 'MOONSHOT_API_KEY',
-        defaultModel: 'kimi-coding/k2p5',
+        defaultModel: 'kimi-coding/kimi-k2.5',
         providerConfig: {
-            baseUrl: 'https://api.kimi.com/coding/',
+            baseUrl: 'https://api.moonshot.ai/v1',
             api: 'openai-completions',
             apiKeyEnv: 'MOONSHOT_API_KEY',
             models: [
-                { id: 'k2p5', name: 'Kimi for Coding' },
+                { id: 'kimi-k2.5', name: 'Kimi K2.5' },
             ],
         },
     },
