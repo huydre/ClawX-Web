@@ -128,10 +128,10 @@ export const PROVIDER_TYPE_INFO: ProviderTypeInfo[] = [
   },
   {
     id: 'moonshot', name: 'Kimi', icon: '🌙', placeholder: 'sk-...', model: 'Kimi', requiresApiKey: true,
-    defaultBaseUrl: 'https://api.kimi.com/coding/', defaultModelId: 'k2p5',
+    defaultBaseUrl: 'https://api.moonshot.ai/v1', defaultModelId: 'kimi-k2.5',
     canFetchModels: true,
     models: [
-      { id: 'k2p5', name: 'Kimi for Coding' },
+      { id: 'kimi-k2.5', name: 'Kimi K2.5' },
     ],
   },
   {
