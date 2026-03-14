@@ -84,13 +84,13 @@ const REGISTRY: Record<string, ProviderBackendMeta> = {
   moonshot: {
     openclawId: 'kimi-coding',
     envVar: 'MOONSHOT_API_KEY',
-    defaultModel: 'kimi-coding/kimi-k2.5',
+    defaultModel: 'kimi-coding/kimi-for-coding',
     providerConfig: {
       baseUrl: 'https://api.kimi.com/coding/v1',
       api: 'anthropic',
       apiKeyEnv: 'MOONSHOT_API_KEY',
       models: [
-        { id: 'kimi-k2.5', name: 'Kimi K2.5' },
+        { id: 'kimi-for-coding', name: 'Kimi For Coding' },
       ],
     },
   },
