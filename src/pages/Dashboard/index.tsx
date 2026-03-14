@@ -102,8 +102,52 @@ export function Dashboard() {
     toast.error('Tunnel chưa kết nối. Vui lòng bật tunnel trước.');
   };
 
+  const [bannerDismissed, setBannerDismissed] = useState(() =>
+    localStorage.getItem('gateway-banner-dismissed') === 'true'
+  );
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    localStorage.setItem('gateway-banner-dismissed', 'true');
+  };
+
   return (
     <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
+      {/* Gateway Dashboard Recommendation Banner */}
+      {!bannerDismissed && (
+        <div className="relative overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 md:p-5">
+          <button
+            onClick={dismissBanner}
+            className="absolute top-2 right-3 text-muted-foreground hover:text-foreground transition-colors text-lg leading-none"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
+            <div className="flex items-center gap-2 text-2xl">
+              <span>✨</span>
+              <MessageSquare className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm md:text-base">
+                Trải nghiệm chat tốt hơn với Gateway Dashboard
+              </h3>
+              <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+                Sử dụng Gateway Dashboard để chat với AI — giao diện tối ưu, hỗ trợ đầy đủ tính năng và phản hồi nhanh hơn.
+              </p>
+            </div>
+            <Button
+              onClick={openGatewayDashboard}
+              size="sm"
+              className="shrink-0 gap-1.5"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Mở Gateway Dashboard
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Status Cards */}
       <div className="grid grid-cols-1 gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Gateway Status */}
