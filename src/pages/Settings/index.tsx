@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   LogOut,
+  Stethoscope,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -165,6 +166,54 @@ function SecuritySettings() {
           <LogOut className="w-4 h-4 mr-2" />
           {t('security.signOut')}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Doctor Fix Card — run openclaw doctor --fix */
+function DoctorFixCard() {
+  const [loading, setLoading] = useState(false);
+  const [output, setOutput] = useState<string | null>(null);
+
+  const runDoctor = async () => {
+    setLoading(true);
+    setOutput(null);
+    try {
+      const res = await fetch('/api/gateway/doctor', { method: 'POST' });
+      const data = await res.json();
+      setOutput(data.output || 'No output');
+      if (data.fixed) {
+        toast.success('Doctor fix completed');
+      } else {
+        toast.info('Doctor completed');
+      }
+    } catch {
+      toast.error('Failed to run doctor fix');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Stethoscope className="h-5 w-5" />
+          Doctor Fix
+        </CardTitle>
+        <CardDescription>Kiểm tra và sửa lỗi cấu hình OpenClaw</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Button onClick={runDoctor} disabled={loading} variant="outline" className="w-full">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Stethoscope className="w-4 h-4 mr-2" />}
+          {loading ? 'Đang chạy...' : 'Run Doctor Fix'}
+        </Button>
+        {output && (
+          <pre className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg max-h-60 overflow-auto whitespace-pre-wrap font-mono border">
+            {output}
+          </pre>
+        )}
       </CardContent>
     </Card>
   );
@@ -517,20 +566,9 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {/* Exec Tool - Web/VPS mode */}
+      {/* Doctor Fix */}
       {platform.isWeb && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Terminal className="h-5 w-5" />
-              Exec Tool
-            </CardTitle>
-            <CardDescription>Cấu hình quyền chạy lệnh cho AI</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ExecSettings />
-          </CardContent>
-        </Card>
+        <DoctorFixCard />
       )}
 
       {/* Updates - Web/VPS mode */}
