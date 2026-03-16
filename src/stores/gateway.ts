@@ -151,6 +151,26 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
     try {
       set({ status: { ...get().status, state: 'starting' }, lastError: null });
       await api.restartOpenClaw();
+
+      // Poll status every 2s for up to 30s
+      const maxAttempts = 15;
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+          const status = await api.getGatewayStatus();
+          if (status.connected) {
+            set({ status: { ...get().status, state: 'connected' }, lastError: null });
+            return;
+          }
+        } catch {
+          // Ignore polling errors
+        }
+      }
+      // After all attempts, set error
+      set({
+        status: { ...get().status, state: 'error', error: 'Gateway did not reconnect after restart' },
+        lastError: 'Gateway did not reconnect after restart'
+      });
     } catch (error) {
       set({
         status: { ...get().status, state: 'error', error: String(error) },

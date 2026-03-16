@@ -78,20 +78,56 @@ router.post('/restart-openclaw', async (_req, res) => {
       }
     }
 
-    // Wait for process to restart
-    await new Promise(resolve => setTimeout(resolve, method === 'reconnect' ? 1000 : 3000));
+    // Wait longer for process to restart
+    await new Promise(resolve => setTimeout(resolve, method === 'reconnect' ? 2000 : 5000));
 
-    // Reconnect
-    try {
-      await gatewayManager.start();
-      logger.info('Gateway manager reconnected after restart');
-    } catch (err) {
-      logger.warn('Gateway reconnect failed after restart, will retry automatically', { err });
+    // Retry reconnect up to 3 times
+    let connected = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await gatewayManager.start();
+        logger.info('Gateway manager reconnected after restart', { attempt });
+        connected = true;
+        break;
+      } catch (err) {
+        logger.warn(`Gateway reconnect attempt ${attempt}/3 failed`, { err });
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
     }
 
-    res.json({ success: true, method });
+    res.json({ success: true, method, connected });
   } catch (error) {
     logger.error('Restart OpenClaw error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// POST /api/gateway/doctor
+// Run openclaw doctor --fix
+router.post('/doctor', async (_req, res) => {
+  try {
+    const { exec: execCmd } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(execCmd);
+
+    let output = '';
+    let fixed = false;
+
+    try {
+      const result = await execAsync('openclaw doctor --fix 2>&1', { timeout: 30000 });
+      output = result.stdout || result.stderr || 'Doctor completed with no output';
+      fixed = true;
+    } catch (err: any) {
+      // openclaw doctor may exit with non-zero even when it fixes things
+      output = err.stdout || err.stderr || err.message || String(err);
+      fixed = output.includes('fixed') || output.includes('removed') || output.includes('Fixed');
+    }
+
+    res.json({ success: true, output, fixed });
+  } catch (error) {
+    logger.error('Doctor fix error:', error);
     res.status(500).json({ success: false, error: String(error) });
   }
 });
