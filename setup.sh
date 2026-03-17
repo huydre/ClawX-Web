@@ -59,6 +59,23 @@ ENV_FILE="${CLAWX_DIR}/.env"
 DEFAULT_PORT=2003
 DEFAULT_GATEWAY_PORT=18789
 
+# ── Source NVM for Node/pnpm/npm ───────────────────────────────────────────
+USER_HOME=$(getent passwd "${CLAWX_USER}" 2>/dev/null | cut -d: -f6 || eval echo "~$CLAWX_USER")
+NVM_DIR_PATH="${USER_HOME}/.nvm"
+
+# Source NVM in current shell if available
+if [[ -s "$NVM_DIR_PATH/nvm.sh" ]]; then
+  export NVM_DIR="$NVM_DIR_PATH"
+  \. "$NVM_DIR_PATH/nvm.sh"
+elif [[ -d "$NVM_DIR_PATH/versions/node" ]]; then
+  # NVM exists but nvm.sh not sourceable as root — add node to PATH directly
+  NODE_BIN=$(ls -d "$NVM_DIR_PATH/versions/node/"*/bin 2>/dev/null | tail -1)
+  [[ -n "$NODE_BIN" ]] && export PATH="$NODE_BIN:$PATH"
+fi
+
+# Command to source NVM inside su/sudo subshells
+NVM_SOURCE_CMD="export NVM_DIR='$NVM_DIR_PATH' && [ -s '\$NVM_DIR/nvm.sh' ] && . '\$NVM_DIR/nvm.sh' || { NODE_BIN=\$(ls -d '$NVM_DIR_PATH/versions/node/'*/bin 2>/dev/null | tail -1); [ -n \"\$NODE_BIN\" ] && export PATH=\"\$NODE_BIN:\$PATH\"; }"
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 log()    { echo -e "${GREEN}[✓]${NC} $*"; }
 warn()   { echo -e "${YELLOW}[!]${NC} $*"; }
@@ -239,7 +256,7 @@ do_build() {
 
     # Only install production deps (much faster, less RAM)
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-      su -s /bin/bash -c "cd '$CLAWX_DIR' && CI=true pnpm install --prod --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --prod --ignore-scripts" "$CLAWX_USER"
+      su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$CLAWX_DIR' && CI=true pnpm install --prod --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --prod --ignore-scripts" "$CLAWX_USER"
     else
       CI=true pnpm install --prod --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --prod --ignore-scripts
     fi
@@ -249,7 +266,7 @@ do_build() {
     step "Installing dependencies"
 
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-      su -s /bin/bash -c "cd '$CLAWX_DIR' && CI=true pnpm install --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --ignore-scripts" "$CLAWX_USER"
+      su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$CLAWX_DIR' && CI=true pnpm install --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --ignore-scripts" "$CLAWX_USER"
     else
       CI=true pnpm install --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --ignore-scripts
     fi
@@ -258,7 +275,7 @@ do_build() {
     step "Building ClawX-Web"
 
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-      su -s /bin/bash -c "cd '$CLAWX_DIR' && pnpm build && pnpm build:server" "$CLAWX_USER"
+      su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$CLAWX_DIR' && pnpm build && pnpm build:server" "$CLAWX_USER"
     else
       pnpm build
       pnpm build:server
