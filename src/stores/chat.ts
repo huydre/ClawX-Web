@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand';
 import { platform } from '@/lib/platform';
+import { generateId } from '@/lib/uuid';
 
 // Helper function to wait for gateway to be connected (web mode only)
 async function waitForGatewayConnected(timeoutMs = 15000): Promise<boolean> {
@@ -1178,7 +1179,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       role: 'user',
       content: trimmed || (attachments?.length ? '(file attached)' : ''),
       timestamp: Date.now() / 1000,
-      id: crypto.randomUUID(),
+      id: generateId(),
       _attachedFiles: attachments?.map(a => ({
         fileName: a.fileName,
         mimeType: a.mimeType,
@@ -1200,7 +1201,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
-      const idempotencyKey = crypto.randomUUID();
+      const idempotencyKey = generateId();
       const hasMedia = attachments && attachments.length > 0;
       console.log(`[sendMessage] hasMedia=${hasMedia}, attachmentCount=${attachments?.length ?? 0}`);
       if (hasMedia) {

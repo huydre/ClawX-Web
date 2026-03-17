@@ -34,6 +34,7 @@ import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { toast } from 'sonner';
 import { platform } from '@/lib/platform';
 import { api } from '@/lib/api';
+import { generateId } from '@/lib/uuid';
 import {
   CHANNEL_META,
   getPrimaryChannels,
@@ -891,7 +892,7 @@ function ProviderContent({
         selectedProvider === 'custom'
           ? (selectedProviderConfigId?.startsWith('custom-')
             ? selectedProviderConfigId
-            : `custom-${crypto.randomUUID()}`)
+            : `custom-${generateId()}`)
           : selectedProvider;
 
       const providerConfig = {
