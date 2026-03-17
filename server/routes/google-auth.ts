@@ -81,7 +81,7 @@ async function injectTokenToGateway(accessToken: string): Promise<void> {
  * The OAuth server will redirect to Google consent, then callback,
  * then redirect to our /api/google-auth/callback with userId.
  */
-router.get('/start', async (req, res) => {
+router.get('/start', async (_req, res) => {
   try {
     // Generate a unique userId for this ClawX instance
     const state = loadState();
@@ -111,7 +111,7 @@ router.get('/start', async (req, res) => {
  */
 router.get('/callback', async (req, res) => {
   try {
-    const { userId, status, error } = req.query;
+    const { userId, error } = req.query;
 
     if (error) {
       return res.status(400).send(`
