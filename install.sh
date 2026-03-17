@@ -80,25 +80,26 @@ fi
 
 export NVM_DIR="$NVM_HOME/.nvm"
 mkdir -p "$NVM_DIR"
+chown "$CLAWX_USER":"$CLAWX_USER" "$NVM_DIR"
 
 install_nodejs_nvm() {
   info "Installing NVM..."
-  # Run NVM install as the service user (not root) so paths are correct
+  # Run NVM install as the service user with correct HOME
   if [[ "$CLAWX_USER" != "root" ]] && id "$CLAWX_USER" &>/dev/null; then
-    sudo -u "$CLAWX_USER" bash -c "
-      export NVM_DIR=\"$NVM_DIR\"
-      mkdir -p \"\$NVM_DIR\"
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
-      . \"\$NVM_DIR/nvm.sh\"
+    sudo -u "$CLAWX_USER" HOME="$NVM_HOME" NVM_DIR="$NVM_DIR" PROFILE=/dev/null bash -c '
+      mkdir -p "$NVM_DIR"
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | PROFILE=/dev/null bash
+      . "$NVM_DIR/nvm.sh"
       nvm install 22
-    "
+    '
   else
+    export PROFILE=/dev/null
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
     \. "$NVM_DIR/nvm.sh"
     nvm install 22
   fi
-  # Source NVM for current shell
-  \. "$NVM_DIR/nvm.sh"
+  # Source NVM for current (root) shell
+  export PATH="$NVM_DIR/versions/node/$(ls "$NVM_DIR/versions/node/" 2>/dev/null | tail -1)/bin:$PATH"
   log "Node.js $(node -v) installed via NVM"
 }
 
