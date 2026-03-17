@@ -112,7 +112,7 @@ router.get('/callback', async (req, res) => {
       `);
         }
         // Fetch the access token from the OAuth server
-        const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/tokens/${userId}`);
+        const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${userId}`);
         if (!tokenResp.ok) {
             return res.status(502).send(`
         <html><body style="font-family:system-ui;text-align:center;padding:60px">
@@ -162,7 +162,7 @@ router.get('/status', async (_req, res) => {
             return res.json({ connected: false });
         }
         // Fetch fresh token from OAuth server (it auto-refreshes if expired)
-        const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/tokens/${state.userId}`);
+        const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${state.userId}`);
         if (!tokenResp.ok) {
             // Token might have been revoked
             clearState();
@@ -193,7 +193,7 @@ router.post('/refresh', async (_req, res) => {
         if (!state) {
             return res.status(400).json({ error: 'Not connected. Please connect Google first.' });
         }
-        const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/tokens/${state.userId}`);
+        const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${state.userId}`);
         if (!tokenResp.ok) {
             clearState();
             return res.status(401).json({ error: 'Token expired or revoked. Please reconnect.' });
@@ -217,7 +217,7 @@ router.delete('/disconnect', async (_req, res) => {
         if (state) {
             // Optionally delete token on OAuth server
             try {
-                await fetch(`${GOOGLE_OAUTH_SERVER}/api/tokens/${state.userId}`, { method: 'DELETE' });
+                await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${state.userId}`, { method: 'DELETE' });
             }
             catch { /* ignore */ }
         }
