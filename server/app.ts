@@ -17,6 +17,7 @@ import pairingRouter from './routes/pairing.js';
 import authRouter from './routes/auth.js';
 import oauthRouter from './routes/oauth.js';
 import channelConfigRouter from './routes/channel-config.js';
+import googleAuthRouter from './routes/google-auth.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const app = express();
@@ -101,6 +102,7 @@ app.use('/api/channels', channelsRouter);
 app.use('/api/system', systemRouter);
 app.use('/api/pairing', pairingRouter);
 app.use('/api/channel-config', channelConfigRouter);
+app.use('/api/google-auth', googleAuthRouter);
 
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
