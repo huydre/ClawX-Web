@@ -156,31 +156,6 @@ export function TunnelSettings() {
         </Card>
       )}
 
-      {/* Info Card */}
-      <Card className="border-blue-500/50 bg-blue-500/5">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-            <div className="space-y-2 text-sm">
-              <p className="font-medium text-blue-700 dark:text-blue-400">
-                {t('tunnel.info.title')}
-              </p>
-              <p className="text-blue-600 dark:text-blue-300">
-                {t('tunnel.info.description')}
-              </p>
-              <Button
-                variant="link"
-                className="h-auto p-0 text-blue-600 dark:text-blue-400"
-                onClick={() => window.open('https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/', '_blank')}
-              >
-                {t('tunnel.info.learnMore')}
-                <ExternalLink className="h-3 w-3 ml-1" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Error Display */}
       {error && (
         <Card className="border-destructive bg-destructive/5">

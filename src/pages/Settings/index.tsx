@@ -535,20 +535,6 @@ export function Settings() {
             </div>
           )}
 
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>{t('gateway.autoStart')}</Label>
-              <p className="text-sm text-muted-foreground">
-                {t('gateway.autoStartDesc')}
-              </p>
-            </div>
-            <Switch
-              checked={gatewayAutoStart}
-              onCheckedChange={setGatewayAutoStart}
-            />
-          </div>
         </CardContent>
       </Card>
 
