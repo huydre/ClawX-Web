@@ -68,42 +68,45 @@ apt-get update -qq 2>/dev/null || true
 apt-get install -y -qq curl git ca-certificates gnupg xz-utils >/dev/null 2>&1
 log "System packages ready"
 
-# ── Step 2: Node.js ────────────────────────────────────────────────────────
+# ── Step 2: Node.js (via NVM) ──────────────────────────────────────────────
 step "Checking Node.js"
 
-NODE_VERSION="22.14.0"
+# Determine home directory for NVM
+if [[ "$CLAWX_USER" != "root" ]] && id "$CLAWX_USER" &>/dev/null; then
+  NVM_HOME=$(eval echo "~$CLAWX_USER")
+else
+  NVM_HOME="$HOME"
+fi
 
-install_nodejs() {
-  # Direct binary download from nodejs.org (bypasses all APT repo conflicts)
-  local arch
-  case "$(uname -m)" in
-    x86_64)  arch="x64" ;;
-    aarch64) arch="arm64" ;;
-    armv7l)  arch="armv7l" ;;
-    *)       error "Unsupported architecture: $(uname -m)" ;;
-  esac
+export NVM_DIR="$NVM_HOME/.nvm"
 
-  info "Downloading Node.js v${NODE_VERSION} (${arch})..."
-  local url="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz"
-
-  curl -fsSL "$url" | tar -xJ -C /usr/local --strip-components=1
-  log "Node.js $(node -v) installed to /usr/local"
+install_nodejs_nvm() {
+  info "Installing NVM..."
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+  \. "$NVM_DIR/nvm.sh"
+  info "Installing Node.js 22 via NVM..."
+  nvm install 22
+  log "Node.js $(node -v) installed via NVM"
 }
+
+# Source NVM if it exists
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  \. "$NVM_DIR/nvm.sh"
+fi
 
 if command -v node &>/dev/null; then
   NODE_VER=$(node -v | sed 's/v//' | cut -d. -f1)
   if [[ "$NODE_VER" -ge "$NODE_MAJOR" ]]; then
     log "Node.js $(node -v) already installed"
   else
-    warn "Node.js v${NODE_VER} is too old, upgrading to v${NODE_VERSION}..."
-    install_nodejs
+    warn "Node.js v${NODE_VER} is too old, upgrading..."
+    install_nodejs_nvm
   fi
 else
-  info "Installing Node.js ${NODE_VERSION}..."
-  install_nodejs
+  install_nodejs_nvm
 fi
 
-# ── Step 3: pnpm ───────────────────────────────────────────────────────────
+# ── Step 3: pnpm ───────────────────────────────────────────────────────
 step "Checking pnpm"
 
 if command -v pnpm &>/dev/null; then
@@ -114,18 +117,18 @@ else
   log "pnpm $(pnpm -v) installed"
 fi
 
-# ── Step 4: OpenClaw ───────────────────────────────────────────────────────
+# ── Step 4: OpenClaw ───────────────────────────────────────────────────
 step "Checking OpenClaw"
 
 if command -v openclaw &>/dev/null; then
   log "OpenClaw already installed: $(openclaw --version 2>/dev/null || echo 'unknown')"
 else
   info "Installing OpenClaw..."
-  if curl -fsSL https://get.openclaw.ai | bash 2>/dev/null; then
-    log "OpenClaw installed"
+  npm i -g openclaw@2026.3.2 >/dev/null 2>&1
+  if command -v openclaw &>/dev/null; then
+    log "OpenClaw installed: $(openclaw --version 2>/dev/null || echo '2026.3.2')"
   else
-    warn "OpenClaw auto-install failed. You can install manually later:"
-    warn "  curl -fsSL https://get.openclaw.ai | bash"
+    warn "OpenClaw install failed. Install manually: npm i -g openclaw@2026.3.2"
   fi
 fi
 
