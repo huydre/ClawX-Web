@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { platform } from '@/lib/platform';
 import { api } from '@/lib/api';
+import { generateId } from '@/lib/uuid';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
       // Add placeholder entries immediately
       const tempIds: string[] = [];
       for (const filePath of result.filePaths) {
-        const tempId = crypto.randomUUID();
+        const tempId = generateId();
         tempIds.push(tempId);
         // Handle both Unix (/) and Windows (\) path separators
         const fileName = filePath.split(/[\\/]/).pop() || 'file';
@@ -174,7 +175,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
 
   const stageBufferFiles = useCallback(async (files: globalThis.File[]) => {
     for (const file of files) {
-      const tempId = crypto.randomUUID();
+      const tempId = generateId();
       setAttachments(prev => [...prev, {
         id: tempId,
         fileName: file.name,

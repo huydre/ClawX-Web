@@ -33,6 +33,7 @@ import {
   shouldInvertInDark,
 } from '@/lib/providers';
 import { cn } from '@/lib/utils';
+import { generateId } from '@/lib/uuid';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -120,7 +121,7 @@ export function ProvidersSettings() {
   ) => {
     // Only custom supports multiple instances.
     // Built-in providers remain singleton by type.
-    const id = type === 'custom' ? `custom-${crypto.randomUUID()}` : type;
+    const id = type === 'custom' ? `custom-${generateId()}` : type;
     try {
       await addProvider(
         {
