@@ -132,6 +132,29 @@ else
   fi
 fi
 
+# ── Step 4b: OpenClaw Gateway ──────────────────────────────────────────
+step "Setting up OpenClaw Gateway"
+
+if command -v openclaw &>/dev/null; then
+  info "Installing gateway service..."
+  openclaw gateway install 2>/dev/null || warn "Gateway install command failed"
+
+  # Enable and start the gateway systemd user service
+  if command -v systemctl &>/dev/null; then
+    # Try default profile first, then with profile suffix
+    if systemctl --user enable --now openclaw-gateway.service 2>/dev/null; then
+      log "Gateway service enabled and started"
+    else
+      warn "Could not enable gateway service via systemctl --user"
+      warn "You may need to run: systemctl --user enable --now openclaw-gateway.service"
+    fi
+  fi
+
+  openclaw gateway status 2>/dev/null && log "Gateway is running" || warn "Gateway status check returned non-zero"
+else
+  warn "OpenClaw not installed, skipping gateway setup"
+fi
+
 # ── Step 5: Clone repository ──────────────────────────────────────────────
 step "Setting up ClawX-Web"
 
