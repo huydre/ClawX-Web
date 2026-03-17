@@ -11,7 +11,7 @@ import os from 'os';
 import { logger } from '../utils/logger.js';
 const router = Router();
 // Centralized Google OAuth server
-const GOOGLE_OAUTH_SERVER = process.env.GOOGLE_OAUTH_SERVER_URL || 'https://google.openclaw-box.com';
+const GOOGLE_OAUTH_SERVER = process.env.GOOGLE_OAUTH_SERVER_URL || 'https://api-googles.openclaw-box.com';
 // File to persist the Google userId across restarts
 const STATE_FILE = path.join(os.homedir(), '.openclaw', '.google-auth-state.json');
 function loadState() {
