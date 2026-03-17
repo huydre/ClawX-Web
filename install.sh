@@ -79,13 +79,26 @@ else
 fi
 
 export NVM_DIR="$NVM_HOME/.nvm"
+mkdir -p "$NVM_DIR"
 
 install_nodejs_nvm() {
   info "Installing NVM..."
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+  # Run NVM install as the service user (not root) so paths are correct
+  if [[ "$CLAWX_USER" != "root" ]] && id "$CLAWX_USER" &>/dev/null; then
+    sudo -u "$CLAWX_USER" bash -c "
+      export NVM_DIR=\"$NVM_DIR\"
+      mkdir -p \"\$NVM_DIR\"
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+      . \"\$NVM_DIR/nvm.sh\"
+      nvm install 22
+    "
+  else
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+    \. "$NVM_DIR/nvm.sh"
+    nvm install 22
+  fi
+  # Source NVM for current shell
   \. "$NVM_DIR/nvm.sh"
-  info "Installing Node.js 22 via NVM..."
-  nvm install 22
   log "Node.js $(node -v) installed via NVM"
 }
 
