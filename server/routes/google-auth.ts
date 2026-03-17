@@ -1,13 +1,20 @@
 /**
  * Google Workspace OAuth Routes — /api/google-auth
- * Proxy OAuth flow to the centralized Google OAuth server (google.openclaw-box.com)
+ * Proxy OAuth flow to the centralized Google OAuth server (api-googles.openclaw-box.com)
  * and inject the access token into the OpenClaw Gateway environment
  * for the GWS CLI skill.
+ *
+ * OAuth Server API (Duong-Anh-Duc/Skill):
+ *   GET  /api/oauth/connect?userId=xxx  → redirects to Google consent
+ *   GET  /api/oauth/callback            → exchanges code, saves tokens, redirects to APP_URL
+ *   GET  /api/token/:userId             → { success, data: { access_token, expiry, refreshed } }
+ *   DELETE /api/token/:userId           → revoke + delete
  */
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
@@ -70,27 +77,23 @@ async function injectTokenToGateway(accessToken: string): Promise<void> {
 
 /**
  * GET /api/google-auth/start
- * Get the Google OAuth URL from the centralized server.
- * Frontend opens this in a new tab/popup.
+ * Redirect user to the OAuth server's /api/oauth/connect endpoint.
+ * The OAuth server will redirect to Google consent, then callback,
+ * then redirect to our /api/google-auth/callback with userId.
  */
 router.get('/start', async (req, res) => {
   try {
-    // Build callback URL that will redirect back to our ClawX instance
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.headers.host;
-    const callbackUrl = `${protocol}://${host}/api/google-auth/callback`;
+    // Generate a unique userId for this ClawX instance
+    const state = loadState();
+    const userId = state?.userId || `clawx-${crypto.randomBytes(8).toString('hex')}`;
 
-    const resp = await fetch(
-      `${GOOGLE_OAUTH_SERVER}/api/oauth/google/url?state=${encodeURIComponent(callbackUrl)}`
-    );
-    if (!resp.ok) {
-      const errText = await resp.text();
-      logger.error('Failed to get Google auth URL', { error: errText });
-      return res.status(502).json({ error: 'Failed to get auth URL from OAuth server' });
-    }
+    // The OAuth server's /api/oauth/connect?userId=xxx redirects straight to Google
+    const connectUrl = `${GOOGLE_OAUTH_SERVER}/api/oauth/connect?userId=${encodeURIComponent(userId)}`;
 
-    const data = await resp.json() as { url: string };
-    res.json({ authUrl: data.url });
+    // Save userId early so we can retrieve tokens after callback
+    saveState({ userId, connectedAt: Date.now() });
+
+    res.json({ authUrl: connectUrl });
   } catch (error) {
     logger.error('Google auth start error:', error);
     res.status(500).json({ error: String(error) });
@@ -99,53 +102,42 @@ router.get('/start', async (req, res) => {
 
 /**
  * GET /api/google-auth/callback
- * Receives redirect from the OAuth server with userId in query params.
- * Fetches the token and injects it into the gateway.
+ * Called when user returns from OAuth flow.
+ * The OAuth server redirects to APP_URL with ?status=connected&userId=xxx
+ * We need APP_URL on the OAuth server to point here.
+ *
+ * But since we can't control APP_URL dynamically per-box, the frontend
+ * handles the return by checking status via /api/google-auth/status.
  */
 router.get('/callback', async (req, res) => {
   try {
-    const { userId, error } = req.query;
+    const { userId, status, error } = req.query;
 
     if (error) {
       return res.status(400).send(`
-        <html><body style="font-family:system-ui;text-align:center;padding:60px">
+        <html><body style="font-family:system-ui;text-align:center;padding:60px;background:#0a0a0a;color:#fff">
           <h2>❌ Google Auth Failed</h2>
-          <p>${String(error)}</p>
+          <p style="color:#f87171">${String(error)}</p>
           <p style="color:#666">You can close this tab.</p>
           <script>setTimeout(()=>window.close(),3000)</script>
         </body></html>
       `);
     }
 
-    if (!userId) {
-      return res.status(400).send(`
-        <html><body style="font-family:system-ui;text-align:center;padding:60px">
-          <h2>❌ Missing userId</h2>
-          <p>No userId returned from OAuth server.</p>
-        </body></html>
-      `);
+    if (userId) {
+      // Fetch the access token from the OAuth server
+      const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${userId}`);
+      if (tokenResp.ok) {
+        const tokenData = await tokenResp.json() as { success: boolean; data?: { access_token: string } };
+        if (tokenData.success && tokenData.data) {
+          saveState({ userId: String(userId), connectedAt: Date.now() });
+          await injectTokenToGateway(tokenData.data.access_token);
+          logger.info('Google Workspace connected', { userId });
+        }
+      }
     }
 
-    // Fetch the access token from the OAuth server
-    const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${userId}`);
-    if (!tokenResp.ok) {
-      return res.status(502).send(`
-        <html><body style="font-family:system-ui;text-align:center;padding:60px">
-          <h2>❌ Token Fetch Failed</h2>
-          <p>Could not retrieve tokens from OAuth server.</p>
-        </body></html>
-      `);
-    }
-
-    const tokenData = await tokenResp.json() as { accessToken: string };
-
-    // Save state and inject token
-    saveState({ userId: String(userId), connectedAt: Date.now() });
-    await injectTokenToGateway(tokenData.accessToken);
-
-    logger.info('Google Workspace connected', { userId });
-
-    // Redirect back to the ClawX Settings page
+    // Redirect back to ClawX Settings
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.headers['x-forwarded-host'] || req.headers.host;
     res.send(`
@@ -184,15 +176,22 @@ router.get('/status', async (_req, res) => {
     // Fetch fresh token from OAuth server (it auto-refreshes if expired)
     const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${state.userId}`);
     if (!tokenResp.ok) {
-      // Token might have been revoked
       clearState();
       return res.json({ connected: false, error: 'Token expired or revoked' });
     }
 
-    const tokenData = await tokenResp.json() as { accessToken: string };
+    const tokenData = await tokenResp.json() as {
+      success: boolean;
+      data?: { access_token: string; expiry: string; refreshed: boolean };
+    };
+
+    if (!tokenData.success || !tokenData.data) {
+      clearState();
+      return res.json({ connected: false, error: 'Token not found' });
+    }
 
     // Re-inject token (it may have been refreshed)
-    await injectTokenToGateway(tokenData.accessToken);
+    await injectTokenToGateway(tokenData.data.access_token);
 
     res.json({
       connected: true,
@@ -223,9 +222,17 @@ router.post('/refresh', async (_req, res) => {
       return res.status(401).json({ error: 'Token expired or revoked. Please reconnect.' });
     }
 
-    const tokenData = await tokenResp.json() as { accessToken: string };
-    await injectTokenToGateway(tokenData.accessToken);
+    const tokenData = await tokenResp.json() as {
+      success: boolean;
+      data?: { access_token: string };
+    };
 
+    if (!tokenData.success || !tokenData.data) {
+      clearState();
+      return res.status(401).json({ error: 'Token not found. Please reconnect.' });
+    }
+
+    await injectTokenToGateway(tokenData.data.access_token);
     res.json({ success: true });
   } catch (error) {
     logger.error('Google auth refresh error:', error);
@@ -241,7 +248,6 @@ router.delete('/disconnect', async (_req, res) => {
   try {
     const state = loadState();
     if (state) {
-      // Optionally delete token on OAuth server
       try {
         await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${state.userId}`, { method: 'DELETE' });
       } catch { /* ignore */ }
