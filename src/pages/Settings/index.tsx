@@ -177,8 +177,11 @@ function GoogleWorkspaceCard() {
     connected: boolean;
     userId?: string;
     email?: string;
+    accessToken?: string;
+    tokenPreview?: string;
     error?: string;
   }>({ connected: false });
+  const [showToken, setShowToken] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -288,6 +291,40 @@ function GoogleWorkspaceCard() {
                 <span className="text-sm text-muted-foreground">{status.email}</span>
               )}
             </div>
+
+            {/* Access Token Preview */}
+            {status.accessToken && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Access Token</Label>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-muted/50 px-3 py-2 rounded-md border font-mono truncate select-all">
+                    {showToken ? status.accessToken : status.tokenPreview}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => setShowToken(!showToken)}
+                    title={showToken ? 'Ẩn token' : 'Hiện token'}
+                  >
+                    {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(status.accessToken!);
+                      toast.success('Đã copy Access Token');
+                    }}
+                    title="Copy token"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground">
               OpenClaw có thể đọc/gửi Gmail, quản lý Drive, Calendar, Sheets và các dịch vụ Google Workspace khác.
             </p>

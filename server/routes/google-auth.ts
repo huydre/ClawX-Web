@@ -81,14 +81,19 @@ async function injectTokenToGateway(accessToken: string): Promise<void> {
  * The OAuth server will redirect to Google consent, then callback,
  * then redirect to our /api/google-auth/callback with userId.
  */
-router.get('/start', async (_req, res) => {
+router.get('/start', async (req, res) => {
   try {
     // Generate a unique userId for this ClawX instance
     const state = loadState();
     const userId = state?.userId || `clawx-${crypto.randomBytes(8).toString('hex')}`;
 
-    // The OAuth server's /api/oauth/connect?userId=xxx redirects straight to Google
-    const connectUrl = `${GOOGLE_OAUTH_SERVER}/api/oauth/connect?userId=${encodeURIComponent(userId)}`;
+    // Build this box's callback URL so OAuth server redirects back here
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const redirectUrl = `${protocol}://${host}/api/google-auth/callback`;
+
+    // The OAuth server's /api/oauth/connect?userId=xxx&redirect=xxx redirects to Google
+    const connectUrl = `${GOOGLE_OAUTH_SERVER}/api/oauth/connect?userId=${encodeURIComponent(userId)}&redirect=${encodeURIComponent(redirectUrl)}`;
 
     // Save userId early so we can retrieve tokens after callback
     saveState({ userId, connectedAt: Date.now() });
@@ -193,11 +198,16 @@ router.get('/status', async (_req, res) => {
     // Re-inject token (it may have been refreshed)
     await injectTokenToGateway(tokenData.data.access_token);
 
+    const token = tokenData.data.access_token;
+    const tokenPreview = token.substring(0, 20) + '••••••••';
+
     res.json({
       connected: true,
       userId: state.userId,
       email: state.email,
       connectedAt: state.connectedAt,
+      accessToken: token,
+      tokenPreview,
     });
   } catch (error) {
     logger.error('Google auth status error:', error);
