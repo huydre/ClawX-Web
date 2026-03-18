@@ -87,13 +87,13 @@ router.get('/start', async (req, res) => {
     const state = loadState();
     const userId = state?.userId || `clawx-${crypto.randomBytes(8).toString('hex')}`;
 
-    // Build this box's callback URL so OAuth server redirects back here
+    // Build the callback URL pointing back to this ClawX instance
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.headers['x-forwarded-host'] || req.headers.host;
     const redirectUrl = `${protocol}://${host}/api/google-auth/callback`;
 
-    // The OAuth server's /api/oauth/connect?userId=xxx&redirect=xxx redirects to Google
-    const connectUrl = `${GOOGLE_OAUTH_SERVER}/api/oauth/connect?userId=${encodeURIComponent(userId)}&redirect=${encodeURIComponent(redirectUrl)}`;
+    // The OAuth server's /api/oauth/connect?userId=xxx&redirectUrl=xxx redirects to Google
+    const connectUrl = `${GOOGLE_OAUTH_SERVER}/api/oauth/connect?userId=${encodeURIComponent(userId)}&redirectUrl=${encodeURIComponent(redirectUrl)}`;
 
     // Save userId early so we can retrieve tokens after callback
     saveState({ userId, connectedAt: Date.now() });
@@ -151,7 +151,7 @@ router.get('/callback', async (req, res) => {
         <p style="color:#aaa">Redirecting back to ClawX...</p>
         <script>
           setTimeout(function(){
-            window.location.href = '${protocol}://${host}/settings?google=connected';
+            window.location.href = '${protocol}://${host}/#/settings?google=connected';
           }, 1500);
         </script>
       </body></html>
