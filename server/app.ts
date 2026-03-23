@@ -18,6 +18,7 @@ import authRouter from './routes/auth.js';
 import oauthRouter from './routes/oauth.js';
 import channelConfigRouter from './routes/channel-config.js';
 import googleAuthRouter from './routes/google-auth.js';
+import wifiRouter from './routes/wifi.js';
 import { startAutoRefresh } from './routes/google-auth.js';
 import { authMiddleware } from './middleware/auth.js';
 
@@ -104,6 +105,7 @@ app.use('/api/system', systemRouter);
 app.use('/api/pairing', pairingRouter);
 app.use('/api/channel-config', channelConfigRouter);
 app.use('/api/google-auth', googleAuthRouter);
+app.use('/api/wifi', wifiRouter);
 
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
