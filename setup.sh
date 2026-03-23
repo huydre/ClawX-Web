@@ -378,15 +378,18 @@ install_gogcli() {
   # Create wrapper script that auto-sources GOG_ACCESS_TOKEN
   cat > /usr/local/bin/gog <<'WRAPPER'
 #!/bin/bash
-# gogcli wrapper — auto-loads GOG_ACCESS_TOKEN from gog.env
+# gogcli wrapper — auto-loads token + disables keyring prompts
 GOG_ENV="${HOME}/.openclaw/gog.env"
 if [[ -f "$GOG_ENV" ]]; then
   source "$GOG_ENV"
 fi
+# Prevent keyring password prompts on headless servers
+export GOG_KEYRING_BACKEND=file
+export GOG_KEYRING_PASSWORD="${GOG_KEYRING_PASSWORD:-clawx}"
 exec /usr/local/bin/gog-bin "$@"
 WRAPPER
   chmod +x /usr/local/bin/gog
-  log "gogcli wrapper installed (auto-loads GOG_ACCESS_TOKEN)"
+  log "gogcli wrapper installed (auto-loads GOG_ACCESS_TOKEN, no keyring prompts)"
 }
 
 # ── Setup systemd ──────────────────────────────────────────────────────────
