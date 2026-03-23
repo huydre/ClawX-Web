@@ -46,7 +46,12 @@ function splitTerse(line) {
  */
 router.get('/scan', async (_req, res) => {
     try {
-        // Rescan first
+        // Ensure WiFi radio is on (may be off after reboot)
+        try {
+            await nmcli('radio', 'wifi', 'on');
+        }
+        catch { /* ignore */ }
+        // Rescan
         try {
             await nmcli('device', 'wifi', 'rescan');
         }
@@ -208,6 +213,37 @@ router.delete('/saved/:ssid', async (req, res) => {
     }
     catch (error) {
         logger.error('WiFi forget error:', error);
+        res.status(500).json({ success: false, error: String(error) });
+    }
+});
+/**
+ * POST /api/wifi/enable — Turn WiFi on and auto-connect saved networks
+ */
+router.post('/enable', async (_req, res) => {
+    try {
+        await nmcli('radio', 'wifi', 'on');
+        // Give NetworkManager time to auto-connect
+        await new Promise(r => setTimeout(r, 3000));
+        // Try to bring up any saved connection
+        try {
+            const saved = await nmcli('-t', '-f', 'NAME,TYPE', 'connection', 'show');
+            for (const line of saved.trim().split('\n')) {
+                const parts = line.split(':');
+                if (parts[1] === '802-11-wireless') {
+                    try {
+                        await nmcli('connection', 'up', parts[0]);
+                        logger.info('WiFi auto-reconnected', { ssid: parts[0] });
+                        break;
+                    }
+                    catch { /* try next */ }
+                }
+            }
+        }
+        catch { /* ignore */ }
+        res.json({ success: true });
+    }
+    catch (error) {
+        logger.error('WiFi enable error:', error);
         res.status(500).json({ success: false, error: String(error) });
     }
 });
