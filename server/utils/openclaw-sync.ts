@@ -396,14 +396,15 @@ export function setOpenClawDefaultModel(
 
 /**
  * Save OAuth tokens (access, refresh, expires) to OpenClaw auth-profiles.json
+ * Supports multi-account: uses email as profile key if provided.
  */
 export function saveOAuthTokenToOpenClaw(
   provider: string,
-  tokens: { access: string; refresh: string; expires: number; accountId?: string }
+  tokens: { access: string; refresh: string; expires: number; accountId?: string; email?: string }
 ): void {
   try {
     const store = readAuthProfiles();
-    const profileId = `${provider}:default`;
+    const profileId = `${provider}:${tokens.email || 'default'}`;
 
     store.profiles[profileId] = {
       type: 'oauth',
@@ -425,7 +426,7 @@ export function saveOAuthTokenToOpenClaw(
     store.lastGood[provider] = profileId;
 
     writeAuthProfiles(store);
-    logger.info('Saved OAuth token to OpenClaw', { provider });
+    logger.info('Saved OAuth token to OpenClaw', { provider, profileId });
   } catch (err) {
     logger.warn('Failed to save OAuth token to OpenClaw', { provider, err });
   }
@@ -433,6 +434,7 @@ export function saveOAuthTokenToOpenClaw(
 
 /**
  * Read OAuth tokens from OpenClaw auth-profiles.json
+ * Tries exact default first, then any profile matching the provider.
  */
 export function getOAuthTokenFromOpenClaw(provider: string): {
   access: string;
@@ -443,6 +445,7 @@ export function getOAuthTokenFromOpenClaw(provider: string): {
 } | null {
   try {
     const store = readAuthProfiles();
+    // Try default first
     const profile = store.profiles[`${provider}:default`];
     if (profile?.type === 'oauth') {
       return {
@@ -453,8 +456,92 @@ export function getOAuthTokenFromOpenClaw(provider: string): {
         accountId: profile.accountId,
       };
     }
+    // Fallback: any profile matching provider
+    const match = Object.entries(store.profiles).find(
+      ([id, p]) => id.startsWith(`${provider}:`) && p.type === 'oauth'
+    );
+    if (match) {
+      const p = match[1] as AuthProfileOAuth;
+      return { access: p.access, refresh: p.refresh, expires: p.expires, savedAt: p.savedAt, accountId: p.accountId };
+    }
     return null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * List all OAuth profiles for a provider.
+ */
+export function listOAuthProfiles(provider: string): Array<{
+  profileId: string;
+  email: string;
+  expires: number;
+  savedAt?: number;
+  accountId?: string;
+  isExpired: boolean;
+}> {
+  try {
+    const store = readAuthProfiles();
+    const results: Array<{
+      profileId: string;
+      email: string;
+      expires: number;
+      savedAt?: number;
+      accountId?: string;
+      isExpired: boolean;
+    }> = [];
+
+    for (const [id, profile] of Object.entries(store.profiles)) {
+      if (id.startsWith(`${provider}:`) && profile.type === 'oauth') {
+        const email = id.replace(`${provider}:`, '');
+        results.push({
+          profileId: id,
+          email,
+          expires: profile.expires,
+          savedAt: profile.savedAt,
+          accountId: profile.accountId,
+          isExpired: profile.expires < Date.now(),
+        });
+      }
+    }
+
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Remove a specific OAuth profile.
+ */
+export function removeOAuthProfile(provider: string, profileId: string): boolean {
+  try {
+    const store = readAuthProfiles();
+    if (!store.profiles[profileId]) return false;
+
+    delete store.profiles[profileId];
+
+    // Clean up order
+    if (store.order?.[provider]) {
+      store.order[provider] = store.order[provider].filter(id => id !== profileId);
+    }
+
+    // Clean up lastGood
+    if (store.lastGood?.[provider] === profileId) {
+      const remaining = store.order?.[provider]?.[0];
+      if (remaining) {
+        store.lastGood[provider] = remaining;
+      } else {
+        delete store.lastGood[provider];
+      }
+    }
+
+    writeAuthProfiles(store);
+    logger.info('Removed OAuth profile', { provider, profileId });
+    return true;
+  } catch (err) {
+    logger.warn('Failed to remove OAuth profile', { provider, profileId, err });
+    return false;
   }
 }
