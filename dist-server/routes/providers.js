@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { getAllProviders, getProvider, saveProvider, deleteProvider, setDefaultProvider, getDefaultProvider, getApiKey, } from '../services/storage.js';
 import { logger } from '../utils/logger.js';
-import { saveProviderKeyToOpenClaw, removeProviderKeyFromOpenClaw, setOpenClawDefaultModel, getProviderKeyFromOpenClaw, getProviderKeyFromEnv, getProviderConfigFromOpenClaw, getOAuthTokenFromOpenClaw, } from '../utils/openclaw-sync.js';
+import { saveProviderKeyToOpenClaw, removeProviderKeyFromOpenClaw, setOpenClawDefaultModel, getProviderKeyFromOpenClaw, getProviderKeyFromEnv, getProviderConfigFromOpenClaw, getOAuthTokenFromOpenClaw, listOAuthProfiles, removeOAuthProfile, } from '../utils/openclaw-sync.js';
 const router = Router();
 // GET /api/providers
 router.get('/', async (_req, res) => {
@@ -405,3 +405,33 @@ router.post('/default', async (req, res) => {
     }
 });
 export default router;
+// ── Codex Multi-Account Endpoints ──────────────────────────────────────────
+// GET /api/providers/codex/accounts
+router.get('/codex/accounts', (_req, res) => {
+    try {
+        const accounts = listOAuthProfiles('openai-codex');
+        res.json({ success: true, accounts });
+    }
+    catch (error) {
+        logger.error('List codex accounts error:', error);
+        res.status(500).json({ success: false, error: String(error) });
+    }
+});
+// DELETE /api/providers/codex/accounts/:profileId
+router.delete('/codex/accounts/:profileId', (req, res) => {
+    try {
+        const { profileId } = req.params;
+        const decoded = decodeURIComponent(profileId);
+        const removed = removeOAuthProfile('openai-codex', decoded);
+        if (removed) {
+            res.json({ success: true });
+        }
+        else {
+            res.status(404).json({ success: false, error: 'Profile not found' });
+        }
+    }
+    catch (error) {
+        logger.error('Remove codex account error:', error);
+        res.status(500).json({ success: false, error: String(error) });
+    }
+});

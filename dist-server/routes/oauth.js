@@ -205,21 +205,32 @@ router.get('/codex/start', async (_req, res) => {
         // Start callback server and handle token exchange in background
         startCallbackServer(codeVerifier, state)
             .then(async (tokens) => {
-            // Extract accountId from JWT payload
+            // Extract accountId + email from JWT payload
             let accountId;
+            let email;
             try {
                 const payloadB64 = tokens.access_token.split('.')[1];
                 const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
                 accountId = payload?.['https://api.openai.com/auth']?.chatgpt_account_id;
             }
             catch { /* ignore */ }
+            // Extract email from id_token
+            try {
+                if (tokens.id_token) {
+                    const idPayloadB64 = tokens.id_token.split('.')[1];
+                    const idPayload = JSON.parse(Buffer.from(idPayloadB64, 'base64url').toString());
+                    email = idPayload?.email;
+                }
+            }
+            catch { /* ignore */ }
             const expiresAt = Date.now() + (tokens.expires_in * 1000);
-            // Save to OpenClaw auth-profiles.json
+            // Save to OpenClaw auth-profiles.json (multi-account via email)
             saveOAuthTokenToOpenClaw('openai-codex', {
                 access: tokens.access_token,
                 refresh: tokens.refresh_token,
                 expires: expiresAt,
                 accountId,
+                email,
             });
             // Set default model
             setOpenClawDefaultModel('openai-codex', 'codex-mini-latest');
@@ -292,26 +303,37 @@ router.post('/codex/exchange', async (req, res) => {
             return res.status(400).json({ error: 'Token exchange failed: ' + errText });
         }
         const tokens = await tokenResp.json();
-        // Extract accountId from JWT payload
+        // Extract accountId + email from JWT payload
         let accountId;
+        let email;
         try {
             const payloadB64 = tokens.access_token.split('.')[1];
             const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
             accountId = payload?.['https://api.openai.com/auth']?.chatgpt_account_id;
         }
         catch { /* ignore */ }
+        // Extract email from id_token
+        try {
+            if (tokens.id_token) {
+                const idPayloadB64 = tokens.id_token.split('.')[1];
+                const idPayload = JSON.parse(Buffer.from(idPayloadB64, 'base64url').toString());
+                email = idPayload?.email;
+            }
+        }
+        catch { /* ignore */ }
         const expiresAt = Date.now() + (tokens.expires_in * 1000);
-        // Save to OpenClaw auth-profiles.json
+        // Save to OpenClaw auth-profiles.json (multi-account via email)
         saveOAuthTokenToOpenClaw('openai-codex', {
             access: tokens.access_token,
             refresh: tokens.refresh_token,
             expires: expiresAt,
             accountId,
+            email,
         });
         // Set default model
         setOpenClawDefaultModel('openai-codex', 'codex-mini-latest');
-        logger.info('Codex OAuth complete (manual exchange)', { accountId, expiresAt: new Date(expiresAt).toISOString() });
-        res.json({ success: true, accountId, expiresAt });
+        logger.info('Codex OAuth complete (manual exchange)', { accountId, email, expiresAt: new Date(expiresAt).toISOString() });
+        res.json({ success: true, accountId, email, expiresAt });
     }
     catch (error) {
         logger.error('Codex manual exchange error:', error);
