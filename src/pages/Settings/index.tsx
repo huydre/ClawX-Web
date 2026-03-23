@@ -750,8 +750,8 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {/* WiFi Settings */}
-      {platform.isWeb && (
+      {/* WiFi Settings (temporarily hidden) */}
+      {false && platform.isWeb && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
