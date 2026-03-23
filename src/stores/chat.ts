@@ -38,10 +38,10 @@ async function gatewayRpc(method: string, params?: any, retries = 2, timeoutMs?:
     // Web mode: wait for gateway to be connected, then use gateway store with retry logic
     const { useGatewayStore } = await import('./gateway');
 
-    // chat.send can take a long time (AI thinking + tool use), use generous timeout
+    // chat.send is fire-and-forget — Gateway acknowledges quickly, streaming events arrive via WS
     const isChatSend = method === 'chat.send';
-    const rpcTimeout = timeoutMs ?? (isChatSend ? 120000 : 10000);
-    // Don't retry chat.send — it's fire-and-forget (streaming events arrive separately)
+    const rpcTimeout = timeoutMs ?? (isChatSend ? 15000 : 10000);
+    // Don't retry chat.send
     const maxRetries = isChatSend ? 0 : retries;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -1278,18 +1278,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // No runId from gateway; keep sending state and wait for events.
       }
 
-      // Safety timeout: if we're still in "sending" state after 120s without
-      // receiving any streaming event (including tool events), the run likely failed silently.
+      // Safety timeout: if we're still in "sending" state after 300s without
+      // receiving any streaming event, the run likely failed silently.
+      // We track lastActivityAt and reset it on each streaming event.
       if (result.success) {
-        const sentAt = Date.now();
-        const SAFETY_TIMEOUT_MS = 120_000;
+        let lastActivityAt = Date.now();
+        const SAFETY_TIMEOUT_MS = 300_000;
         const checkStuck = () => {
           const state = get();
           if (!state.sending) return;
-          // Check for ANY streaming activity: text, message, OR tool events
-          if (state.streamingMessage || state.streamingText || state.streamingTools.length > 0) return;
-          if (Date.now() - sentAt < SAFETY_TIMEOUT_MS) {
-            setTimeout(checkStuck, 10_000);
+          // Any streaming activity resets the timer
+          if (state.streamingMessage || state.streamingText || state.streamingTools.length > 0) {
+            lastActivityAt = Date.now();
+          }
+          if (Date.now() - lastActivityAt < SAFETY_TIMEOUT_MS) {
+            setTimeout(checkStuck, 15_000);
             return;
           }
           set({
@@ -1336,7 +1339,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   handleChatEvent: (event: Record<string, unknown>) => {
     const runId = String(event.runId || '');
     const eventState = String(event.state || '');
-    const { activeRunId } = get();
+    const { activeRunId, currentSessionKey } = get();
+
+    // Session filtering: ignore events from other sessions (e.g., Telegram/Zalo)
+    const eventSessionKey = String(event.sessionKey || '');
+    if (eventSessionKey && currentSessionKey && eventSessionKey !== currentSessionKey) return;
 
     // Only process events for the active run (or if no active run set)
     if (activeRunId && runId && runId !== activeRunId) return;

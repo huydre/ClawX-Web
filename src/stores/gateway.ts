@@ -95,9 +95,11 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
           if (method === 'agent' || method === 'chat') {
             // Forward agent and chat notifications to chat store
+            // Include sessionKey from params for session filtering
             const normalizedEvent: Record<string, unknown> = {
               ...(params?.data || {}),
               ...params,
+              sessionKey: params?.sessionKey || params?.data?.sessionKey || '',
             };
 
             console.log('[Gateway] Forwarding to chat store:', normalizedEvent);
