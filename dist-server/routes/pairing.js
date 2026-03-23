@@ -4,14 +4,12 @@
  * Uses openclaw CLI for approve (communicates directly with gateway)
  */
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync, readdirSync, realpathSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { exec, execSync } from 'child_process';
-import { promisify } from 'util';
+import { execSync } from 'child_process';
 import { logger } from '../utils/logger.js';
 const router = Router();
-const execAsync = promisify(exec);
 /** Find the .openclaw dir (may be under a different user than who runs this service) */
 function findOpenClawDir() {
     const defaultDir = join(homedir(), '.openclaw');
@@ -58,77 +56,7 @@ function resolveUserHome(username) {
     return `/home/${username}`;
 }
 const OWNER_HOME = OWNER_USER ? resolveUserHome(OWNER_USER) : homedir();
-/** Find the actual openclaw binary path */
-function findOpenClawBin() {
-    const searchPaths = [
-        '/usr/local/bin/openclaw',
-        '/usr/bin/openclaw',
-        join(homedir(), '.local', 'bin', 'openclaw'),
-        join(homedir(), '.openclaw', 'bin', 'openclaw'),
-    ];
-    // Also search in owner user's paths
-    if (OWNER_USER) {
-        const ownerHome = OWNER_HOME;
-        searchPaths.push(join(ownerHome, '.local', 'bin', 'openclaw'), join(ownerHome, '.openclaw', 'bin', 'openclaw'), join(ownerHome, '.npm-global', 'bin', 'openclaw'), join(ownerHome, '.nvm', 'current', 'bin', 'openclaw'), join(ownerHome, '.local', 'share', 'pnpm', 'openclaw'));
-    }
-    for (const p of searchPaths) {
-        if (existsSync(p))
-            return p;
-    }
-    // Last resort: use just 'openclaw' and hope PATH works
-    return 'openclaw';
-}
-const OPENCLAW_BIN = findOpenClawBin();
-/** Resolve openclaw binary to its actual .mjs entry point */
-function resolveOpenClawMjs() {
-    try {
-        return realpathSync(OPENCLAW_BIN);
-    }
-    catch {
-        // Try common pattern: ~/.npm-global/lib/node_modules/openclaw/openclaw.mjs
-        if (OWNER_USER) {
-            const mjs = join(OWNER_HOME, '.npm-global', 'lib', 'node_modules', 'openclaw', 'openclaw.mjs');
-            if (existsSync(mjs))
-                return mjs;
-        }
-        return null;
-    }
-}
-/** Find NVM node binary (highest version) for a given home dir */
-function findNvmNode(userHome) {
-    try {
-        const versionsDir = join(userHome, '.nvm', 'versions', 'node');
-        if (!existsSync(versionsDir))
-            return null;
-        const versions = readdirSync(versionsDir).sort();
-        if (versions.length === 0)
-            return null;
-        const latest = versions[versions.length - 1];
-        const nodeBin = join(versionsDir, latest, 'bin', 'node');
-        return existsSync(nodeBin) ? nodeBin : null;
-    }
-    catch {
-        return null;
-    }
-}
-const OPENCLAW_MJS = resolveOpenClawMjs();
-// OWNER_HOME already defined above via resolveUserHome()
-const NVM_NODE = findNvmNode(OWNER_HOME);
-logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, bin=${OPENCLAW_BIN}, mjs=${OPENCLAW_MJS}, owner=${OWNER_USER}, nvmNode=${NVM_NODE}`);
-/** Build CLI command: always use NVM node + openclaw.mjs to bypass shebang version issues */
-function buildCmd(args) {
-    const currentUser = process.env.USER || process.env.LOGNAME || '';
-    const entry = OPENCLAW_MJS || OPENCLAW_BIN;
-    const nodeCmd = NVM_NODE || 'node';
-    // Embed HOME and CI directly in command to ensure they're available under systemd
-    const envPrefix = `HOME=${OWNER_HOME} CI=true`;
-    if (OWNER_USER && OWNER_USER !== currentUser) {
-        // Different user: use sudo with env preservation
-        return `sudo -u ${OWNER_USER} env ${envPrefix} ${nodeCmd} ${entry} ${args}`;
-    }
-    // Same user: run node directly (bypasses shebang which may use old system node)
-    return `env ${envPrefix} ${nodeCmd} ${entry} ${args}`;
-}
+logger.info(`Pairing: openclaw dir=${OPENCLAW_DIR}, owner=${OWNER_USER}`);
 /** Parse OpenClaw v1 pairing file */
 function readPairingFile(channel) {
     const filePath = join(CREDENTIALS_DIR, `${channel}-pairing.json`);
