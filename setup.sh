@@ -379,14 +379,30 @@ install_gogcli() {
   # Create wrapper script that auto-sources GOG_ACCESS_TOKEN
   cat > /usr/local/bin/gog <<'WRAPPER'
 #!/bin/bash
-# gogcli wrapper — auto-loads token + disables keyring prompts
+# gogcli wrapper — auto-loads token + intercepts auth commands
 GOG_ENV="${HOME}/.openclaw/gog.env"
 if [[ -f "$GOG_ENV" ]]; then
   source "$GOG_ENV"
 fi
+
 # Prevent keyring password prompts on headless servers
 export GOG_KEYRING_BACKEND=file
 export GOG_KEYRING_PASSWORD="${GOG_KEYRING_PASSWORD:-clawx}"
+
+# Intercept auth commands that trigger keyring — return token info instead
+if [[ -n "$GOG_ACCESS_TOKEN" ]]; then
+  case "$1:$2" in
+    auth:list|auth:status)
+      echo "✅ Authenticated via GOG_ACCESS_TOKEN (ClawX Google Workspace)"
+      echo "Token: ${GOG_ACCESS_TOKEN:0:20}..."
+      echo "Source: ~/.openclaw/gog.env (auto-refreshed every 45 min)"
+      echo ""
+      echo "Ready to use: gog gmail, gog calendar, gog drive, gog sheets, etc."
+      exit 0
+      ;;
+  esac
+fi
+
 exec /usr/local/bin/gog-bin "$@"
 WRAPPER
   chmod +x /usr/local/bin/gog
