@@ -58,18 +58,78 @@ function clearState(): void {
 
 /**
  * Inject Google access token into gateway environment.
- * Writes a credentials file for headless gws CLI usage.
+ * Writes both the legacy token JSON and GOG_ACCESS_TOKEN env file.
  */
 async function injectTokenToGateway(accessToken: string): Promise<void> {
   const credDir = path.join(os.homedir(), '.openclaw');
-  const credFile = path.join(credDir, 'google-workspace-token.json');
   try {
     if (!fs.existsSync(credDir)) fs.mkdirSync(credDir, { recursive: true });
+
+    // Legacy token file
+    const credFile = path.join(credDir, 'google-workspace-token.json');
     fs.writeFileSync(credFile, JSON.stringify({ token: accessToken, updatedAt: Date.now() }));
     fs.chmodSync(credFile, 0o600);
-    logger.info('Google access token written to gateway credentials file');
+
+    // gogcli env file — sourced before gog commands
+    const gogEnvFile = path.join(credDir, 'gog.env');
+    fs.writeFileSync(gogEnvFile, `export GOG_ACCESS_TOKEN="${accessToken}"\n`);
+    fs.chmodSync(gogEnvFile, 0o600);
+
+    logger.info('Google access token written (token.json + gog.env)');
   } catch (err) {
-    logger.error('Failed to write Google token file', { error: String(err) });
+    logger.error('Failed to write Google token files', { error: String(err) });
+  }
+}
+
+// ── Auto-refresh timer ─────────────────────────────────────────────────────
+const REFRESH_INTERVAL_MS = 45 * 60 * 1000; // 45 minutes
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+async function doTokenRefresh(): Promise<void> {
+  const state = loadState();
+  if (!state) return;
+
+  try {
+    const tokenResp = await fetch(`${GOOGLE_OAUTH_SERVER}/api/token/${state.userId}`);
+    if (!tokenResp.ok) {
+      logger.warn('Auto-refresh: token expired or revoked');
+      return;
+    }
+    const tokenData = await tokenResp.json() as {
+      success: boolean;
+      data?: { access_token: string };
+    };
+    if (tokenData.success && tokenData.data) {
+      await injectTokenToGateway(tokenData.data.access_token);
+      logger.info('Auto-refresh: Google token refreshed successfully');
+    }
+  } catch (err) {
+    logger.error('Auto-refresh failed', { error: String(err) });
+  }
+}
+
+/** Start auto-refresh timer. Call on server boot. */
+export function startAutoRefresh(): void {
+  // Only start if user has already connected
+  const state = loadState();
+  if (!state) {
+    logger.info('Google auto-refresh: no connection found, skipping');
+    return;
+  }
+
+  if (refreshTimer) clearInterval(refreshTimer);
+
+  // Do an immediate refresh on boot
+  doTokenRefresh();
+
+  refreshTimer = setInterval(doTokenRefresh, REFRESH_INTERVAL_MS);
+  logger.info(`Google auto-refresh started (every ${REFRESH_INTERVAL_MS / 60000} min)`);
+}
+
+export function stopAutoRefresh(): void {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
   }
 }
 

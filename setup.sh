@@ -335,6 +335,44 @@ EOF
   fi
 }
 
+# ── Install gogcli (Google Workspace CLI) ──────────────────────────────────
+install_gogcli() {
+  step "Installing gogcli (Google Workspace CLI)"
+
+  if command -v gog &>/dev/null; then
+    info "gogcli already installed: $(gog --version 2>&1 | head -1)"
+    return
+  fi
+
+  local GOGCLI_VERSION="0.12.0"
+  local ARCH
+  ARCH=$(uname -m)
+  case "$ARCH" in
+    x86_64)  ARCH="amd64" ;;
+    aarch64) ARCH="arm64" ;;
+    *)       warn "Unsupported architecture: $ARCH, skipping gogcli"; return ;;
+  esac
+
+  local URL="https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_${ARCH}.tar.gz"
+  local TMP_DIR
+  TMP_DIR=$(mktemp -d)
+
+  info "Downloading gogcli v${GOGCLI_VERSION} (${ARCH})..."
+  if curl -fsSL "$URL" | tar xz -C "$TMP_DIR" 2>/dev/null; then
+    if [[ -f "$TMP_DIR/gog" ]]; then
+      mv "$TMP_DIR/gog" /usr/local/bin/gog
+      chmod +x /usr/local/bin/gog
+      log "gogcli installed: $(gog --version 2>&1 | head -1)"
+    else
+      warn "gogcli binary not found in archive (non-critical, skip)"
+    fi
+  else
+    warn "Failed to download gogcli (non-critical, skip)"
+  fi
+
+  rm -rf "$TMP_DIR"
+}
+
 # ── Setup systemd ──────────────────────────────────────────────────────────
 setup_systemd() {
   step "Setting up systemd service"
@@ -601,8 +639,9 @@ cmd_install() {
   # Install ttyd web terminal
   if [[ $EUID -eq 0 ]]; then
     install_ttyd
+    install_gogcli
   else
-    warn "Skipping ttyd setup (requires root)"
+    warn "Skipping ttyd/gogcli setup (requires root)"
   fi
 
   # Configure OpenClaw (gateway mode, exec, allowed origins)
