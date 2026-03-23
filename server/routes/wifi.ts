@@ -23,6 +23,25 @@ async function nmcli(...args: string[]): Promise<string> {
   }
 }
 
+// nmcli -t escapes colons in values as \: — this splits correctly
+function splitTerse(line: string): string[] {
+  const parts: string[] = [];
+  let cur = '';
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '\\' && i + 1 < line.length && line[i + 1] === ':') {
+      cur += ':';
+      i++;
+    } else if (line[i] === ':') {
+      parts.push(cur);
+      cur = '';
+    } else {
+      cur += line[i];
+    }
+  }
+  parts.push(cur);
+  return parts;
+}
+
 interface WifiNetwork {
   inUse: boolean;
   bssid: string;
@@ -43,60 +62,32 @@ router.get('/scan', async (_req, res) => {
     try { await nmcli('device', 'wifi', 'rescan'); } catch { /* ignore rescan errors */ }
     await new Promise(r => setTimeout(r, 2000));
 
-    // Use multiline mode to avoid BSSID colon delimiter conflicts
     const output = await nmcli(
-      '-m', 'multiline', '-f', 'IN-USE,SSID,SIGNAL,SECURITY,BSSID',
+      '-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY',
       'device', 'wifi', 'list'
     );
 
     const networks: WifiNetwork[] = [];
     const seenSSIDs = new Set<string>();
 
-    // Parse multiline: each field on its own line, records separated by blank lines
-    let current: Partial<WifiNetwork> = {};
-    for (const line of output.split('\n')) {
-      const match = line.match(/^\s*([^:]+):\s*(.*)/);
-      if (!match) {
-        // End of record
-        if (current.ssid && current.ssid !== '--') {
-          if (!seenSSIDs.has(current.ssid)) {
-            seenSSIDs.add(current.ssid);
-            networks.push({
-              inUse: current.inUse || false,
-              bssid: current.bssid || '',
-              ssid: current.ssid,
-              mode: '',
-              channel: 0,
-              rate: '',
-              signal: current.signal || 0,
-              security: current.security || '',
-            });
-          }
-        }
-        current = {};
-        continue;
-      }
+    for (const line of output.trim().split('\n')) {
+      if (!line.trim()) continue;
+      const parts = splitTerse(line);
+      // Fields: IN-USE, SSID, SIGNAL, SECURITY
+      if (parts.length < 4) continue;
 
-      const key = match[1].trim();
-      const value = match[2].trim();
+      const inUse = parts[0] === '*';
+      const ssid = parts[1];
+      const signal = parseInt(parts[2], 10) || 0;
+      const security = parts[3];
 
-      if (key === 'IN-USE') current.inUse = value === '*';
-      else if (key === 'SSID') current.ssid = value;
-      else if (key === 'SIGNAL') current.signal = parseInt(value, 10) || 0;
-      else if (key === 'SECURITY') current.security = value;
-      else if (key === 'BSSID') current.bssid = value;
-    }
-    // Don't forget the last record
-    if (current.ssid && current.ssid !== '--' && !seenSSIDs.has(current.ssid)) {
+      if (!ssid || ssid === '--') continue;
+      if (seenSSIDs.has(ssid)) continue;
+      seenSSIDs.add(ssid);
+
       networks.push({
-        inUse: current.inUse || false,
-        bssid: current.bssid || '',
-        ssid: current.ssid,
-        mode: '',
-        channel: 0,
-        rate: '',
-        signal: current.signal || 0,
-        security: current.security || '',
+        inUse, bssid: '', ssid, mode: '', channel: 0, rate: '',
+        signal, security,
       });
     }
 
