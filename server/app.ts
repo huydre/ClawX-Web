@@ -18,6 +18,7 @@ import authRouter from './routes/auth.js';
 import oauthRouter from './routes/oauth.js';
 import channelConfigRouter from './routes/channel-config.js';
 import googleAuthRouter from './routes/google-auth.js';
+import { startAutoRefresh } from './routes/google-auth.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const app = express();
@@ -137,5 +138,8 @@ app.use((req, res, next) => {
 
 // Error handler (must be last)
 app.use(errorHandler);
+
+// Start Google token auto-refresh if already connected
+startAutoRefresh();
 
 export { app, dashboardProxy };

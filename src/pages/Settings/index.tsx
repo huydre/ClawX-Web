@@ -249,9 +249,9 @@ function GoogleWorkspaceCard() {
       await fetch('/api/gateway/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'openclaw skill install swaylq/gws-workspace' }),
+        body: JSON.stringify({ command: 'openclaw skill install luccast/gogcli' }),
       });
-      toast.success('Google Workspace skill installed');
+      toast.success('gogcli (Google Workspace CLI) skill installed');
     } catch {
       // Skill install is best-effort
     } finally {
@@ -272,7 +272,7 @@ function GoogleWorkspaceCard() {
           Google Workspace
         </CardTitle>
         <CardDescription>
-          Kết nối Google để sử dụng Gmail, Drive, Calendar, Sheets qua AI
+          Kết nối Google để sử dụng Gmail, Drive, Calendar, Sheets, Docs, Slides, Contacts, Tasks qua AI (gogcli)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -326,7 +326,7 @@ function GoogleWorkspaceCard() {
             )}
 
             <p className="text-xs text-muted-foreground">
-              OpenClaw có thể đọc/gửi Gmail, quản lý Drive, Calendar, Sheets và các dịch vụ Google Workspace khác.
+              OpenClaw sử dụng gogcli để đọc/gửi Gmail, quản lý Drive, Calendar, Sheets, Docs, Slides, Contacts, Tasks. Token tự động làm mới.
             </p>
             <Button
               variant="destructive"
