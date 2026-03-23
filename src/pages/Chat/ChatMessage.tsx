@@ -356,7 +356,7 @@ function MessageBubble({
   return (
     <div
       className={cn(
-        'relative rounded-2xl px-4 py-3',
+        'relative rounded-2xl px-4 py-3 overflow-hidden',
         !isUser && 'w-full',
         isUser
           ? 'bg-primary text-primary-foreground'
@@ -364,7 +364,7 @@ function MessageBubble({
       )}
     >
       {isUser ? (
-        <p className="whitespace-pre-wrap text-sm">{text}</p>
+        <p className="whitespace-pre-wrap break-all text-sm">{text}</p>
       ) : (
         <div className="prose prose-sm dark:prose-invert max-w-none">
           <ReactMarkdown
