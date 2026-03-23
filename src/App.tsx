@@ -2,7 +2,7 @@
  * Root Application Component
  * Handles routing and global providers
  */
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Component, useEffect, useState, useCallback } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Toaster } from 'sonner';
@@ -15,7 +15,7 @@ import { Channels } from './pages/Channels';
 import { Skills } from './pages/Skills';
 import { Cron } from './pages/Cron';
 import { Settings } from './pages/Settings';
-import { Setup } from './pages/Setup';
+
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
 import { ws } from './lib/websocket';
@@ -89,10 +89,10 @@ class ErrorBoundary extends Component<
 
 function App() {
   const navigate = useNavigate();
-  const location = useLocation();
+
   const theme = useSettingsStore((state) => state.theme);
   const language = useSettingsStore((state) => state.language);
-  const setupComplete = useSettingsStore((state) => state.setupComplete);
+
   const initGateway = useGatewayStore((state) => state.init);
 
   // Auth state
@@ -140,12 +140,7 @@ function App() {
     };
   }, []);
 
-  // Redirect to setup wizard if not complete
-  useEffect(() => {
-    if (!setupComplete && !location.pathname.startsWith('/setup')) {
-      navigate('/setup');
-    }
-  }, [setupComplete, location.pathname, navigate]);
+  // Setup redirect removed — go straight to main app
 
   // Listen for navigation events from main process
   useEffect(() => {
@@ -203,8 +198,6 @@ function App() {
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
         <Routes>
-          {/* Setup wizard (shown on first launch) */}
-          <Route path="/setup/*" element={<Setup />} />
 
           {/* Main application routes */}
           <Route element={<MainLayout />}>
