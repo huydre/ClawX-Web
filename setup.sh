@@ -237,6 +237,16 @@ cmd_update() {
       chmod 0440 "$SUDOERS_FILE"
       log "sudoers rule installed: ${CLAWX_USER} can run nmcli without password"
     fi
+
+    # Ensure NetworkManager starts at boot and WiFi radio is on
+    if command -v nmcli &>/dev/null; then
+      systemctl enable NetworkManager 2>/dev/null || true
+      nmcli radio wifi on 2>/dev/null || true
+      # Auto-connect saved WiFi if not connected
+      if ! nmcli -t -f TYPE connection show --active 2>/dev/null | grep -q '802-11-wireless'; then
+        nmcli connection up "$(nmcli -t -f NAME,TYPE connection show 2>/dev/null | grep '802-11-wireless' | head -1 | cut -d: -f1)" 2>/dev/null || true
+      fi
+    fi
   fi
 
   # Restart service
