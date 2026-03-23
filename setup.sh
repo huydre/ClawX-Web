@@ -221,12 +221,13 @@ cmd_update() {
   # Rebuild
   do_build
 
-  # Ensure ttyd is installed (may be new since last install)
+  # Ensure ttyd and gogcli are installed (may be new since last install)
   if [[ $EUID -eq 0 ]]; then
     load_existing_env
     CFG_TTYD_PORT="${EXISTING_TTYD_PORT:-7681}"
     CFG_AUTH_PASSWORD="${EXISTING_AUTH_PASSWORD:-ClawX2026}"
     install_ttyd
+    install_gogcli
   fi
 
   # Restart service
