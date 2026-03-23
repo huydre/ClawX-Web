@@ -233,7 +233,7 @@ router.get('/codex/start', async (_req, res) => {
                 email,
             });
             // Set default model
-            setOpenClawDefaultModel('openai-codex', 'codex-mini-latest');
+            setOpenClawDefaultModel('openai-codex', 'gpt-5.3-codex');
             logger.info('Codex OAuth complete', { accountId, expiresAt: new Date(expiresAt).toISOString() });
         })
             .catch((err) => {
