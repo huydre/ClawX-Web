@@ -200,7 +200,7 @@ export function WifiSettings() {
       </div>
 
       {/* Network list */}
-      <div className="space-y-1">
+      <div className="space-y-1 max-h-[360px] overflow-y-auto pr-1">
         {scanning && networks.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" />
