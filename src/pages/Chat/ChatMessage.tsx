@@ -89,7 +89,7 @@ export const ChatMessage = memo(function ChatMessage({
           isUser ? 'items-end' : 'items-start',
         )}
       >
-        {showThinking && isStreaming && !isUser && streamingTools.length > 0 && (
+        {isStreaming && !isUser && streamingTools.length > 0 && (
           <ToolStatusBar tools={streamingTools} />
         )}
 
@@ -622,7 +622,7 @@ function ToolCard({ name, input }: { name: string; input: unknown }) {
         {expanded ? <ChevronDown className="h-3 w-3 ml-auto" /> : <ChevronRight className="h-3 w-3 ml-auto" />}
       </button>
       {expanded && input != null && (
-        <pre className="px-3 pb-2 text-xs text-muted-foreground overflow-x-auto">
+        <pre className="px-3 pb-2 text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all max-w-full">
           {typeof input === 'string' ? input : JSON.stringify(input, null, 2) as string}
         </pre>
       )}
