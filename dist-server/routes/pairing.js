@@ -249,34 +249,16 @@ router.post('/approve', async (req, res) => {
         res.status(500).json({ error: String(error) });
     }
 });
-// POST /api/pairing/reject — uses CLI
+// POST /api/pairing/reject — directly remove from pairing file (no CLI needed)
 router.post('/reject', async (req, res) => {
     try {
         const { channel, code } = req.body;
         if (!channel || !code) {
             return res.status(400).json({ error: 'Missing channel or code' });
         }
-        const cmd = buildCmd(`pairing reject ${channel} ${code}`);
-        logger.info(`Pairing reject: running "${cmd}"`);
-        try {
-            const { stdout } = await execAsync(cmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
-            logger.info(`Pairing rejected: ${channel} ${code}`, { stdout: stdout.trim() });
-            removePairingEntry(channel, code);
-            res.json({ success: true });
-        }
-        catch {
-            // Reject may not have CLI support — try with 'deny' alias
-            try {
-                const denyCmd = buildCmd(`pairing deny ${channel} ${code}`);
-                const { stdout } = await execAsync(denyCmd, { timeout: 15000, env: { ...process.env, CI: 'true' } });
-                removePairingEntry(channel, code);
-                res.json({ success: true, output: stdout.trim() });
-            }
-            catch (err2) {
-                logger.warn('CLI reject failed', { error: String(err2) });
-                res.status(500).json({ error: 'Reject CLI failed: ' + String(err2) });
-            }
-        }
+        removePairingEntry(channel, code);
+        logger.info(`Pairing rejected (direct): ${channel} ${code}`);
+        res.json({ success: true });
     }
     catch (error) {
         logger.error('Reject pairing error:', error);
