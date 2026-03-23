@@ -31,36 +31,60 @@ router.get('/scan', async (_req, res) => {
             await nmcli('device', 'wifi', 'rescan');
         }
         catch { /* ignore rescan errors */ }
-        await new Promise(r => setTimeout(r, 1500));
-        const output = await nmcli('-t', '-f', 'IN-USE,BSSID,SSID,MODE,CHAN,RATE,SIGNAL,SECURITY', 'device', 'wifi', 'list');
+        await new Promise(r => setTimeout(r, 2000));
+        // Use multiline mode to avoid BSSID colon delimiter conflicts
+        const output = await nmcli('-m', 'multiline', '-f', 'IN-USE,SSID,SIGNAL,SECURITY,BSSID', 'device', 'wifi', 'list');
         const networks = [];
         const seenSSIDs = new Set();
-        for (const line of output.trim().split('\n')) {
-            if (!line.trim())
+        // Parse multiline: each field on its own line, records separated by blank lines
+        let current = {};
+        for (const line of output.split('\n')) {
+            const match = line.match(/^\s*([^:]+):\s*(.*)/);
+            if (!match) {
+                // End of record
+                if (current.ssid && current.ssid !== '--') {
+                    if (!seenSSIDs.has(current.ssid)) {
+                        seenSSIDs.add(current.ssid);
+                        networks.push({
+                            inUse: current.inUse || false,
+                            bssid: current.bssid || '',
+                            ssid: current.ssid,
+                            mode: '',
+                            channel: 0,
+                            rate: '',
+                            signal: current.signal || 0,
+                            security: current.security || '',
+                        });
+                    }
+                }
+                current = {};
                 continue;
-            // nmcli -t uses : as separator, but BSSID also has colons
-            // Format: *:AA\:BB\:CC\:DD\:EE\:FF:SSID:Infra:6:130 Mbit/s:85:WPA2
-            const parts = line.split(':');
-            if (parts.length < 8)
-                continue;
-            const inUse = parts[0] === '*';
-            // BSSID: next 6 parts joined with :  (they're escaped with \)
-            const bssid = parts.slice(1, 7).join(':').replace(/\\\\/g, '');
-            const remaining = parts.slice(7);
-            // Last 4 are: MODE, CHAN, RATE, SIGNAL, SECURITY
-            const security = remaining.pop() || '';
-            const signal = parseInt(remaining.pop() || '0', 10);
-            const rate = remaining.pop() || '';
-            const channel = parseInt(remaining.pop() || '0', 10);
-            const mode = remaining.pop() || '';
-            const ssid = remaining.join(':');
-            if (!ssid || ssid === '--')
-                continue;
-            // Deduplicate by SSID, keep strongest signal
-            if (seenSSIDs.has(ssid))
-                continue;
-            seenSSIDs.add(ssid);
-            networks.push({ inUse, bssid, ssid, mode, channel, rate, signal, security });
+            }
+            const key = match[1].trim();
+            const value = match[2].trim();
+            if (key === 'IN-USE')
+                current.inUse = value === '*';
+            else if (key === 'SSID')
+                current.ssid = value;
+            else if (key === 'SIGNAL')
+                current.signal = parseInt(value, 10) || 0;
+            else if (key === 'SECURITY')
+                current.security = value;
+            else if (key === 'BSSID')
+                current.bssid = value;
+        }
+        // Don't forget the last record
+        if (current.ssid && current.ssid !== '--' && !seenSSIDs.has(current.ssid)) {
+            networks.push({
+                inUse: current.inUse || false,
+                bssid: current.bssid || '',
+                ssid: current.ssid,
+                mode: '',
+                channel: 0,
+                rate: '',
+                signal: current.signal || 0,
+                security: current.security || '',
+            });
         }
         // Sort: in-use first, then by signal strength
         networks.sort((a, b) => {
