@@ -339,38 +339,54 @@ EOF
 install_gogcli() {
   step "Installing gogcli (Google Workspace CLI)"
 
-  if command -v gog &>/dev/null; then
-    info "gogcli already installed: $(gog --version 2>&1 | head -1)"
-    return
-  fi
-
-  local GOGCLI_VERSION="0.12.0"
-  local ARCH
-  ARCH=$(uname -m)
-  case "$ARCH" in
-    x86_64)  ARCH="amd64" ;;
-    aarch64) ARCH="arm64" ;;
-    *)       warn "Unsupported architecture: $ARCH, skipping gogcli"; return ;;
-  esac
-
-  local URL="https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_${ARCH}.tar.gz"
-  local TMP_DIR
-  TMP_DIR=$(mktemp -d)
-
-  info "Downloading gogcli v${GOGCLI_VERSION} (${ARCH})..."
-  if curl -fsSL "$URL" | tar xz -C "$TMP_DIR" 2>/dev/null; then
-    if [[ -f "$TMP_DIR/gog" ]]; then
-      mv "$TMP_DIR/gog" /usr/local/bin/gog
-      chmod +x /usr/local/bin/gog
-      log "gogcli installed: $(gog --version 2>&1 | head -1)"
-    else
-      warn "gogcli binary not found in archive (non-critical, skip)"
-    fi
+  # Check if real binary exists (not just our wrapper)
+  if [[ -f /usr/local/bin/gog-bin ]]; then
+    info "gogcli already installed: $(gog-bin --version 2>&1 | head -1)"
   else
-    warn "Failed to download gogcli (non-critical, skip)"
+    local GOGCLI_VERSION="0.12.0"
+    local ARCH
+    ARCH=$(uname -m)
+    case "$ARCH" in
+      x86_64)  ARCH="amd64" ;;
+      aarch64) ARCH="arm64" ;;
+      *)       warn "Unsupported architecture: $ARCH, skipping gogcli"; return ;;
+    esac
+
+    local URL="https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_${ARCH}.tar.gz"
+    local TMP_DIR
+    TMP_DIR=$(mktemp -d)
+
+    info "Downloading gogcli v${GOGCLI_VERSION} (${ARCH})..."
+    if curl -fsSL "$URL" | tar xz -C "$TMP_DIR" 2>/dev/null; then
+      if [[ -f "$TMP_DIR/gog" ]]; then
+        mv "$TMP_DIR/gog" /usr/local/bin/gog-bin
+        chmod +x /usr/local/bin/gog-bin
+        log "gogcli binary installed: $(gog-bin --version 2>&1 | head -1)"
+      else
+        warn "gogcli binary not found in archive (non-critical, skip)"
+        rm -rf "$TMP_DIR"
+        return
+      fi
+    else
+      warn "Failed to download gogcli (non-critical, skip)"
+      rm -rf "$TMP_DIR"
+      return
+    fi
+    rm -rf "$TMP_DIR"
   fi
 
-  rm -rf "$TMP_DIR"
+  # Create wrapper script that auto-sources GOG_ACCESS_TOKEN
+  cat > /usr/local/bin/gog <<'WRAPPER'
+#!/bin/bash
+# gogcli wrapper — auto-loads GOG_ACCESS_TOKEN from gog.env
+GOG_ENV="${HOME}/.openclaw/gog.env"
+if [[ -f "$GOG_ENV" ]]; then
+  source "$GOG_ENV"
+fi
+exec /usr/local/bin/gog-bin "$@"
+WRAPPER
+  chmod +x /usr/local/bin/gog
+  log "gogcli wrapper installed (auto-loads GOG_ACCESS_TOKEN)"
 }
 
 # ── Setup systemd ──────────────────────────────────────────────────────────
