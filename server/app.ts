@@ -90,6 +90,9 @@ app.use('/api/auth', authRouter);
 // OAuth callback must be before auth middleware (OpenAI redirects here)
 app.use('/api/oauth', oauthRouter);
 
+// Google Auth callback must be before auth middleware (Google redirects here)
+app.use('/api/google-auth', googleAuthRouter);
+
 // Password gate — all routes below require authentication
 app.use(authMiddleware);
 
@@ -104,7 +107,6 @@ app.use('/api/channels', channelsRouter);
 app.use('/api/system', systemRouter);
 app.use('/api/pairing', pairingRouter);
 app.use('/api/channel-config', channelConfigRouter);
-app.use('/api/google-auth', googleAuthRouter);
 app.use('/api/wifi', wifiRouter);
 
 // Serve hashed assets with long-term immutable cache
