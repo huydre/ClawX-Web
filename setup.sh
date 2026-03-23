@@ -228,6 +228,15 @@ cmd_update() {
     CFG_AUTH_PASSWORD="${EXISTING_AUTH_PASSWORD:-ClawX2026}"
     install_ttyd
     install_gogcli
+
+    # Ensure nmcli sudoers rule exists (WiFi management from web UI)
+    local CLAWX_USER="${SUDO_USER:-$(logname 2>/dev/null || echo techla)}"
+    local SUDOERS_FILE="/etc/sudoers.d/clawx-nmcli"
+    if [[ ! -f "$SUDOERS_FILE" ]] || ! grep -q "nmcli" "$SUDOERS_FILE" 2>/dev/null; then
+      echo "${CLAWX_USER} ALL=(ALL) NOPASSWD: /usr/bin/nmcli" > "$SUDOERS_FILE"
+      chmod 0440 "$SUDOERS_FILE"
+      log "sudoers rule installed: ${CLAWX_USER} can run nmcli without password"
+    fi
   fi
 
   # Restart service
