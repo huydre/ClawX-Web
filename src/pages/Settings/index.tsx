@@ -21,6 +21,7 @@ import {
   EyeOff,
   LogOut,
   Stethoscope,
+  Wifi,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +39,7 @@ import { UpdateSettings } from '@/components/settings/UpdateSettings';
 import { WebUpdateSettings } from '@/components/settings/WebUpdateSettings';
 import { TunnelSettings } from '@/components/settings/TunnelSettings';
 import { ExecSettings } from '@/components/settings/ExecSettings';
+import { WifiSettings } from '@/components/settings/WifiSettings';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { platform } from '@/lib/platform';
@@ -747,6 +749,22 @@ export function Settings() {
           <TunnelSettings />
         </CardContent>
       </Card>
+
+      {/* WiFi Settings */}
+      {platform.isWeb && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wifi className="h-5 w-5" />
+              WiFi
+            </CardTitle>
+            <CardDescription>Quản lý kết nối WiFi — quét, kết nối, ngắt mạng</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WifiSettings />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Google Workspace */}
       {platform.isWeb && (

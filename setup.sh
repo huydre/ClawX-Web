@@ -676,8 +676,17 @@ cmd_install() {
   if [[ $EUID -eq 0 ]]; then
     install_ttyd
     install_gogcli
+
+    # Allow clawx user to run nmcli without password (WiFi management from web UI)
+    local CLAWX_USER="${SUDO_USER:-$(logname 2>/dev/null || echo techla)}"
+    local SUDOERS_FILE="/etc/sudoers.d/clawx-nmcli"
+    if [[ ! -f "$SUDOERS_FILE" ]] || ! grep -q "nmcli" "$SUDOERS_FILE" 2>/dev/null; then
+      echo "${CLAWX_USER} ALL=(ALL) NOPASSWD: /usr/bin/nmcli" > "$SUDOERS_FILE"
+      chmod 0440 "$SUDOERS_FILE"
+      log "sudoers rule installed: ${CLAWX_USER} can run nmcli without password"
+    fi
   else
-    warn "Skipping ttyd/gogcli setup (requires root)"
+    warn "Skipping ttyd/gogcli/nmcli setup (requires root)"
   fi
 
   # Configure OpenClaw (gateway mode, exec, allowed origins)
