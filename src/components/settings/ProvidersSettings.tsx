@@ -787,8 +787,8 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
     return () => clearTimeout(timer);
   }, [apiKey, selectedType, baseUrl, typeInfo?.canFetchModels, typeInfo?.requiresApiKey]);
 
-  // custom and 9router can be added multiple times (multiple instances/configs).
-  const MULTI_INSTANCE_TYPES = new Set(['custom', '9router']);
+  // custom, 9router, and codex can be added multiple times (multi-account OAuth rotation).
+  const MULTI_INSTANCE_TYPES = new Set(['custom', '9router', 'codex']);
   const availableTypes = PROVIDER_TYPE_INFO.filter(
     (t) => MULTI_INSTANCE_TYPES.has(t.id) || !existingTypes.has(t.id),
   );
