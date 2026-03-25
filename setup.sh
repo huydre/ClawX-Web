@@ -228,6 +228,7 @@ cmd_update() {
     CFG_AUTH_PASSWORD="${EXISTING_AUTH_PASSWORD:-ClawX2026}"
     install_ttyd
     install_gogcli
+    install_openzca
 
     # Ensure nmcli sudoers rule exists (WiFi management from web UI)
     local CLAWX_USER="${SUDO_USER:-$(logname 2>/dev/null || echo techla)}"
@@ -426,6 +427,29 @@ exec /usr/local/bin/gog-bin "$@"
 WRAPPER
   chmod +x /usr/local/bin/gog
   log "gogcli wrapper installed (auto-loads GOG_ACCESS_TOKEN, no keyring prompts)"
+}
+
+# ── Install openzca (OpenZalo CLI) ─────────────────────────────────────────
+install_openzca() {
+  step "Installing openzca (OpenZalo CLI)"
+
+  # Check if openzca is already installed
+  if command -v openzca &>/dev/null; then
+    info "openzca already installed: $(openzca --version 2>&1 | head -1)"
+  else
+    info "Installing openzca globally via npm..."
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "$NVM_SOURCE_CMD && npm install -g openzca" "$CLAWX_USER" 2>&1 | tail -3
+    else
+      npm install -g openzca 2>&1 | tail -3
+    fi
+
+    if command -v openzca &>/dev/null; then
+      log "openzca installed: $(openzca --version 2>&1 | head -1)"
+    else
+      warn "Failed to install openzca (non-critical, skip)"
+    fi
+  fi
 }
 
 # ── Setup systemd ──────────────────────────────────────────────────────────
@@ -695,6 +719,7 @@ cmd_install() {
   if [[ $EUID -eq 0 ]]; then
     install_ttyd
     install_gogcli
+    install_openzca
 
     # Allow clawx user to run nmcli without password (WiFi management from web UI)
     local CLAWX_USER="${SUDO_USER:-$(logname 2>/dev/null || echo techla)}"
