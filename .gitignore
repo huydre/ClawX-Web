@@ -62,4 +62,5 @@ build/
 
 .cursor/
 .pnpm-store/
-.agent/.claude/
+.agent/
+.claude/
