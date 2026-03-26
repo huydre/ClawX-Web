@@ -85,10 +85,28 @@ export const useCronStore = create<CronState>((set) => ({
       if (platform.isElectron) {
         job = await window.electron.ipcRenderer.invoke('cron:create', input) as CronJob;
       } else {
-        job = await api.createCronJob(input);
+        const rawJob = await api.createCronJob(input);
+        // In case rawJob only has an ID, we populate optimistic values from input
+        job = transformGatewayJob({
+          id: rawJob?.id || `temp-${Date.now()}`,
+          name: input.name,
+          schedule: typeof input.schedule === 'string'
+            ? { kind: 'cron', expr: input.schedule }
+            : input.schedule,
+          payload: { kind: 'agentTurn', message: input.message },
+          delivery: {
+            channel: input.target.channelType,
+            to: input.target.channelId,
+          },
+          ...rawJob
+        });
       }
 
       set((state) => ({ jobs: [...state.jobs, job] }));
+      
+      // Sync from gateway in background
+      useCronStore.getState().fetchJobs();
+      
       return job;
     } catch (error) {
       console.error('Failed to create cron job:', error);
