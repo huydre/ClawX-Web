@@ -150,9 +150,9 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
 
   // Find channel by type if channelId is empty (for existing jobs from Gateway)
   const initialChannelId = (() => {
-    if (job?.target.channelId) return job.target.channelId;
+    if (job?.target?.channelId) return job?.target?.channelId;
     // Try to find channel by type
-    const channelType = job?.target.channelType;
+    const channelType = job?.target?.channelType;
     if (channelType) {
       const matchingChannel = channels.find(c => c.type === channelType);
       return matchingChannel?.id || '';
@@ -208,9 +208,9 @@ function TaskDialog({ job, onClose, onSave }: TaskDialogProps) {
           message: message.trim(),
           schedule: finalSchedule,
           target: {
-            channelType: selectedChannel!.type,
+            channelType: selectedChannel?.type || 'telegram',
             channelId: actualChannelId,
-            channelName: selectedChannel!.name,
+            channelName: selectedChannel?.name || 'Telegram',
           },
           enabled,
         });
@@ -462,8 +462,8 @@ function CronJobCard({ job, onToggle, onEdit, onDelete, onTrigger }: CronJobCard
         {/* Metadata */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs md:text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
-            <ChannelIcon type={job.target.channelType} className="h-3.5 w-3.5 shrink-0" />
-            {job.target.channelName}
+            <ChannelIcon type={job.target?.channelType || 'telegram'} className="h-3.5 w-3.5 shrink-0" />
+            {job.target?.channelName || 'Telegram'}
           </span>
 
           {job.lastRun && (
