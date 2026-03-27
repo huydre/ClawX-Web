@@ -89,12 +89,12 @@ export const PROVIDER_TYPE_INFO: ProviderTypeInfo[] = [
   {
     id: 'codex', name: 'Codex (OpenAI)', icon: '🧠', placeholder: 'Connect via OAuth', model: 'Codex',
     requiresApiKey: false, useOAuth: true, canFetchModels: true,
-    defaultModelId: 'gpt-5.3-codex',
+    defaultModelId: 'gpt-5.4',
     models: [
-      { id: 'codex-mini-latest', name: 'Codex Mini (Latest)' },
-      { id: 'codex-mini', name: 'Codex Mini' },
       { id: 'gpt-5.4', name: 'GPT 5.4' },
       { id: 'gpt-5.3-codex', name: 'GPT 5.3 Codex' },
+      { id: 'codex-mini-latest', name: 'Codex Mini (Latest)' },
+      { id: 'codex-mini', name: 'Codex Mini' },
       { id: 'gpt-5.3-codex-xhigh', name: 'GPT 5.3 Codex XHigh' },
       { id: 'gpt-5.3-codex-high', name: 'GPT 5.3 Codex High' },
       { id: 'gpt-5.3-codex-low', name: 'GPT 5.3 Codex Low' },

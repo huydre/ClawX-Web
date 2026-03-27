@@ -43,6 +43,26 @@
             "editKey": "Edit API key",
             "delete": "Delete provider"
         },
+        "codexBuy": {
+            "tabHaveAccount": "I have an account",
+            "tabBuySlot": "Buy Codex slot",
+            "price": "200,000 VND / slot",
+            "emailLabel": "Registration email",
+            "emailPlaceholder": "email@example.com",
+            "generateQR": "Generate payment QR",
+            "paymentInfo": "Payment information",
+            "bank": "Techcombank",
+            "accountName": "TECHLA AI CO., LTD",
+            "accountNo": "39156868",
+            "transferContent": "Transfer content",
+            "afterPayment": "After payment",
+            "waitNote": "Processing time: usually 5-15 minutes during business hours",
+            "step1": "Check email → Accept invite from OpenAI",
+            "step2": "Sign in at platform.openai.com",
+            "step3": "Come back here and click \"Connect Codex\" below",
+            "connectCodex": "Connect Codex",
+            "scanQR": "Scan QR code or transfer manually"
+        },
         "toast": {
             "added": "Provider added successfully",
             "failedAdd": "Failed to add provider",

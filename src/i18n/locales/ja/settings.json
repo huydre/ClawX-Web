@@ -43,6 +43,26 @@
             "editKey": "API キーを編集",
             "delete": "プロバイダーを削除"
         },
+        "codexBuy": {
+            "tabHaveAccount": "アカウントを持っている",
+            "tabBuySlot": "Codex スロットを購入",
+            "price": "200,000 VND / スロット",
+            "emailLabel": "登録メール",
+            "emailPlaceholder": "email@example.com",
+            "generateQR": "QR コードを生成",
+            "paymentInfo": "支払い情報",
+            "bank": "Techcombank",
+            "accountName": "TECHLA AI CO., LTD",
+            "accountNo": "39156868",
+            "transferContent": "振込内容",
+            "afterPayment": "支払い後",
+            "waitNote": "処理時間：通常営業時間内5〜15分",
+            "step1": "メールを確認 → OpenAI からの招待を承認",
+            "step2": "platform.openai.com にログイン",
+            "step3": "ここに戻って下の「Codex を接続」をクリック",
+            "connectCodex": "Codex を接続",
+            "scanQR": "QR コードをスキャンまたは手動で振込"
+        },
         "toast": {
             "added": "プロバイダーが正常に追加されました",
             "failedAdd": "プロバイダーの追加に失敗しました",

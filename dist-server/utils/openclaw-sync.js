@@ -59,7 +59,7 @@ const REGISTRY = {
         },
     },
     'openai-codex': {
-        defaultModel: 'openai-codex/gpt-5.3-codex',
+        defaultModel: 'openai-codex/gpt-5.4',
         providerConfig: {
             baseUrl: 'https://api.openai.com/v1',
             api: 'openai-responses',
@@ -69,7 +69,7 @@ const REGISTRY = {
     // Alias: UI uses 'codex' but OpenClaw uses 'openai-codex'
     codex: {
         openclawId: 'openai-codex',
-        defaultModel: 'openai-codex/gpt-5.3-codex',
+        defaultModel: 'openai-codex/gpt-5.4',
         providerConfig: {
             baseUrl: 'https://api.openai.com/v1',
             api: 'openai-responses',

@@ -43,6 +43,26 @@
             "editKey": "Sửa khóa API",
             "delete": "Xóa nhà cung cấp"
         },
+        "codexBuy": {
+            "tabHaveAccount": "Đã có tài khoản",
+            "tabBuySlot": "Mua slot Codex",
+            "price": "200,000đ / slot",
+            "emailLabel": "Email đăng ký",
+            "emailPlaceholder": "email@example.com",
+            "generateQR": "Tạo QR thanh toán",
+            "paymentInfo": "Thông tin chuyển khoản",
+            "bank": "Techcombank",
+            "accountName": "TECHLA AI CO., LTD",
+            "accountNo": "39156868",
+            "transferContent": "Nội dung CK",
+            "afterPayment": "Sau khi chuyển khoản",
+            "waitNote": "Chờ xử lý (thường 5-15 phút trong giờ hành chính)",
+            "step1": "Vào email → Accept invite từ OpenAI",
+            "step2": "Đăng nhập tại platform.openai.com",
+            "step3": "Quay lại đây bấm \"Kết nối Codex\" bên dưới",
+            "connectCodex": "Kết nối Codex",
+            "scanQR": "Quét mã QR hoặc chuyển khoản thủ công"
+        },
         "toast": {
             "added": "Đã thêm nhà cung cấp thành công",
             "failedAdd": "Không thể thêm nhà cung cấp",

@@ -748,6 +748,9 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
   const [callbackUrl, setCallbackUrl] = useState('');
   const [showPasteCallback, setShowPasteCallback] = useState(false);
   const [exchanging, setExchanging] = useState(false);
+  const [codexTab, setCodexTab] = useState<'auth' | 'buy'>('auth');
+  const [buyEmail, setBuyEmail] = useState('');
+  const [showQR, setShowQR] = useState(false);
 
   const typeInfo = PROVIDER_TYPE_INFO.find((t) => t.id === selectedType);
 
@@ -774,9 +777,12 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
           const data = await resp.json();
           if (data.models?.length > 0) {
             setFetchedModels(data.models);
-            // Auto-select first model if none selected
-            if (!modelId.trim() || modelId === typeInfo?.defaultModelId) {
-              setModelId(data.models[0].id);
+            // Auto-select: prefer defaultModelId if it exists in fetched list, otherwise first
+            if (!modelId.trim()) {
+              const preferred = typeInfo?.defaultModelId && data.models.some((m: { id: string }) => m.id === typeInfo.defaultModelId)
+                ? typeInfo.defaultModelId
+                : data.models[0].id;
+              setModelId(preferred);
             }
           }
         }
@@ -844,8 +850,8 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
+      <Card className="w-full max-w-md my-auto">
         <CardHeader>
           <CardTitle>{t('aiProviders.dialog.title')}</CardTitle>
           <CardDescription>
@@ -912,122 +918,269 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
               </div>
 
               {typeInfo?.useOAuth ? (
-                /* OAuth flow — show connect button instead of API key input */
-                <div className="space-y-2">
-                  <Label>Authentication</Label>
-                  <Button
-                    className="w-full"
-                    disabled={oauthConnecting || showPasteCallback}
-                    onClick={async () => {
-                      setOauthConnecting(true);
-                      setValidationError(null);
-                      setShowPasteCallback(false);
-                      try {
-                        const resp = await fetch('/api/oauth/codex/start');
-                        const data = await resp.json();
-                        if (data.authUrl) {
-                          window.open(data.authUrl, '_blank');
-                          setShowPasteCallback(true);
-                          // Record when flow started to ignore stale tokens
-                          const flowStartedAt = Date.now();
-                          // Start polling for auto-completion (localhost:1455 callback)
-                          const pollInterval = setInterval(async () => {
-                            try {
-                              const statusResp = await fetch('/api/oauth/codex/status');
-                              const statusData = await statusResp.json();
-                              // Only accept NEW tokens (savedAt must be after flow started)
-                              if (statusData.connected && !statusData.expired && statusData.savedAt > flowStartedAt) {
-                                clearInterval(pollInterval);
-                                setShowPasteCallback(false);
-                                const finalModel = modelId.trim() || typeInfo?.defaultModelId;
-                                await onAdd(
-                                  selectedType!,
-                                  name || typeInfo?.name || selectedType!,
-                                  '',
-                                  { model: finalModel || undefined }
-                                );
-                              }
-                            } catch { /* ignore */ }
-                          }, 3000);
-                          // Stop polling after 5 min
-                          setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
-                        } else {
-                          setValidationError(data.error || 'Failed to start OAuth');
-                        }
-                      } catch (err) {
-                        setValidationError(String(err));
-                      } finally {
-                        setOauthConnecting(false);
-                      }
-                    }}
-                  >
-                    {oauthConnecting ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                    )}
-                    {showPasteCallback ? 'Waiting for login...' : 'Connect with OpenAI'}
-                  </Button>
+                /* Codex — tabs: have account / buy slot */
+                <div className="space-y-3">
+                  <div className="flex rounded-lg border overflow-hidden">
+                    <button
+                      className={cn(
+                        'flex-1 px-3 py-2 text-sm font-medium transition-colors',
+                        codexTab === 'auth' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                      )}
+                      onClick={() => setCodexTab('auth')}
+                    >
+                      {t('aiProviders.codexBuy.tabHaveAccount')}
+                    </button>
+                    <button
+                      className={cn(
+                        'flex-1 px-3 py-2 text-sm font-medium transition-colors',
+                        codexTab === 'buy' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                      )}
+                      onClick={() => setCodexTab('buy')}
+                    >
+                      {t('aiProviders.codexBuy.tabBuySlot')}
+                    </button>
+                  </div>
 
-                  {showPasteCallback && (
-                    <div className="space-y-2 mt-3 p-3 rounded-md border border-dashed border-muted-foreground/30">
-                      <Label className="text-xs">Paste callback URL (for remote access)</Label>
-                      <p className="text-xs text-muted-foreground">
-                        If the page didn't auto-close, copy the URL from the browser tab and paste it here.
-                      </p>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="http://localhost:1455/auth/callback?code=..."
-                          value={callbackUrl}
-                          onChange={(e) => setCallbackUrl(e.target.value)}
-                          className="text-xs"
-                        />
-                        <Button
-                          size="sm"
-                          disabled={!callbackUrl.trim() || exchanging}
-                          onClick={async () => {
-                            setExchanging(true);
-                            setValidationError(null);
-                            try {
-                              const resp = await fetch('/api/oauth/codex/exchange', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ callbackUrl: callbackUrl.trim() }),
-                              });
-                              const data = await resp.json();
-                              if (data.success) {
-                                setShowPasteCallback(false);
-                                setCallbackUrl('');
-                                // Now add the provider
-                                const finalModel = modelId.trim() || typeInfo?.defaultModelId;
-                                await onAdd(
-                                  selectedType!,
-                                  name || typeInfo?.name || selectedType!,
-                                  '',
-                                  { model: finalModel || undefined }
-                                );
-                              } else {
-                                setValidationError(data.error || 'Exchange failed');
-                              }
-                            } catch (err) {
-                              setValidationError(String(err));
-                            } finally {
-                              setExchanging(false);
+                  {codexTab === 'auth' ? (
+                    /* Existing OAuth flow */
+                    <div className="space-y-2">
+                      <Label>Authentication</Label>
+                      <Button
+                        className="w-full"
+                        disabled={oauthConnecting || showPasteCallback}
+                        onClick={async () => {
+                          setOauthConnecting(true);
+                          setValidationError(null);
+                          setShowPasteCallback(false);
+                          try {
+                            const resp = await fetch('/api/oauth/codex/start');
+                            const data = await resp.json();
+                            if (data.authUrl) {
+                              window.open(data.authUrl, '_blank');
+                              setShowPasteCallback(true);
+                              const flowStartedAt = Date.now();
+                              const pollInterval = setInterval(async () => {
+                                try {
+                                  const statusResp = await fetch('/api/oauth/codex/status');
+                                  const statusData = await statusResp.json();
+                                  if (statusData.connected && !statusData.expired && statusData.savedAt > flowStartedAt) {
+                                    clearInterval(pollInterval);
+                                    setShowPasteCallback(false);
+                                    const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+                                    await onAdd(
+                                      selectedType!,
+                                      name || typeInfo?.name || selectedType!,
+                                      '',
+                                      { model: finalModel || undefined }
+                                    );
+                                  }
+                                } catch { /* ignore */ }
+                              }, 3000);
+                              setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+                            } else {
+                              setValidationError(data.error || 'Failed to start OAuth');
                             }
-                          }}
-                        >
-                          {exchanging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                        </Button>
-                      </div>
+                          } catch (err) {
+                            setValidationError(String(err));
+                          } finally {
+                            setOauthConnecting(false);
+                          }
+                        }}
+                      >
+                        {oauthConnecting ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                        )}
+                        {showPasteCallback ? 'Waiting for login...' : 'Connect with OpenAI'}
+                      </Button>
+
+                      {showPasteCallback && (
+                        <div className="space-y-2 mt-3 p-3 rounded-md border border-dashed border-muted-foreground/30">
+                          <Label className="text-xs">Paste callback URL (for remote access)</Label>
+                          <p className="text-xs text-muted-foreground">
+                            If the page didn't auto-close, copy the URL from the browser tab and paste it here.
+                          </p>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="http://localhost:1455/auth/callback?code=..."
+                              value={callbackUrl}
+                              onChange={(e) => setCallbackUrl(e.target.value)}
+                              className="text-xs"
+                            />
+                            <Button
+                              size="sm"
+                              disabled={!callbackUrl.trim() || exchanging}
+                              onClick={async () => {
+                                setExchanging(true);
+                                setValidationError(null);
+                                try {
+                                  const resp = await fetch('/api/oauth/codex/exchange', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ callbackUrl: callbackUrl.trim() }),
+                                  });
+                                  const data = await resp.json();
+                                  if (data.success) {
+                                    setShowPasteCallback(false);
+                                    setCallbackUrl('');
+                                    const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+                                    await onAdd(
+                                      selectedType!,
+                                      name || typeInfo?.name || selectedType!,
+                                      '',
+                                      { model: finalModel || undefined }
+                                    );
+                                  } else {
+                                    setValidationError(data.error || 'Exchange failed');
+                                  }
+                                } catch (err) {
+                                  setValidationError(String(err));
+                                } finally {
+                                  setExchanging(false);
+                                }
+                              }}
+                            >
+                              {exchanging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {validationError && (
+                        <p className="text-xs text-destructive">{validationError}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Opens OpenAI login in a new tab. After approving, tokens are saved automatically.
+                      </p>
+                    </div>
+                  ) : (
+                    /* Buy Codex slot flow */
+                    <div className="space-y-3">
+                      {!showQR ? (
+                        /* Step 1: Email input */
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-lg bg-muted text-center">
+                            <p className="text-lg font-bold">{t('aiProviders.codexBuy.price')}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="buyEmail">{t('aiProviders.codexBuy.emailLabel')}</Label>
+                            <Input
+                              id="buyEmail"
+                              type="email"
+                              placeholder={t('aiProviders.codexBuy.emailPlaceholder')}
+                              value={buyEmail}
+                              onChange={(e) => setBuyEmail(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            className="w-full"
+                            disabled={!buyEmail.trim() || !buyEmail.includes('@')}
+                            onClick={() => setShowQR(true)}
+                          >
+                            {t('aiProviders.codexBuy.generateQR')}
+                          </Button>
+                        </div>
+                      ) : (
+                        /* Step 2: QR + instructions */
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => setShowQR(false)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            ← {t('aiProviders.dialog.change')}
+                          </button>
+
+                          {/* QR Code */}
+                          <div className="text-center space-y-2">
+                            <img
+                              src={`https://img.vietqr.io/image/970407-39156868-compact.png?amount=200000&addInfo=CODEX%20${encodeURIComponent(buyEmail.trim())}&accountName=TECHLA%20AI%20CO.,%20LTD`}
+                              alt="VietQR Payment"
+                              className="mx-auto rounded-lg border max-w-[220px]"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {t('aiProviders.codexBuy.scanQR')}
+                            </p>
+                          </div>
+
+                          {/* Manual transfer info */}
+                          <div className="p-3 rounded-lg border text-sm space-y-1">
+                            <p className="font-medium">{t('aiProviders.codexBuy.paymentInfo')}</p>
+                            <p>{t('aiProviders.codexBuy.bank')} — {t('aiProviders.codexBuy.accountNo')}</p>
+                            <p>{t('aiProviders.codexBuy.accountName')}</p>
+                            <p className="font-mono text-xs">
+                              {t('aiProviders.codexBuy.transferContent')}: <span className="font-bold select-all">CODEX {buyEmail.trim()}</span>
+                            </p>
+                          </div>
+
+                          <Separator />
+
+                          {/* Post-payment instructions */}
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">{t('aiProviders.codexBuy.afterPayment')}</p>
+                            <p className="text-xs text-muted-foreground">{t('aiProviders.codexBuy.waitNote')}</p>
+                            <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
+                              <li>{t('aiProviders.codexBuy.step1')}</li>
+                              <li>{t('aiProviders.codexBuy.step2')}</li>
+                              <li>{t('aiProviders.codexBuy.step3')}</li>
+                            </ol>
+                          </div>
+
+                          {/* Connect button — triggers existing OAuth flow */}
+                          <Button
+                            className="w-full"
+                            disabled={oauthConnecting}
+                            onClick={async () => {
+                              setOauthConnecting(true);
+                              setValidationError(null);
+                              try {
+                                const resp = await fetch('/api/oauth/codex/start');
+                                const data = await resp.json();
+                                if (data.authUrl) {
+                                  window.open(data.authUrl, '_blank');
+                                  const flowStartedAt = Date.now();
+                                  const pollInterval = setInterval(async () => {
+                                    try {
+                                      const statusResp = await fetch('/api/oauth/codex/status');
+                                      const statusData = await statusResp.json();
+                                      if (statusData.connected && !statusData.expired && statusData.savedAt > flowStartedAt) {
+                                        clearInterval(pollInterval);
+                                        const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+                                        await onAdd(
+                                          selectedType!,
+                                          name || typeInfo?.name || selectedType!,
+                                          '',
+                                          { model: finalModel || undefined }
+                                        );
+                                      }
+                                    } catch { /* ignore */ }
+                                  }, 3000);
+                                  setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+                                } else {
+                                  setValidationError(data.error || 'Failed to start OAuth');
+                                }
+                              } catch (err) {
+                                setValidationError(String(err));
+                              } finally {
+                                setOauthConnecting(false);
+                              }
+                            }}
+                          >
+                            {oauthConnecting ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                            )}
+                            {t('aiProviders.codexBuy.connectCodex')}
+                          </Button>
+
+                          {validationError && (
+                            <p className="text-xs text-destructive">{validationError}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
-
-                  {validationError && (
-                    <p className="text-xs text-destructive">{validationError}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Opens OpenAI login in a new tab. After approving, tokens are saved automatically.
-                  </p>
                 </div>
               ) : (
                 /* Standard API key input */
