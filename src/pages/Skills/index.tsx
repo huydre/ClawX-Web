@@ -5,7 +5,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search,
   Puzzle,
   RefreshCw,
   Lock,
@@ -47,8 +46,7 @@ import { toast } from 'sonner';
 import type { Skill, MarketplaceSkill } from '@/types/skill';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/lib/platform';
-
-
+import { SearchInput } from '@/components/common/SearchInput';
 
 
 // ── Recommended Skills Bundle ─────────────────────────────────────
@@ -1086,15 +1084,12 @@ export function Skills() {
         <TabsContent value="all" className="space-y-4 md:space-y-6 mt-4 md:mt-6">
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('search')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+            <SearchInput
+              placeholder={t('search')}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              fullWidth
+            />
 
             <div className="flex gap-2 flex-wrap">
               <Button
@@ -1241,24 +1236,12 @@ export function Skills() {
             </Card>
             <div className="flex gap-4">
               <form onSubmit={handleMarketplaceSearch} className="flex-1 flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('searchMarketplace')}
-                    value={marketplaceQuery}
-                    onChange={(e) => setMarketplaceQuery(e.target.value)}
-                    className="pl-9 pr-9"
-                  />
-                  {marketplaceQuery && (
-                    <button
-                      type="button"
-                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      onClick={() => setMarketplaceQuery('')}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+                <SearchInput
+                  placeholder={t('searchMarketplace')}
+                  value={marketplaceQuery}
+                  onChange={setMarketplaceQuery}
+                  fullWidth
+                />
                 <Button type="submit" disabled={searching} className="min-w-[100px]" asChild>
                   <motion.button whileTap={{ scale: 0.98 }}>
                     <AnimatePresence mode="wait" initial={false}>

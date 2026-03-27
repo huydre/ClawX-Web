@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
-  Eye,
-  EyeOff,
   RefreshCw,
   CheckCircle2,
   XCircle,
@@ -26,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { SecretInput } from '@/components/common/SecretInput';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
@@ -726,7 +725,6 @@ function ProviderContent({
   onConfiguredChange,
 }: ProviderContentProps) {
   const { t } = useTranslation(['setup', 'settings']);
-  const [showKey, setShowKey] = useState(false);
   const [validating, setValidating] = useState(false);
   const [keyValid, setKeyValid] = useState<boolean | null>(null);
   const [selectedProviderConfigId, setSelectedProviderConfigId] = useState<string | null>(null);
@@ -1104,28 +1102,19 @@ function ProviderContent({
           {requiresKey && (
             <div className="space-y-2">
               <Label htmlFor="apiKey">{t('provider.apiKey')}</Label>
-              <div className="relative">
-                <Input
-                  id="apiKey"
-                  type={showKey ? 'text' : 'password'}
-                  placeholder={selectedProviderData?.placeholder}
-                  value={apiKey}
-                  onChange={(e) => {
-                    onApiKeyChange(e.target.value);
-                    onConfiguredChange(false);
-                    setKeyValid(null);
-                  }}
-                  autoComplete="off"
-                  className="pr-10 bg-background border-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <SecretInput
+                id="apiKey"
+                placeholder={selectedProviderData?.placeholder}
+                value={apiKey}
+                onChange={(e) => {
+                  onApiKeyChange(e.target.value);
+                  onConfiguredChange(false);
+                  setKeyValid(null);
+                }}
+                autoComplete="off"
+                className="bg-background border-input"
+                fullWidth
+              />
             </div>
           )}
 
@@ -1162,7 +1151,6 @@ function SetupChannelContent() {
   const { t } = useTranslation(['setup', 'channels']);
   const [selectedChannel, setSelectedChannel] = useState<ChannelType | null>(null);
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
-  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -1380,29 +1368,25 @@ function SetupChannelContent() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+            ) : isPassword ? (
+              <SecretInput
+                id={`setup-${field.key}`}
+                placeholder={field.placeholder ? t(field.placeholder) : undefined}
+                value={configValues[field.key] || ''}
+                onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                autoComplete="off"
+                className="font-mono text-sm bg-background border-input"
+                fullWidth
+              />
             ) : (
-              <div className="flex gap-2">
-                <Input
-                  id={`setup-${field.key}`}
-                  type={isPassword && !showSecrets[field.key] ? 'password' : 'text'}
-                  placeholder={field.placeholder ? t(field.placeholder) : undefined}
-                  value={configValues[field.key] || ''}
-                  onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                  autoComplete="off"
-                  className="font-mono text-sm bg-background border-input"
-                />
-                {isPassword && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() => setShowSecrets((prev) => ({ ...prev, [field.key]: !prev[field.key] }))}
-                  >
-                    {showSecrets[field.key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                )}
-              </div>
+              <Input
+                id={`setup-${field.key}`}
+                placeholder={field.placeholder ? t(field.placeholder) : undefined}
+                value={configValues[field.key] || ''}
+                onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                autoComplete="off"
+                className="font-mono text-sm bg-background border-input"
+              />
             )}
             {field.description && (
               <p className="text-xs text-slate-500 mt-1">{t(field.description)}</p>

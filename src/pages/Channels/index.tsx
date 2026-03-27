@@ -12,8 +12,6 @@ import {
   X,
   ExternalLink,
   BookOpen,
-  Eye,
-  EyeOff,
   Check,
   AlertCircle,
   CheckCircle,
@@ -43,6 +41,7 @@ import {
   type ChannelConfigField,
 } from '@/types/channel';
 import { toast } from 'sonner';
+import { SecretInput } from '@/components/common/SecretInput';
 import { PairingApprovals } from '@/components/channels/PairingApprovals';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/lib/platform';
@@ -586,7 +585,6 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
   const [channelName, setChannelName] = useState('');
   const [connecting, setConnecting] = useState(false);
-  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
@@ -949,10 +947,6 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
     setConfigValues((prev) => ({ ...prev, [key]: value }));
   };
 
-  const toggleSecretVisibility = (key: string) => {
-    setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 !m-0">
       <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -1130,8 +1124,6 @@ function AddChannelDialog({ selectedType, onSelectType, onClose, onChannelAdded 
                     field={field}
                     value={configValues[field.key] || ''}
                     onChange={(value) => updateConfigValue(field.key, value)}
-                    showSecret={showSecrets[field.key] || false}
-                    onToggleSecret={() => toggleSecretVisibility(field.key)}
                   />
                 );
               })}
@@ -1240,11 +1232,9 @@ interface ConfigFieldProps {
   field: ChannelConfigField;
   value: string;
   onChange: (value: string) => void;
-  showSecret: boolean;
-  onToggleSecret: () => void;
 }
 
-function ConfigField({ field, value, onChange, showSecret, onToggleSecret }: ConfigFieldProps) {
+function ConfigField({ field, value, onChange }: ConfigFieldProps) {
   const { t } = useTranslation('channels');
   const isPassword = field.type === 'password';
   const isSelect = field.type === 'select';
@@ -1269,27 +1259,24 @@ function ConfigField({ field, value, onChange, showSecret, onToggleSecret }: Con
             </option>
           ))}
         </select>
+      ) : isPassword ? (
+        <SecretInput
+          id={field.key}
+          placeholder={field.placeholder ? t(field.placeholder) : undefined}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="font-mono text-sm"
+          fullWidth
+        />
       ) : (
-        <div className="flex gap-2">
-          <Input
-            id={field.key}
-            type={isPassword && !showSecret ? 'password' : 'text'}
-            placeholder={field.placeholder ? t(field.placeholder) : undefined}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="font-mono text-sm"
-          />
-          {isPassword && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={onToggleSecret}
-            >
-              {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          )}
-        </div>
+        <Input
+          id={field.key}
+          type="text"
+          placeholder={field.placeholder ? t(field.placeholder) : undefined}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="font-mono text-sm"
+        />
       )}
       {field.description && (
         <p className="text-xs text-muted-foreground">

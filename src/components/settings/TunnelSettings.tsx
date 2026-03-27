@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { SecretInput } from '@/components/common/SecretInput';
 import { useTunnelStore } from '@/stores/tunnel';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -357,7 +358,6 @@ function NamedTunnelSetupForm({ loading, onSetup, onValidateToken }: NamedTunnel
   const [apiToken, setApiToken] = useState('');
   const [tunnelName, setTunnelName] = useState('');
   const [domain, setDomain] = useState('');
-  const [showToken, setShowToken] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validated, setValidated] = useState(false);
 
@@ -411,26 +411,17 @@ function NamedTunnelSetupForm({ loading, onSetup, onValidateToken }: NamedTunnel
             <span className="text-destructive ml-1">*</span>
           </Label>
           <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input
-                id="apiToken"
-                type={showToken ? 'text' : 'password'}
-                placeholder={t('tunnel.named.apiTokenPlaceholder')}
-                value={apiToken}
-                onChange={(e) => {
-                  setApiToken(e.target.value);
-                  setValidated(false);
-                }}
-                className="pr-10 font-mono text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowToken(!showToken)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
+            <SecretInput
+              id="apiToken"
+              placeholder={t('tunnel.named.apiTokenPlaceholder')}
+              value={apiToken}
+              onChange={(e) => {
+                setApiToken(e.target.value);
+                setValidated(false);
+              }}
+              fullWidth
+              className="font-mono text-sm"
+            />
             <Button
               variant="outline"
               onClick={handleValidate}

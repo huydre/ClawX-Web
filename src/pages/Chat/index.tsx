@@ -186,7 +186,7 @@ export function Chat() {
         {!isNearBottom && (
           <button
             onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border bg-background shadow-md hover:bg-accent transition-colors"
+            className="absolute bottom-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border bg-background/90 backdrop-blur-sm shadow-lg hover:bg-accent hover:scale-105 transition-all duration-200 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
             aria-label="Scroll to bottom"
           >
             <ChevronDown className="h-4 w-4" />
@@ -239,12 +239,14 @@ export function Chat() {
 function WelcomeScreen() {
   const { t } = useTranslation('chat');
   return (
-    <div className="flex flex-col items-center justify-center text-center py-8 sm:py-16">
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-4 sm:mb-6">
+    <div className="flex flex-col items-center justify-center text-center py-8 sm:py-16 animate-in fade-in-0 duration-500">
+      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-indigo-500/25 animate-in zoom-in-50 duration-500">
         <Bot className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
       </div>
-      <h2 className="text-xl sm:text-2xl font-bold mb-2">{t('welcome.title')}</h2>
-      <p className="text-muted-foreground mb-6 sm:mb-8 max-w-md text-sm sm:text-base px-4">
+      <h2 className="text-xl sm:text-2xl font-bold mb-2 animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-100">
+        {t('welcome.title')}
+      </h2>
+      <p className="text-muted-foreground mb-6 sm:mb-8 max-w-md text-sm sm:text-base px-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-200">
         {t('welcome.subtitle')}
       </p>
 
@@ -253,7 +255,11 @@ function WelcomeScreen() {
           { icon: MessageSquare, title: t('welcome.askQuestions'), desc: t('welcome.askQuestionsDesc') },
           { icon: Sparkles, title: t('welcome.creativeTasks'), desc: t('welcome.creativeTasksDesc') },
         ].map((item, i) => (
-          <Card key={i} className="text-left">
+          <Card
+            key={i}
+            className="text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-in fade-in-0 slide-in-from-bottom-3 duration-500"
+            style={{ animationDelay: `${300 + i * 100}ms`, animationFillMode: 'both' }}
+          >
             <CardContent className="p-4">
               <item.icon className="h-6 w-6 text-primary mb-2" />
               <h3 className="font-medium">{item.title}</h3>
@@ -290,19 +296,19 @@ function ProgressIndicator({ streamingTools }: { streamingTools: ToolStatus[] })
   }
 
   return (
-    <div className="flex gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-        <Sparkles className="h-4 w-4" />
+    <div className="flex gap-3 animate-in fade-in-0 slide-in-from-bottom-4 duration-300">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/20">
+        <Sparkles className="h-4 w-4 animate-pulse" />
       </div>
-      <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-3">
-        <div className="flex gap-1">
-          <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 delay-100">
+        <div className="flex gap-1.5">
+          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }} />
+          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }} />
+          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }} />
         </div>
         <span className="text-xs text-muted-foreground">
           {statusText}
-          {elapsed > 2 && <span className="ml-1 tabular-nums">{elapsed}s</span>}
+          {elapsed > 2 && <span className="ml-1 tabular-nums opacity-60">{elapsed}s</span>}
         </span>
       </div>
     </div>

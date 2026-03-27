@@ -7,8 +7,6 @@ import {
   Plus,
   Trash2,
   Edit,
-  Eye,
-  EyeOff,
   Check,
   X,
   Loader2,
@@ -21,9 +19,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { SecretInput } from '@/components/common/SecretInput';
+import { AsyncButton } from '@/components/common/AsyncButton';
+import { EmptyState } from '@/components/common/EmptyState';
+import { ModalDialog } from '@/components/common/ModalDialog';
 import { useProviderStore, type ProviderConfig, type ProviderWithKeyInfo } from '@/stores/providers';
 import { api } from '@/lib/api';
 import {
@@ -192,42 +194,39 @@ export function ProvidersSettings() {
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : providers.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Key className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">{t('aiProviders.empty.title')}</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              {t('aiProviders.empty.desc')}
-            </p>
-
-            {/* Detected OpenClaw model */}
-            {detectedModel && (
-              <div className="w-full max-w-sm mb-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-4 py-3">
-                <p className="text-xs text-muted-foreground mb-1">Phát hiện cấu hình OpenClaw:</p>
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <span className="text-sm font-medium">{detectedModel.provider}</span>
-                    <span className="mx-1 text-muted-foreground">/</span>
-                    <span className="text-sm font-mono text-foreground/80">{detectedModel.modelId}</span>
+        <EmptyState
+          variant="card"
+          icon={<Key className="h-full w-full" />}
+          title={t('aiProviders.empty.title')}
+          description={t('aiProviders.empty.desc')}
+          renderContent={() => (
+            <>
+              <h3 className="text-base font-semibold">{t('aiProviders.empty.title')}</h3>
+              <p className="text-sm text-muted-foreground max-w-[280px]">{t('aiProviders.empty.desc')}</p>
+              {detectedModel && (
+                <div className="w-full max-w-sm mt-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-4 py-3">
+                  <p className="text-xs text-muted-foreground mb-1">Phát hiện cấu hình OpenClaw:</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-sm font-medium">{detectedModel.provider}</span>
+                      <span className="mx-1 text-muted-foreground">/</span>
+                      <span className="text-sm font-mono text-foreground/80">{detectedModel.modelId}</span>
+                    </div>
+                    <AsyncButton size="sm" onClick={handleImportFromOpenClaw} loading={importing} icon={<Download className="h-3.5 w-3.5" />}>
+                      Import
+                    </AsyncButton>
                   </div>
-                  <Button size="sm" onClick={handleImportFromOpenClaw} disabled={importing}>
-                    {importing ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5 mr-1" />
-                    )}
-                    Import
-                  </Button>
                 </div>
+              )}
+              <div className="mt-2">
+                <Button variant={detectedModel ? 'outline' : 'default'} onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('aiProviders.empty.cta')}
+                </Button>
               </div>
-            )}
-
-            <Button variant={detectedModel ? 'outline' : 'default'} onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('aiProviders.empty.cta')}
-            </Button>
-          </CardContent>
-        </Card>
+            </>
+          )}
+        />
       ) : (
         <div className="space-y-4">
           {providers.map((provider) => (
@@ -535,20 +534,18 @@ function ProviderCard({
               </button>
             ) : (
               <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type="password"
-                    placeholder={typeInfo?.requiresApiKey ? typeInfo?.placeholder : (typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : t('aiProviders.card.editKey'))}
-                    value={newKey}
-                    onChange={(e) => setNewKey(e.target.value)}
-                    className="h-9 text-sm"
-                  />
-                </div>
+                <SecretInput
+                  placeholder={typeInfo?.requiresApiKey ? typeInfo?.placeholder : (typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : t('aiProviders.card.editKey'))}
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+                  size="sm"
+                  fullWidth
+                />
                 {provider.hasKey && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-9 text-xs"
+                    className="h-8 text-xs"
                     onClick={() => { setShowKey(false); setNewKey(''); }}
                   >
                     Cancel
@@ -557,14 +554,14 @@ function ProviderCard({
               </div>
             )}
             <div className="flex gap-2 justify-end">
-              <Button
+              <AsyncButton
                 variant="outline"
                 size="sm"
                 onClick={handleSaveEdits}
+                loading={validating || saving}
+                icon={<Check className="h-3.5 w-3.5" />}
                 disabled={
-                  validating
-                  || saving
-                  || (
+                  (
                     !newKey.trim()
                     && (baseUrl.trim() || undefined) === (provider.baseUrl || undefined)
                     && (modelId.trim() || undefined) === (provider.model || undefined)
@@ -572,13 +569,8 @@ function ProviderCard({
                   || Boolean(typeInfo?.showModelId && !modelId.trim())
                 }
               >
-                {validating || saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                ) : (
-                  <Check className="h-3.5 w-3.5 mr-1" />
-                )}
                 Save
-              </Button>
+              </AsyncButton>
               <Button variant="ghost" size="sm" onClick={onCancelEdit}>
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -740,7 +732,6 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [modelId, setModelId] = useState('');
-  const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [customModel, setCustomModel] = useState(false);
@@ -850,15 +841,29 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
-      <Card className="w-full max-w-md my-auto">
-        <CardHeader>
-          <CardTitle>{t('aiProviders.dialog.title')}</CardTitle>
-          <CardDescription>
-            {t('aiProviders.dialog.desc')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <ModalDialog
+      open={true}
+      onClose={onClose}
+      title={t('aiProviders.dialog.title')}
+      description={t('aiProviders.dialog.desc')}
+      showCloseButton={false}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            {t('aiProviders.dialog.cancel')}
+          </Button>
+          {!typeInfo?.useOAuth && selectedType && (
+            <AsyncButton
+              onClick={handleAdd}
+              loading={saving}
+              disabled={!selectedType || ((typeInfo?.showModelId ?? false) && modelId.trim().length === 0)}
+            >
+              {t('aiProviders.dialog.add')}
+            </AsyncButton>
+          )}
+        </>
+      }
+    >
           {!selectedType ? (
             <div className="grid grid-cols-2 gap-3">
               {availableTypes.map((type) => (
@@ -1186,26 +1191,16 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
                 /* Standard API key input */
                 <div className="space-y-2">
                   <Label htmlFor="apiKey">{t('aiProviders.dialog.apiKey')}</Label>
-                  <div className="relative">
-                    <Input
-                      id="apiKey"
-                      type={showKey ? 'text' : 'password'}
-                      placeholder={typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : typeInfo?.placeholder}
-                      value={apiKey}
-                      onChange={(e) => {
-                        setApiKey(e.target.value);
-                        setValidationError(null);
-                      }}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowKey(!showKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                  <SecretInput
+                    id="apiKey"
+                    placeholder={typeInfo?.id === 'ollama' ? t('aiProviders.notRequired') : typeInfo?.placeholder}
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      setValidationError(null);
+                    }}
+                    fullWidth
+                  />
                   {validationError && (
                     <p className="text-xs text-destructive">{validationError}</p>
                   )}
@@ -1303,26 +1298,6 @@ function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey }: Add
             </div>
           )}
 
-          <Separator />
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
-              {t('aiProviders.dialog.cancel')}
-            </Button>
-            {!typeInfo?.useOAuth && (
-              <Button
-                onClick={handleAdd}
-                disabled={!selectedType || saving || ((typeInfo?.showModelId ?? false) && modelId.trim().length === 0)}
-              >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                {t('aiProviders.dialog.add')}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </ModalDialog>
   );
 }
