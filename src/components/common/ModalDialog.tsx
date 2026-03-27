@@ -4,6 +4,7 @@
  */
 import * as React from 'react';
 import { useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -104,11 +105,11 @@ function ModalDialog({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto',
-        'bg-black/50 backdrop-blur-[2px]',
+        'fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto',
+        'bg-black/60 backdrop-blur-sm',
         'animate-in fade-in-0 duration-200',
         overlayClassName
       )}
@@ -121,8 +122,8 @@ function ModalDialog({
         ref={cardRef}
         className={cn(
           modalVariants({ maxWidth }),
-          'my-auto shadow-lg',
-          'animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-250',
+          'my-auto shadow-2xl border-border/50',
+          'animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200',
           className
         )}
       >
@@ -162,7 +163,8 @@ function ModalDialog({
           </div>
         )}
       </Card>
-    </div>
+    </div>,
+    document.body
   );
 }
 
