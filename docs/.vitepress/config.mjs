@@ -55,6 +55,7 @@ export default defineConfig({
           { text: 'Quản lý kênh', link: '/usage/channels' },
           { text: 'Kỹ năng (Skills)', link: '/usage/skills' },
           { text: 'Tác vụ định kỳ', link: '/usage/cron' },
+          { text: 'Mua & dùng Codex', link: '/usage/codex' },
           { text: 'Cài đặt', link: '/usage/settings' },
           { text: 'Truy cập từ xa', link: '/usage/tunnel' },
         ],
