@@ -13,28 +13,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format relative time (e.g., "2 minutes ago")
+ * Format relative time (e.g., "2m ago", "3h ago")
+ * Accepts Date, ISO string, or Unix timestamp (ms).
+ * Returns 'Never' for null/undefined.
  */
-export function formatRelativeTime(date: string | Date): string {
-  const now = new Date();
-  const then = new Date(date);
-  const diffMs = now.getTime() - then.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-  
-  if (diffSec < 60) {
-    return 'just now';
-  } else if (diffMin < 60) {
-    return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
-  } else if (diffHour < 24) {
-    return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
-  } else if (diffDay < 7) {
-    return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
-  } else {
-    return then.toLocaleDateString();
-  }
+export function formatRelativeTime(date: string | Date | number | null | undefined): string {
+  if (date == null) return 'Never';
+  const now = Date.now();
+  const then = typeof date === 'number' ? date : new Date(date).getTime();
+  const diffMs = now - then;
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(then).toLocaleDateString();
 }
 
 /**
