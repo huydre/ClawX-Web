@@ -171,6 +171,13 @@ cmd_status() {
     echo -e "  Service:  ${RED}● stopped${NC}"
   fi
 
+  # Claw3D status
+  if systemctl is-active --quiet claw3d 2>/dev/null; then
+    echo -e "  Company3D: ${GREEN}● running${NC}"
+  else
+    echo -e "  Company3D: ${DIM}○ stopped${NC}"
+  fi
+
   # Port check
   if ss -tlnp | grep -q ":${DEFAULT_PORT} " 2>/dev/null; then
     echo -e "  Port:     ${GREEN}● :${DEFAULT_PORT} listening${NC}"
@@ -194,6 +201,7 @@ cmd_status() {
       echo -e "    Local:     ${CYAN}http://localhost:${DEFAULT_PORT}${NC}"
       echo -e "    Dashboard: ${CYAN}https://${subdomain}.${domain}${NC}"
       echo -e "    Gateway:   ${CYAN}https://dashboard-${subdomain}.${domain}${NC}"
+      echo -e "    Company3D: ${CYAN}https://company-${subdomain}.${domain}${NC}"
       echo -e "    Terminal:  ${CYAN}https://terminal-${subdomain}.${domain}${NC}"
     else
       echo -e "\n  ${BOLD}URL:${NC}  ${CYAN}http://localhost:${DEFAULT_PORT}${NC}"
@@ -229,6 +237,7 @@ cmd_update() {
     install_ttyd
     install_gogcli
     install_openzca
+    install_claw3d
 
     # Ensure nmcli sudoers rule exists (WiFi management from web UI)
     local CLAWX_USER="${SUDO_USER:-$(logname 2>/dev/null || echo techla)}"
@@ -449,6 +458,106 @@ install_openzca() {
     else
       warn "Failed to install openzca (non-critical, skip)"
     fi
+  fi
+}
+
+# ── Install Claw3D (Company 3D) ───────────────────────────────────────────
+install_claw3d() {
+  step "Setting up Company 3D (Claw3D)"
+
+  local claw3d_dir="${USER_HOME}/.clawx/claw3d"
+  local claw3d_repo="https://github.com/iamlukethedev/Claw3D.git"
+  local claw3d_port="${COMPANY_3D_PORT:-3333}"
+  local gateway_port="${CFG_GATEWAY_PORT:-$DEFAULT_GATEWAY_PORT}"
+
+  # Clone or update
+  if [[ -d "$claw3d_dir/.git" ]]; then
+    info "Claw3D already installed, updating..."
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "cd '$claw3d_dir' && git pull origin main 2>/dev/null || git pull" "$CLAWX_USER" 2>/dev/null || true
+    else
+      cd "$claw3d_dir" && git pull origin main 2>/dev/null || git pull || true
+    fi
+    log "Claw3D updated"
+  else
+    info "Cloning Claw3D..."
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      su -s /bin/bash -c "git clone --depth 1 '$claw3d_repo' '$claw3d_dir'" "$CLAWX_USER" 2>/dev/null
+    else
+      git clone --depth 1 "$claw3d_repo" "$claw3d_dir"
+    fi
+    log "Claw3D cloned to $claw3d_dir"
+  fi
+
+  # Write .env
+  cat > "$claw3d_dir/.env" <<ENVEOF
+NEXT_PUBLIC_GATEWAY_URL=ws://localhost:${gateway_port}
+DEBUG=true
+PORT=${claw3d_port}
+HOST=127.0.0.1
+ENVEOF
+
+  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+    chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
+  fi
+  log "Claw3D .env configured (port: $claw3d_port, gateway: $gateway_port)"
+
+  # Install dependencies
+  info "Installing Claw3D dependencies..."
+  local pm="npm"
+  [[ -f "$claw3d_dir/pnpm-lock.yaml" ]] && pm="pnpm"
+
+  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+    su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$claw3d_dir' && $pm install" "$CLAWX_USER" 2>&1 | tail -3
+  else
+    cd "$claw3d_dir" && $pm install 2>&1 | tail -3
+  fi
+  log "Claw3D dependencies installed"
+
+  # Setup systemd service
+  if [[ $EUID -eq 0 ]]; then
+    local node_path
+    node_path=$(which node)
+
+    local pm_path
+    pm_path=$(which $pm 2>/dev/null || echo "/usr/local/bin/$pm")
+
+    cat > /etc/systemd/system/claw3d.service <<SVCEOF
+[Unit]
+Description=Claw3D - Company 3D Visualization
+After=network.target clawx.service
+Wants=clawx.service
+
+[Service]
+Type=simple
+User=${CLAWX_USER}
+WorkingDirectory=${claw3d_dir}
+ExecStart=${pm_path} run dev
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=development
+Environment=PORT=${claw3d_port}
+Environment=HOME=${USER_HOME}
+Environment=PATH=$(dirname "$node_path"):/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=${claw3d_dir}/.env
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+    systemctl daemon-reload
+    systemctl enable claw3d >/dev/null 2>&1
+    systemctl restart claw3d
+
+    sleep 2
+    if systemctl is-active --quiet claw3d; then
+      log "Claw3D running on port $claw3d_port"
+    else
+      warn "Claw3D may have failed to start. Check: journalctl -u claw3d -n 20"
+    fi
+  else
+    warn "Not running as root — skipping Claw3D systemd setup"
+    warn "Start manually: cd $claw3d_dir && $pm run dev"
   fi
 }
 
@@ -720,6 +829,7 @@ cmd_install() {
     install_ttyd
     install_gogcli
     install_openzca
+    install_claw3d
 
     # Allow clawx user to run nmcli without password (WiFi management from web UI)
     local CLAWX_USER="${SUDO_USER:-$(logname 2>/dev/null || echo techla)}"
