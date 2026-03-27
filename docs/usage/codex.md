@@ -4,7 +4,7 @@
 
 ## Giá
 
-**200.000 VND / slot**
+**200.000 VND / slot / tháng**
 
 ---
 
@@ -30,7 +30,7 @@ Nhấn **"Tạo mã QR thanh toán"**. Một mã QR sẽ hiện ra với thông 
 | **Ngân hàng** | Techcombank |
 | **Chủ tài khoản** | TECHLA AI CO., LTD |
 | **Số tài khoản** | 39156868 |
-| **Số tiền** | 200.000 VND |
+| **Số tiền** | 200.000 VND (1 tháng) |
 | **Nội dung chuyển khoản** | `CODEX email_của_bạn` |
 
 **Cách thanh toán:**
