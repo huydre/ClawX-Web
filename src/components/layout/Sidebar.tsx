@@ -118,7 +118,17 @@ export function Sidebar() {
         <button
           onClick={async () => {
             try {
-              // Check status first
+              const isRemote = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
+              if (isRemote) {
+                // Remote access via tunnel — open company subdomain
+                const host = window.location.hostname; // e.g. clawbox20.openclaw-box.com
+                const companyUrl = `https://company-${host}`;
+                window.open(companyUrl, '_blank');
+                return;
+              }
+
+              // Local access — start Claw3D server
               const statusRes = await fetch('/api/claw3d/status');
               const status = await statusRes.json();
 
@@ -127,7 +137,6 @@ export function Sidebar() {
                 return;
               }
 
-              // Start if not running
               const { toast } = await import('sonner');
               toast.info(status.installed ? 'Starting Company 3D...' : 'Setting up Company 3D (first time)...');
 
@@ -135,7 +144,6 @@ export function Sidebar() {
               const startData = await startRes.json();
 
               if (startData.success) {
-                // Wait for server to be ready, then open
                 setTimeout(() => {
                   window.open(startData.url || 'http://localhost:3333', '_blank');
                 }, status.installed ? 3000 : 15000);
