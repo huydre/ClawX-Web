@@ -6,7 +6,8 @@
         "channels": "Kênh",
         "dashboard": "Bảng điều khiển",
         "settings": "Cài đặt",
-        "devConsole": "Console phát triển"
+        "devConsole": "Console phát triển",
+        "docs": "Hướng dẫn"
     },
     "actions": {
         "save": "Lưu",

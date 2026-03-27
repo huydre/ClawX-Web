@@ -22,6 +22,8 @@ import {
   LogOut,
   Stethoscope,
   Wifi,
+  AlertTriangle,
+  Gift,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -602,6 +604,48 @@ export function Settings() {
         <p className="text-muted-foreground">
           {t('subtitle')}
         </p>
+      </div>
+
+      {/* OpenClaw Version Warning */}
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 animate-in fade-in-0 slide-in-from-top-2 duration-300">
+        <div className="flex gap-3">
+          <div className="shrink-0 rounded-lg bg-amber-500/10 p-2 h-fit">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+              OpenClaw v2026.3.2
+            </p>
+            <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-0.5 leading-relaxed">
+              Vui lòng không update OpenClaw để tránh lỗi ngoài ý muốn. Nếu cố tình update OpenClaw sẽ không bảo hành phần mềm.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Codex Trial Banner */}
+      <div className="rounded-lg border border-border bg-muted/30 p-4 animate-in fade-in-0 slide-in-from-top-2 duration-300" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+        <div className="flex gap-3">
+          <div className="shrink-0 rounded-lg bg-primary/10 p-2 h-fit">
+            <Gift className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              Dùng thử Codex — 4 ngày
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              Chúng tôi đã add sẵn tài khoản GPT Codex để dùng thử. Sau khi hết thời gian dùng thử, vui lòng mua và sử dụng tài khoản theo{' '}
+              <a
+                href="https://docs.openclaw-box.com/usage/codex.html#huong-dan-mua-va-su-dung-codex"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                hướng dẫn tại đây
+              </a>.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Appearance */}
