@@ -507,11 +507,19 @@ ENVEOF
   local pm="npm"
   [[ -f "$claw3d_dir/pnpm-lock.yaml" ]] && pm="pnpm"
 
+  # Fix ownership before install so npm can write freely
   if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-    su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$claw3d_dir' && HOME='$USER_HOME' $pm install --ignore-scripts 2>/dev/null || $pm install --ignore-scripts" "$CLAWX_USER" 2>&1 | tail -5
+    chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
+    # Run npm as the target user with full env (HOME, PATH, npm cache)
+    sudo -u "$CLAWX_USER" bash -c "
+      export HOME='$USER_HOME'
+      $NVM_SOURCE_CMD
+      cd '$claw3d_dir'
+      npm_config_cache='$USER_HOME/.npm' $pm install 2>&1 | tail -10
+    " || warn "npm install had errors (may still work)"
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
   else
-    cd "$claw3d_dir" && $pm install --ignore-scripts 2>&1 | tail -5
+    cd "$claw3d_dir" && $pm install 2>&1 | tail -10
   fi
   log "Claw3D dependencies installed"
 
