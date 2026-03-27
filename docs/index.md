@@ -1,6 +1,6 @@
 ---
 layout: home
-titleTemplate: false
+titleTemplate: ClawX - Trợ lý AI
 
 hero:
   name: ClawX
