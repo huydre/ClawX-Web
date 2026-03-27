@@ -24,5 +24,10 @@
     "activeSkills": "Kỹ năng đang hoạt động",
     "noSkills": "Chưa có kỹ năng nào",
     "enableSome": "Bật một số kỹ năng",
-    "more": "+{{count}} thêm"
+    "more": "+{{count}} thêm",
+    "analytics": {
+        "title": "Thống kê",
+        "messages": "Tin nhắn",
+        "activity": "Hoạt động"
+    }
 }
