@@ -259,6 +259,14 @@ cmd_update() {
     fi
   fi
 
+  # Re-configure OpenClaw (add new origins, etc.)
+  configure_openclaw
+
+  # Restart gateway to pick up config changes
+  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+    sudo -u "$CLAWX_USER" bash -c "systemctl --user restart openclaw-gateway 2>/dev/null" || true
+  fi
+
   # Restart service
   if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
     info "Restarting service..."
