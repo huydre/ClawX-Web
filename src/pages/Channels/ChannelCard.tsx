@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Trash2,
   ExternalLink,
@@ -6,7 +7,9 @@ import {
   Settings,
   Clock,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { AsyncButton } from '@/components/common/AsyncButton';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import {
   CHANNEL_NAMES,
@@ -17,11 +20,13 @@ import { formatRelativeTime } from '@/lib/utils';
 
 interface ChannelCardProps {
   channel: Channel;
-  onDelete: () => void;
+  onDelete: () => void | Promise<void>;
   onSettings: () => void;
 }
 
 export function ChannelCard({ channel, onDelete, onSettings }: ChannelCardProps) {
+  const [deleting, setDeleting] = useState(false);
+  const { t } = useTranslation('channels');
   const isOnline = channel.status === 'connected';
   const isError = channel.status === 'error';
   const statusColor = isOnline
@@ -29,7 +34,7 @@ export function ChannelCard({ channel, onDelete, onSettings }: ChannelCardProps)
     : isError
       ? 'bg-red-500'
       : 'bg-zinc-400 dark:bg-zinc-600';
-  const statusLabel = isOnline ? 'Online' : isError ? 'Error' : 'Offline';
+  const statusLabel = isOnline ? t('card.online') : isError ? t('card.error') : t('card.offline');
 
   const lastActivity = channel.lastInboundAt || channel.lastOutboundAt;
   const botName = channel.botUsername || channel.probe?.bot?.username;
@@ -63,7 +68,7 @@ export function ChannelCard({ channel, onDelete, onSettings }: ChannelCardProps)
       {/* Info Grid */}
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
         <div>
-          <p className="text-[11px] text-muted-foreground">Connection</p>
+          <p className="text-[11px] text-muted-foreground">{t('card.connection')}</p>
           <div className="flex items-center gap-1 mt-0.5">
             {isOnline ? (
               <Wifi className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
@@ -71,12 +76,12 @@ export function ChannelCard({ channel, onDelete, onSettings }: ChannelCardProps)
               <WifiOff className="h-3 w-3 text-muted-foreground" />
             )}
             <span className="text-xs font-medium capitalize">
-              {channel.mode || (isOnline ? 'Active' : 'Inactive')}
+              {channel.mode || (isOnline ? t('card.active') : t('card.inactive'))}
             </span>
           </div>
         </div>
         <div>
-          <p className="text-[11px] text-muted-foreground">Last message</p>
+          <p className="text-[11px] text-muted-foreground">{t('card.lastMessage')}</p>
           <div className="flex items-center gap-1 mt-0.5">
             <Clock className="h-3 w-3 text-muted-foreground" />
             <span className="text-xs font-medium">
@@ -96,17 +101,26 @@ export function ChannelCard({ channel, onDelete, onSettings }: ChannelCardProps)
             onClick={onSettings}
           >
             <Settings className="h-3.5 w-3.5 mr-1" />
-            Settings
+            {t('card.settings')}
           </Button>
-          <Button
+          <AsyncButton
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
+            loading={deleting}
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            onClick={async () => {
+              if (!confirm(t('deleteConfirm'))) return;
+              setDeleting(true);
+              try {
+                await onDelete();
+              } finally {
+                setDeleting(false);
+              }
+            }}
           >
-            <Trash2 className="h-3.5 w-3.5 mr-1" />
-            Remove
-          </Button>
+            {t('card.remove')}
+          </AsyncButton>
         </div>
         <a
           href={CHANNEL_META[channel.type]?.docsUrl}
@@ -114,7 +128,7 @@ export function ChannelCard({ channel, onDelete, onSettings }: ChannelCardProps)
           rel="noopener noreferrer"
           className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
         >
-          Docs
+          {t('card.docs')}
           <ExternalLink className="h-3 w-3" />
         </a>
       </div>

@@ -7,6 +7,7 @@ import {
   Plus,
   RefreshCw,
   AlertCircle,
+  Radio,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { useChannelsStore } from '@/stores/channels';
 import { useGatewayStore } from '@/stores/gateway';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { AsyncButton } from '@/components/common/AsyncButton';
+import { EmptyState } from '@/components/common/EmptyState';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import {
   CHANNEL_META,
@@ -99,9 +102,14 @@ export function Channels() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="icon" onClick={fetchChannels}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <AsyncButton
+            variant="outline"
+            iconOnly
+            loading={loading}
+            icon={<RefreshCw className="h-4 w-4" />}
+            onClick={fetchChannels}
+            aria-label={t('refresh')}
+          />
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">{t('addChannel')}</span>
@@ -131,7 +139,7 @@ export function Channels() {
       )}
 
       {/* Connected Channels */}
-      {channels.length > 0 && (
+      {channels.length > 0 ? (
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
             {t('configured')}
@@ -141,17 +149,26 @@ export function Channels() {
               <ChannelCard
                 key={channel.id}
                 channel={channel}
-                onDelete={() => {
-                  if (confirm(t('deleteConfirm'))) {
-                    deleteChannel(channel.id);
-                  }
-                }}
+                onDelete={() => deleteChannel(channel.id)}
                 onSettings={() => setSettingsChannel(channel)}
               />
             ))}
           </div>
         </div>
-      )}
+      ) : !loading ? (
+        <EmptyState
+          icon={<Radio className="h-full w-full" />}
+          title={t('empty.title')}
+          description={t('empty.desc')}
+          action={
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('empty.cta')}
+            </Button>
+          }
+          variant="card"
+        />
+      ) : null}
 
       {/* Available Channels */}
       <Card>
