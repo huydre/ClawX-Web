@@ -489,18 +489,29 @@ install_claw3d() {
     log "Claw3D cloned to $claw3d_dir"
   fi
 
+  # Build gateway URL — use tunnel if configured, else localhost
+  local gw_url="ws://localhost:${gateway_port}"
+  if [[ -f "$ENV_FILE" ]]; then
+    local c3d_domain c3d_sub
+    c3d_domain=$(grep '^CLOUDFLARE_TUNNEL_DOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
+    c3d_sub=$(grep '^CLOUDFLARE_TUNNEL_SUBDOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
+    if [[ -n "$c3d_domain" && -n "$c3d_sub" ]]; then
+      gw_url="wss://dashboard-${c3d_sub}.${c3d_domain}"
+    fi
+  fi
+
   # Write .env
   cat > "$claw3d_dir/.env" <<ENVEOF
-NEXT_PUBLIC_GATEWAY_URL=ws://localhost:${gateway_port}
+NEXT_PUBLIC_GATEWAY_URL=${gw_url}
 DEBUG=true
 PORT=${claw3d_port}
-HOST=127.0.0.1
+HOST=0.0.0.0
 ENVEOF
 
   if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
   fi
-  log "Claw3D .env configured (port: $claw3d_port, gateway: $gateway_port)"
+  log "Claw3D .env configured (port: $claw3d_port, gateway: $gw_url)"
 
   # Install dependencies
   info "Installing Claw3D dependencies..."
