@@ -4,10 +4,13 @@ import {
   Loader2,
   X,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { ModalDialog } from '@/components/common/ModalDialog';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import {
   CHANNEL_NAMES,
   type Channel,
@@ -20,6 +23,7 @@ interface ChannelSettingsPanelProps {
 }
 
 export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelProps) {
+  const { t } = useTranslation('channels');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [groupPolicy, setGroupPolicy] = useState('allowlist');
@@ -33,6 +37,7 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
     const load = async () => {
       try {
         const res = await fetch(`/api/channel-config/${channel.type}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         setGroupPolicy(data.groupPolicy || 'allowlist');
         setPairingPolicy(data.pairingPolicy || 'code');
@@ -55,6 +60,7 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ groupPolicy, pairingPolicy, allowFrom, groupAllowFrom }),
       });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (data.success) {
         toast.success('Channel config saved');
@@ -83,60 +89,66 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-background rounded-lg p-8">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+      <ModalDialog open={true} onClose={onClose} maxWidth="lg">
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner size="lg" />
         </div>
-      </div>
+      </ModalDialog>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="bg-background rounded-lg border shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold">Channel Settings — {CHANNEL_NAMES[channel.type]}</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
+    <ModalDialog
+      open={true}
+      onClose={onClose}
+      title={`${t('settings.title')} — ${CHANNEL_NAMES[channel.type]}`}
+      maxWidth="lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>{t('settings.cancel')}</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {t('settings.save')}
           </Button>
-        </div>
-
-        <div className="p-4 space-y-5">
+        </>
+      }
+    >
+        <div className="space-y-5">
           {/* Group Policy */}
           <div className="space-y-2">
-            <Label className="font-medium">Group Policy</Label>
-            <p className="text-xs text-muted-foreground">Cho phép bot phản hồi trong group</p>
+            <Label className="font-medium">{t('settings.groupPolicy')}</Label>
+            <p className="text-xs text-muted-foreground">{t('settings.groupPolicyDesc')}</p>
             <div className="flex gap-2">
               <Button
                 variant={groupPolicy === 'open' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setGroupPolicy('open')}
               >
-                Open
+                {t('settings.open')}
               </Button>
               <Button
                 variant={groupPolicy === 'allowlist' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setGroupPolicy('allowlist')}
               >
-                Allowlist
+                {t('settings.allowlist')}
               </Button>
             </div>
           </div>
 
           {/* Pairing Policy */}
           <div className="space-y-2">
-            <Label className="font-medium">Pairing Policy</Label>
-            <p className="text-xs text-muted-foreground">Cách pair user với bot</p>
+            <Label className="font-medium">{t('settings.pairingPolicy')}</Label>
+            <p className="text-xs text-muted-foreground">{t('settings.pairingPolicyDesc')}</p>
             <div className="flex gap-2">
-              {['open', 'code', 'disabled'].map((p) => (
+              {(['open', 'code', 'disabled'] as const).map((p) => (
                 <Button
                   key={p}
                   variant={pairingPolicy === p ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setPairingPolicy(p)}
                 >
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                  {t(`settings.${p}`)}
                 </Button>
               ))}
             </div>
@@ -144,8 +156,8 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
 
           {/* Allow From (DM) */}
           <div className="space-y-2">
-            <Label className="font-medium">Allow From (DM)</Label>
-            <p className="text-xs text-muted-foreground">Danh sách user ID được phép gửi DM</p>
+            <Label className="font-medium">{t('settings.allowFrom')}</Label>
+            <p className="text-xs text-muted-foreground">{t('settings.allowFromDesc')}</p>
             <div className="flex gap-2">
               <Input
                 placeholder="User ID"
@@ -178,8 +190,8 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
 
           {/* Group Allow From */}
           <div className="space-y-2">
-            <Label className="font-medium">Group Allow From</Label>
-            <p className="text-xs text-muted-foreground">Danh sách group ID được phép (khi groupPolicy = allowlist)</p>
+            <Label className="font-medium">{t('settings.groupAllowFrom')}</Label>
+            <p className="text-xs text-muted-foreground">{t('settings.groupAllowFromDesc')}</p>
             <div className="flex gap-2">
               <Input
                 placeholder="Group ID"
@@ -210,15 +222,6 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
             )}
           </div>
         </div>
-
-        <div className="p-4 border-t flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Save
-          </Button>
-        </div>
-      </div>
-    </div>
+    </ModalDialog>
   );
 }

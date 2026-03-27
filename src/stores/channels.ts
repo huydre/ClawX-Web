@@ -149,9 +149,9 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
         // Gateway not available - try to show channels from local config
         set({ channels: [], loading: false });
       }
-    } catch {
+    } catch (err) {
       // Gateway not connected, show empty
-      set({ channels: [], loading: false });
+      set({ channels: [], loading: false, error: String(err) });
     }
   },
 
@@ -203,7 +203,8 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
 
   deleteChannel: async (channelId) => {
     // Extract channel type from the channelId (format: "channelType-accountId")
-    const channelType = channelId.split('-')[0];
+    const dashIdx = channelId.indexOf('-');
+    const channelType = dashIdx > 0 ? channelId.slice(0, dashIdx) : channelId;
 
     try {
       if (platform.isElectron) {

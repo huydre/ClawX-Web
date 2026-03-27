@@ -5,6 +5,7 @@ import { gatewayManager } from '../services/gateway-manager.js';
 import { tunnelManager } from '../services/tunnel-manager.js';
 import { updateChecker } from '../services/update-checker.js';
 import { getSettings } from '../services/storage.js';
+import { trackEvent } from '../services/analytics.js';
 
 // Exported so routes can broadcast to all clients
 export let wss: WebSocketServer;
@@ -50,6 +51,56 @@ export function createWebSocketServer(server: any): WebSocketServer {
           method,
           params,
         }));
+      }
+
+      // --- Analytics tracking (fire-and-forget, errors silenced) ---
+      try {
+        const sessionKey = params?.sessionKey || params?.data?.sessionKey;
+        const eventState = params?.state || params?.data?.state;
+        const message = params?.message || params?.data?.message;
+
+        if (method === 'agent' || method === 'chat') {
+          // Track assistant response completion
+          if (eventState === 'final') {
+            // Check if the final message contains tool_use blocks
+            const content = message?.content;
+            const hasToolUse = Array.isArray(content) &&
+              content.some((b: any) => b.type === 'tool_use' || b.type === 'toolCall');
+
+            if (hasToolUse) {
+              const toolNames = content
+                .filter((b: any) => b.type === 'tool_use' || b.type === 'toolCall')
+                .map((b: any) => b.name)
+                .filter(Boolean);
+              trackEvent({
+                type: 'tool_call',
+                sessionKey,
+                metadata: { method, toolNames },
+              }).catch(() => {});
+            }
+
+            // Check if this is a tool_result role (tool execution result)
+            const role = message?.role;
+            const isToolResult = typeof role === 'string' &&
+              (role.toLowerCase() === 'toolresult' || role.toLowerCase() === 'tool_result');
+
+            if (!isToolResult) {
+              trackEvent({
+                type: 'message_received',
+                sessionKey,
+                metadata: { method },
+              }).catch(() => {});
+            }
+          }
+        } else if (method.startsWith('channels.') || method.startsWith('channel.')) {
+          trackEvent({
+            type: 'channel_activity',
+            channel: params?.channelType || params?.channelId || method,
+            metadata: { method, channelType: params?.channelType },
+          }).catch(() => {});
+        }
+      } catch {
+        // Silently ignore analytics errors
       }
     };
 

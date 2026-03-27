@@ -48,7 +48,8 @@
     "generateQRCode": "Generate QR Code",
     "updateAndReconnect": "Update & Reconnect",
     "saveAndConnect": "Save & Connect",
-    "envVar": "Environment Variable: {{var}}"
+    "envVar": "Environment Variable: {{var}}",
+    "doneScan": "Done scanning"
   },
   "meta": {
     "telegram": {
@@ -292,5 +293,43 @@
       ]
     }
   },
-  "viewDocs": "View Documentation"
+  "viewDocs": "View Documentation",
+  "card": {
+    "online": "Online",
+    "offline": "Offline",
+    "error": "Error",
+    "active": "Active",
+    "inactive": "Inactive",
+    "connection": "Connection",
+    "lastMessage": "Last message",
+    "settings": "Settings",
+    "remove": "Remove",
+    "docs": "Docs"
+  },
+  "settings": {
+    "title": "Channel Settings",
+    "groupPolicy": "Group Policy",
+    "groupPolicyDesc": "Allow bot to respond in groups",
+    "pairingPolicy": "Pairing Policy",
+    "pairingPolicyDesc": "How users pair with bot",
+    "allowFrom": "Allow From (DM)",
+    "allowFromDesc": "User IDs allowed to send DMs",
+    "groupAllowFrom": "Group Allow From",
+    "groupAllowFromDesc": "Group IDs allowed to use bot",
+    "save": "Save",
+    "cancel": "Cancel",
+    "open": "Open",
+    "allowlist": "Allowlist",
+    "code": "Code",
+    "disabled": "Disabled"
+  },
+  "configured": "Configured Channels",
+  "empty": {
+    "title": "No channels configured",
+    "desc": "Connect a messaging channel to start receiving and sending messages.",
+    "cta": "Add your first channel"
+  },
+  "deleteConfirm": "Are you sure you want to remove this channel?",
+  "configuredBadge": "Configured",
+  "doneScan": "Done scanning"
 }
