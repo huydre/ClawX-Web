@@ -9,13 +9,13 @@ import {
   MessageSquare,
   Radio,
   Puzzle,
-  Clock,
   Settings,
   ChevronLeft,
   ChevronRight,
   Terminal,
   ExternalLink,
   BookOpen,
+  Box,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -114,6 +114,54 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-2 space-y-1">
+        {/* Company 3D */}
+        <button
+          onClick={async () => {
+            try {
+              // Check status first
+              const statusRes = await fetch('/api/claw3d/status');
+              const status = await statusRes.json();
+
+              if (status.state === 'running' && status.url) {
+                window.open(status.url, '_blank');
+                return;
+              }
+
+              // Start if not running
+              const { toast } = await import('sonner');
+              toast.info(status.installed ? 'Starting Company 3D...' : 'Setting up Company 3D (first time)...');
+
+              const startRes = await fetch('/api/claw3d/start', { method: 'POST' });
+              const startData = await startRes.json();
+
+              if (startData.success) {
+                // Wait for server to be ready, then open
+                setTimeout(() => {
+                  window.open(startData.url || 'http://localhost:3333', '_blank');
+                }, status.installed ? 3000 : 15000);
+              } else {
+                toast.error(startData.error || 'Failed to start Company 3D');
+              }
+            } catch (err) {
+              const { toast } = await import('sonner');
+              toast.error(String(err));
+            }
+          }}
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full',
+            'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+            sidebarCollapsed && 'justify-center px-2'
+          )}
+        >
+          <Box className="h-5 w-5" />
+          {!sidebarCollapsed && (
+            <>
+              <span className="flex-1 text-left">{t('sidebar.company3d', 'Company 3D')}</span>
+              <ExternalLink className="h-3 w-3 text-muted-foreground/50" />
+            </>
+          )}
+        </button>
+
         {/* Docs link */}
         <a
           href="https://docs.openclaw-box.com"

@@ -97,6 +97,8 @@ app.use('/api/pairing', pairingRouter);
 app.use('/api/channel-config', channelConfigRouter);
 app.use('/api/wifi', wifiRouter);
 app.use('/api/analytics', analyticsRouter);
+import claw3dRouter from './routes/claw3d.js';
+app.use('/api/claw3d', claw3dRouter);
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
     maxAge: '1y',
