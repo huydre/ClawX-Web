@@ -522,6 +522,8 @@ ENVEOF
       # Pre-install TypeScript deps (Next.js dev needs them)
       $pm install --save-dev typescript @types/node @types/react --ignore-scripts 2>&1 | tail -3 || true
       chmod -R +x node_modules/.bin/ 2>/dev/null || true
+      # Build for production
+      node_modules/.bin/next build 2>&1 | tail -5 || true
     "
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
   else
@@ -530,8 +532,9 @@ ENVEOF
     chmod -R +x node_modules/.bin/ 2>/dev/null || true
     $pm install --save-dev typescript @types/node @types/react --ignore-scripts 2>&1 | tail -3 || true
     chmod -R +x node_modules/.bin/ 2>/dev/null || true
+    node_modules/.bin/next build 2>&1 | tail -5 || true
   fi
-  log "Claw3D dependencies installed"
+  log "Claw3D dependencies installed and built"
 
   # Setup systemd service
   if [[ $EUID -eq 0 ]]; then
@@ -548,12 +551,12 @@ Wants=clawx.service
 Type=simple
 User=${CLAWX_USER}
 WorkingDirectory=${claw3d_dir}
-ExecStart=${node_path} ${claw3d_dir}/node_modules/.bin/next dev -p ${claw3d_port}
+ExecStart=${node_path} ${claw3d_dir}/node_modules/.bin/next start -p ${claw3d_port}
 Restart=on-failure
 RestartSec=10
 StartLimitInterval=60
 StartLimitBurst=3
-Environment=NODE_ENV=development
+Environment=NODE_ENV=production
 Environment=PORT=${claw3d_port}
 Environment=HOME=${USER_HOME}
 Environment=PATH=${claw3d_dir}/node_modules/.bin:$(dirname "$node_path"):/usr/local/bin:/usr/bin:/bin
