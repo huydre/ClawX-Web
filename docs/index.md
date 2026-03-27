@@ -7,7 +7,7 @@ hero:
   text: Trợ lý AI dễ dùng cho mọi người
   tagline: Trò chuyện với AI, kết nối Telegram/Discord/WhatsApp/Zalo, lên lịch tự động — tất cả qua giao diện trực quan, không cần biết lập trình.
   image:
-    src: /logo.png
+    src: /clawx-logo.png
     alt: ClawX Logo
   actions:
     - theme: brand
