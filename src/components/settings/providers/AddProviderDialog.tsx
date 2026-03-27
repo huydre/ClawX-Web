@@ -449,15 +449,17 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                           {/* Connect button — triggers existing OAuth flow */}
                           <Button
                             className="w-full"
-                            disabled={oauthConnecting}
+                            disabled={oauthConnecting || showPasteCallback}
                             onClick={async () => {
                               setOauthConnecting(true);
                               setValidationError(null);
+                              setShowPasteCallback(false);
                               try {
                                 const resp = await fetch('/api/oauth/codex/start');
                                 const data = await resp.json();
                                 if (data.authUrl) {
                                   window.open(data.authUrl, '_blank');
+                                  setShowPasteCallback(true);
                                   const flowStartedAt = Date.now();
                                   const pollInterval = setInterval(async () => {
                                     try {
@@ -465,6 +467,7 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                                       const statusData = await statusResp.json();
                                       if (statusData.connected && !statusData.expired && statusData.savedAt > flowStartedAt) {
                                         clearInterval(pollInterval);
+                                        setShowPasteCallback(false);
                                         const finalModel = modelId.trim() || typeInfo?.defaultModelId;
                                         await onAdd(
                                           selectedType!,
@@ -491,8 +494,60 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                             ) : (
                               <ExternalLink className="h-4 w-4 mr-2" />
                             )}
-                            {t('aiProviders.codexBuy.connectCodex')}
+                            {showPasteCallback ? 'Waiting for login...' : t('aiProviders.codexBuy.connectCodex')}
                           </Button>
+
+                          {showPasteCallback && (
+                            <div className="space-y-2 mt-3 p-3 rounded-md border border-dashed border-muted-foreground/30">
+                              <Label className="text-xs">Paste callback URL (for remote access)</Label>
+                              <p className="text-xs text-muted-foreground">
+                                If the page didn't auto-close, copy the URL from the browser tab and paste it here.
+                              </p>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="http://localhost:1455/auth/callback?code=..."
+                                  value={callbackUrl}
+                                  onChange={(e) => setCallbackUrl(e.target.value)}
+                                  className="text-xs"
+                                />
+                                <Button
+                                  size="sm"
+                                  disabled={!callbackUrl.trim() || exchanging}
+                                  onClick={async () => {
+                                    setExchanging(true);
+                                    setValidationError(null);
+                                    try {
+                                      const resp = await fetch('/api/oauth/codex/exchange', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ callbackUrl: callbackUrl.trim() }),
+                                      });
+                                      const data = await resp.json();
+                                      if (data.success) {
+                                        setShowPasteCallback(false);
+                                        setCallbackUrl('');
+                                        const finalModel = modelId.trim() || typeInfo?.defaultModelId;
+                                        await onAdd(
+                                          selectedType!,
+                                          name || typeInfo?.name || selectedType!,
+                                          '',
+                                          { model: finalModel || undefined }
+                                        );
+                                      } else {
+                                        setValidationError(data.error || 'Exchange failed');
+                                      }
+                                    } catch (err) {
+                                      setValidationError(String(err));
+                                    } finally {
+                                      setExchanging(false);
+                                    }
+                                  }}
+                                >
+                                  {exchanging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
 
                           {validationError && (
                             <p className="text-xs text-destructive">{validationError}</p>

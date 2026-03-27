@@ -64,3 +64,8 @@ build/
 .pnpm-store/
 .agent/
 .claude/
+
+# Docs build artifacts
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/node_modules/
