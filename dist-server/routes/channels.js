@@ -323,9 +323,10 @@ router.get('/:type/form-values', (req, res) => {
 router.post('/openzalo/login', async (req, res) => {
     try {
         const { profile = 'default' } = req.body;
-        const { exec } = await import('child_process');
+        const { exec, execFile } = await import('child_process');
         const { promisify } = await import('util');
         const execAsync = promisify(exec);
+        const execFileAsync = promisify(execFile);
         // Find openzca binary (may be in nvm path, not in system PATH)
         const os = await import('os');
         const fs = await import('fs');
@@ -376,9 +377,10 @@ router.post('/openzalo/login', async (req, res) => {
         }
         logger.info('Found openzca binary', { path: openzcaBin });
         // Run openzca auth login with --qr-base64 flag
-        const cmd = `${openzcaBin} --profile ${profile.replace(/[^a-zA-Z0-9_-]/g, '')} auth login --qr-base64`;
-        logger.info('Running openzca login', { cmd });
-        const { stdout, stderr } = await execAsync(cmd, { timeout: 30000 });
+        const sanitizedProfile = profile.replace(/[^a-zA-Z0-9_-]/g, '');
+        const args = ['--profile', sanitizedProfile, 'auth', 'login', '--qr-base64'];
+        logger.info('Running openzca login', { bin: openzcaBin, args });
+        const { stdout, stderr } = await execFileAsync(openzcaBin, args, { timeout: 30000 });
         // openzca --qr-base64 outputs the data URL on stdout
         const output = stdout.trim();
         if (output.startsWith('data:image')) {

@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   QrCode,
   Loader2,
-  X,
   ExternalLink,
   BookOpen,
   Check,
@@ -13,8 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { ModalDialog } from '@/components/common/ModalDialog';
 import { useChannelsStore } from '@/stores/channels';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import {
@@ -53,6 +52,17 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
     errors: string[];
     warnings: string[];
   } | null>(null);
+
+  const zaloPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const zaloPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup Zalo polling on unmount
+  useEffect(() => {
+    return () => {
+      if (zaloPollRef.current) clearInterval(zaloPollRef.current);
+      if (zaloPollTimeoutRef.current) clearTimeout(zaloPollTimeoutRef.current);
+    };
+  }, []);
 
   const meta: ChannelMeta | null = selectedType ? CHANNEL_META[selectedType] : null;
 
@@ -111,8 +121,10 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
     if (selectedType !== 'whatsapp') return;
 
     const onQr = (...args: unknown[]) => {
-      const data = args[0] as { qr: string; raw: string };
-      setQrCode(`data:image/png;base64,${data.qr}`);
+      const data = args[0];
+      if (typeof data !== 'object' || data === null || !('qr' in data)) return;
+      const qrData = data as { qr: string; raw: string };
+      setQrCode(`data:image/png;base64,${qrData.qr}`);
     };
 
     const onSuccess = async (...args: unknown[]) => {
@@ -137,9 +149,13 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
       addChannel({
         type: 'whatsapp',
         name: channelName || 'WhatsApp',
-      }).then(() => {
+      }).then(async () => {
         // Restart gateway to pick up the new session
-        window.electron.ipcRenderer.invoke('gateway:restart').catch(console.error);
+        try {
+          await window.electron.ipcRenderer.invoke('gateway:restart');
+        } catch (err) {
+          console.error('Gateway restart failed:', err);
+        }
         onChannelAdded();
       });
     };
@@ -244,14 +260,36 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
             setQrCode(data.qrDataUrl);
 
             // Poll gateway health to detect when Zalo login completes
+            // Clear any existing poll first
+            if (zaloPollRef.current) clearInterval(zaloPollRef.current);
+            if (zaloPollTimeoutRef.current) clearTimeout(zaloPollTimeoutRef.current);
+
+            let pollRetries = 0;
+            const MAX_POLL_RETRIES = 40; // 40 * 3s = 120s max
+
             const pollInterval = setInterval(async () => {
+              pollRetries++;
+              if (pollRetries > MAX_POLL_RETRIES) {
+                clearInterval(pollInterval);
+                zaloPollRef.current = null;
+                setQrCode(null);
+                setConnecting(false);
+                toast.error('QR code expired. Please try again.');
+                return;
+              }
               try {
                 const statusRes = await fetch('/api/gateway/channels');
+                if (!statusRes.ok) return;
                 const statusData = await statusRes.json();
                 const zaloStatus = statusData?.channels?.openzalo;
 
                 if (zaloStatus?.configured || zaloStatus?.running) {
                   clearInterval(pollInterval);
+                  zaloPollRef.current = null;
+                  if (zaloPollTimeoutRef.current) {
+                    clearTimeout(zaloPollTimeoutRef.current);
+                    zaloPollTimeoutRef.current = null;
+                  }
                   setQrCode(null);
                   setConnecting(false);
                   toast.success('Zalo connected successfully!');
@@ -270,9 +308,15 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
               } catch { /* ignore poll errors */ }
             }, 3000);
 
-            // Stop polling after 2 minutes (QR expires)
-            setTimeout(() => {
-              clearInterval(pollInterval);
+            zaloPollRef.current = pollInterval;
+
+            // Stop polling after 2 minutes (QR expires) as fallback
+            zaloPollTimeoutRef.current = setTimeout(() => {
+              if (zaloPollRef.current) {
+                clearInterval(zaloPollRef.current);
+                zaloPollRef.current = null;
+              }
+              zaloPollTimeoutRef.current = null;
               setQrCode(null);
               setConnecting(false);
               toast.error('QR code expired. Please try again.');
@@ -407,28 +451,23 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 !m-0">
-      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-start justify-between">
-          <div>
-            <CardTitle>
-              {selectedType
-                ? isExistingConfig
-                  ? t('dialog.updateTitle', { name: CHANNEL_NAMES[selectedType] })
-                  : t('dialog.configureTitle', { name: CHANNEL_NAMES[selectedType] })
-                : t('dialog.addTitle')}
-            </CardTitle>
-            <CardDescription>
-              {selectedType && isExistingConfig
-                ? t('dialog.existingDesc')
-                : meta ? t(meta.description) : t('dialog.selectDesc')}
-            </CardDescription>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <ModalDialog
+      open={true}
+      onClose={onClose}
+      title={
+        selectedType
+          ? isExistingConfig
+            ? t('dialog.updateTitle', { name: CHANNEL_NAMES[selectedType] })
+            : t('dialog.configureTitle', { name: CHANNEL_NAMES[selectedType] })
+          : t('dialog.addTitle')
+      }
+      description={
+        selectedType && isExistingConfig
+          ? t('dialog.existingDesc')
+          : meta ? t(meta.description) : t('dialog.selectDesc')
+      }
+      maxWidth="lg"
+    >
           {!selectedType ? (
             // Channel type selection
             <div className="grid grid-cols-2 gap-4">
@@ -679,9 +718,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div >
+    </ModalDialog>
   );
 }
 
