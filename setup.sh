@@ -547,6 +547,17 @@ PATCHEOF
     log "Claw3D proxy-url.ts patched to use NEXT_PUBLIC_GATEWAY_URL"
   fi
 
+  # Patch settings.ts to expose gateway token to client (internal deployment only)
+  local settings_file="$claw3d_dir/src/lib/studio/settings.ts"
+  if [[ -f "$settings_file" ]]; then
+    # Replace sanitizeStudioGatewaySettings to include token
+    sed -i 's/tokenConfigured: value\.token\.length > 0,/tokenConfigured: value.token.length > 0, token: value.token,/' "$settings_file" 2>/dev/null || true
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      chown "$CLAWX_USER":"$CLAWX_USER" "$settings_file"
+    fi
+    log "Claw3D settings.ts patched to expose gateway token"
+  fi
+
   # Install dependencies
   info "Installing Claw3D dependencies..."
   local pm="npm"
