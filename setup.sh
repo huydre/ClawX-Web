@@ -963,6 +963,11 @@ main() {
     --update|-u)
       cmd_update
       ;;
+    --update-claw3d)
+      load_existing_env
+      CFG_GATEWAY_PORT="${EXISTING_GATEWAY_PORT:-$DEFAULT_GATEWAY_PORT}"
+      install_claw3d
+      ;;
     --status|-s)
       cmd_status
       ;;
