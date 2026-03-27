@@ -121,9 +121,19 @@ export function Sidebar() {
               const isRemote = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 
               if (isRemote) {
-                // Remote access via tunnel — open company subdomain
-                const host = window.location.hostname; // e.g. clawbox20.openclaw-box.com
-                const companyUrl = `https://company-${host}`;
+                // Remote access via tunnel — open company subdomain with gateway token
+                const host = window.location.hostname;
+                let companyUrl = `https://company-${host}`;
+
+                // Get gateway token to pass along
+                try {
+                  const settingsRes = await fetch('/api/settings');
+                  const settings = await settingsRes.json();
+                  if (settings.gatewayToken) {
+                    companyUrl += `?token=${settings.gatewayToken}`;
+                  }
+                } catch { /* open without token */ }
+
                 window.open(companyUrl, '_blank');
                 return;
               }
