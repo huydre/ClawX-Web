@@ -40,7 +40,3 @@ Cài thêm các "skill" để AI có thể làm nhiều việc hơn: tìm kiếm
 ## ClawX và OpenClaw
 
 ClawX sử dụng **OpenClaw** làm "bộ não" bên trong. Bạn không cần quan tâm đến OpenClaw — ClawX tự động quản lý mọi thứ. Chỉ cần mở ứng dụng và bắt đầu sử dụng.
-
-## Bước tiếp theo
-
-Sẵn sàng chưa? Hãy [cài đặt ClawX](/guide/installation) ngay!
