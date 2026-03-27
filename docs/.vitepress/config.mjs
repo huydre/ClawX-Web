@@ -45,7 +45,6 @@ export default defineConfig({
         text: 'Bắt đầu',
         items: [
           { text: 'Giới thiệu', link: '/guide/introduction' },
-          { text: 'Cài đặt', link: '/guide/installation' },
         ],
       },
       {
