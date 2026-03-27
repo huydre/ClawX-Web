@@ -46,7 +46,7 @@
         "codexBuy": {
             "tabHaveAccount": "I have an account",
             "tabBuySlot": "Buy Codex slot",
-            "price": "200,000 VND / slot",
+            "price": "200,000 VND / slot / month",
             "emailLabel": "Registration email",
             "emailPlaceholder": "email@example.com",
             "generateQR": "Generate payment QR",

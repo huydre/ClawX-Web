@@ -46,7 +46,7 @@
         "codexBuy": {
             "tabHaveAccount": "アカウントを持っている",
             "tabBuySlot": "Codex スロットを購入",
-            "price": "200,000 VND / スロット",
+            "price": "200,000 VND / スロット / 月",
             "emailLabel": "登録メール",
             "emailPlaceholder": "email@example.com",
             "generateQR": "QR コードを生成",
