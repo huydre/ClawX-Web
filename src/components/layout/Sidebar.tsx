@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Terminal,
   ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -86,7 +87,7 @@ export function Sidebar() {
 
   const navItems = [
     { to: '/', icon: <MessageSquare className="h-5 w-5" />, label: t('sidebar.chat') },
-    { to: '/cron', icon: <Clock className="h-5 w-5" />, label: t('sidebar.cronTasks') },
+    // { to: '/cron', icon: <Clock className="h-5 w-5" />, label: t('sidebar.cronTasks') },
     { to: '/skills', icon: <Puzzle className="h-5 w-5" />, label: t('sidebar.skills') },
     { to: '/channels', icon: <Radio className="h-5 w-5" />, label: t('sidebar.channels') },
     { to: '/dashboard', icon: <Home className="h-5 w-5" />, label: t('sidebar.dashboard') },
@@ -112,7 +113,27 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-2 space-y-2">
+      <div className="p-2 space-y-1">
+        {/* Docs link */}
+        <a
+          href="https://docs.openclaw-box.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+            sidebarCollapsed && 'justify-center px-2'
+          )}
+        >
+          <BookOpen className="h-5 w-5" />
+          {!sidebarCollapsed && (
+            <>
+              <span className="flex-1">{t('sidebar.docs', 'Hướng dẫn')}</span>
+              <ExternalLink className="h-3 w-3 text-muted-foreground/50" />
+            </>
+          )}
+        </a>
+
         {devModeUnlocked && !sidebarCollapsed && (
           <Button
             variant="ghost"
