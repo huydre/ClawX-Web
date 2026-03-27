@@ -510,16 +510,23 @@ ENVEOF
   # Fix ownership before install so npm can write freely
   if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
-    # Run npm as the target user with full env (HOME, PATH, npm cache)
+    # Run npm as the target user with node_modules/.bin in PATH
     sudo -u "$CLAWX_USER" bash -c "
       export HOME='$USER_HOME'
+      export npm_config_cache='$USER_HOME/.npm'
       $NVM_SOURCE_CMD
       cd '$claw3d_dir'
-      npm_config_cache='$USER_HOME/.npm' $pm install 2>&1 | tail -10
-    " || warn "npm install had errors (may still work)"
+      export PATH=\"\$PWD/node_modules/.bin:\$PATH\"
+      $pm install 2>&1 | tail -10 || true
+      # Ensure TypeScript deps are installed (Next.js needs them)
+      $pm install --save-dev typescript @types/node @types/react 2>&1 | tail -5 || true
+    "
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
   else
-    cd "$claw3d_dir" && $pm install 2>&1 | tail -10
+    cd "$claw3d_dir"
+    export PATH="$PWD/node_modules/.bin:$PATH"
+    $pm install 2>&1 | tail -10 || true
+    $pm install --save-dev typescript @types/node @types/react 2>&1 | tail -5 || true
   fi
   log "Claw3D dependencies installed"
 
@@ -543,11 +550,13 @@ User=${CLAWX_USER}
 WorkingDirectory=${claw3d_dir}
 ExecStart=${pm_path} run dev
 Restart=on-failure
-RestartSec=5
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
 Environment=NODE_ENV=development
 Environment=PORT=${claw3d_port}
 Environment=HOME=${USER_HOME}
-Environment=PATH=$(dirname "$node_path"):/usr/local/bin:/usr/bin:/bin
+Environment=PATH=${claw3d_dir}/node_modules/.bin:$(dirname "$node_path"):/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=${claw3d_dir}/.env
 
 [Install]
