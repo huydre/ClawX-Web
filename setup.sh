@@ -513,6 +513,24 @@ ENVEOF
   fi
   log "Claw3D .env configured (port: $claw3d_port, gateway: $gw_url)"
 
+  # Patch proxy-url.ts to use NEXT_PUBLIC_GATEWAY_URL instead of window.location
+  local proxy_file="$claw3d_dir/src/lib/gateway/proxy-url.ts"
+  if [[ -f "$proxy_file" ]]; then
+    cat > "$proxy_file" <<'PATCHEOF'
+export const resolveStudioProxyGatewayUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
+  if (envUrl) return envUrl;
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const host = window.location.host;
+  return `${protocol}://${host}/api/gateway/ws`;
+};
+PATCHEOF
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      chown "$CLAWX_USER":"$CLAWX_USER" "$proxy_file"
+    fi
+    log "Claw3D proxy-url.ts patched to use NEXT_PUBLIC_GATEWAY_URL"
+  fi
+
   # Install dependencies
   info "Installing Claw3D dependencies..."
   local pm="npm"
