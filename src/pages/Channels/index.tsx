@@ -47,19 +47,7 @@ import { PairingApprovals } from '@/components/channels/PairingApprovals';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/lib/platform';
 import { api } from '@/lib/api';
-
-function formatRelativeTime(timestamp: number | null | undefined): string {
-  if (!timestamp) return 'Never';
-  const diff = Date.now() - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return 'Just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+import { formatRelativeTime } from '@/lib/utils';
 
 export function Channels() {
   const { t } = useTranslation('channels');
