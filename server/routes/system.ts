@@ -4,6 +4,8 @@
  */
 import { Router } from 'express';
 import { spawn, execSync } from 'child_process';
+import { join } from 'path';
+import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
 import { updateChecker } from '../services/update-checker.js';
 import { wss } from '../websocket/server.js';
@@ -97,9 +99,25 @@ router.post('/update', async (_req, res) => {
       send('log', { line: 'Pre-built dist found, skipping build' });
     }
 
+    // 4. Update Claw3D if installed
+    const claw3dDir = join(homedir(), '.clawx', 'claw3d');
+    if (fs.existsSync(join(claw3dDir, 'package.json'))) {
+      send('updating_claw3d');
+      try {
+        await runStream('bash', ['-c', `cd "${cwd}" && bash setup.sh --update-claw3d 2>&1 || true`], cwd, send);
+      } catch {
+        send('log', { line: 'Claw3D update skipped (non-critical)' });
+      }
+      // Restart claw3d service
+      try {
+        execSync('systemctl restart claw3d 2>/dev/null || true', { stdio: 'ignore' });
+        send('log', { line: 'Claw3D service restarted' });
+      } catch { /* ignore */ }
+    }
+
     send('restarting');
 
-    // 4. Restart: exit with non-zero so systemd Restart=on-failure restarts us
+    // 5. Restart: exit with non-zero so systemd Restart=on-failure restarts us
     setTimeout(() => {
       process.exit(1);
     }, 1500);
