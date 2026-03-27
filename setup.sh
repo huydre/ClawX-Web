@@ -508,9 +508,10 @@ ENVEOF
   [[ -f "$claw3d_dir/pnpm-lock.yaml" ]] && pm="pnpm"
 
   if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-    su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$claw3d_dir' && $pm install" "$CLAWX_USER" 2>&1 | tail -3
+    su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$claw3d_dir' && HOME='$USER_HOME' $pm install --ignore-scripts 2>/dev/null || $pm install --ignore-scripts" "$CLAWX_USER" 2>&1 | tail -5
+    chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
   else
-    cd "$claw3d_dir" && $pm install 2>&1 | tail -3
+    cd "$claw3d_dir" && $pm install --ignore-scripts 2>&1 | tail -5
   fi
   log "Claw3D dependencies installed"
 
