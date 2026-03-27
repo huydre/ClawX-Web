@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'ClawX',
-  description: 'Giao diện đồ hoạ cho OpenClaw AI Agents - Tài liệu hướng dẫn',
+  description: 'Tài liệu hướng dẫn sử dụng ClawX - Trợ lý AI cho mọi người',
   lang: 'vi-VN',
   base: '/',
 
