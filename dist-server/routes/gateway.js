@@ -5,6 +5,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
 import { gatewayManager } from '../services/gateway-manager.js';
+import { trackEvent } from '../services/analytics.js';
 const router = Router();
 // GET /api/gateway/status
 router.get('/status', (_req, res) => {
@@ -245,6 +246,12 @@ router.post('/send-with-media', async (req, res) => {
         const timeoutMs = imageAttachments.length > 0 ? 120000 : 60000;
         const result = await gatewayManager.rpc('chat.send', rpcParams, timeoutMs);
         logger.info(`[send-with-media] RPC result: ${JSON.stringify(result)}`);
+        // Track message_sent analytics (fire-and-forget)
+        trackEvent({
+            type: 'message_sent',
+            sessionKey,
+            metadata: { method: 'chat.send', hasMedia: true, mediaCount: media.length },
+        }).catch(() => { });
         res.json({ success: true, result });
     }
     catch (error) {
@@ -350,6 +357,14 @@ router.post('/rpc', async (req, res) => {
                     throw new Error('Gateway not connected after waiting');
                 }
                 const result = await gatewayManager.rpc(method, params, effectiveTimeout);
+                // Track message_sent analytics for chat.send (fire-and-forget)
+                if (isChatSend) {
+                    trackEvent({
+                        type: 'message_sent',
+                        sessionKey: params?.sessionKey,
+                        metadata: { method },
+                    }).catch(() => { });
+                }
                 res.json({ success: true, result });
                 return;
             }

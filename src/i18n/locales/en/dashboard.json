@@ -24,5 +24,10 @@
     "activeSkills": "Active Skills",
     "noSkills": "No skills enabled",
     "enableSome": "Enable some skills",
-    "more": "+{{count}} more"
+    "more": "+{{count}} more",
+    "analytics": {
+        "title": "Analytics",
+        "messages": "Messages",
+        "activity": "Activity"
+    }
 }

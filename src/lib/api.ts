@@ -445,6 +445,19 @@ class ApiClient {
     return this.request<{ success: boolean; values: Record<string, string> | null }>(`/channels/${type}/form-values`);
   }
 
+  // Analytics API
+  async getAnalyticsDaily(days = 7) {
+    return this.request<{ data: Array<{ date: string; sent: number; received: number }> }>('/analytics/daily?days=' + days);
+  }
+
+  async getAnalyticsTotals() {
+    return this.request<{ sent: number; received: number }>('/analytics/totals');
+  }
+
+  async getAnalyticsHourly() {
+    return this.request<{ data: Record<string, number> }>('/analytics/hourly');
+  }
+
   // System / Update API (web-only)
   async getSystemInfo() {
     return this.request<{
