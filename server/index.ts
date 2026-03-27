@@ -209,11 +209,28 @@ async function start() {
           const terminalUrl = `https://${terminalFullDomain}`;
           logger.info('Terminal tunnel ingress configured', { terminalUrl });
 
+          // Set up Company 3D (Claw3D) subdomain
+          const companyPort = process.env.COMPANY_3D_PORT || '3333';
+          const companySubdomain = `company-${subdomain}`;
+          const companyFullDomain = `${companySubdomain}.${envDomain}`;
+
+          let companyDnsSubdomain: string;
+          if (envDomain === zoneName) {
+            companyDnsSubdomain = companySubdomain;
+          } else {
+            const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
+            companyDnsSubdomain = `${companySubdomain}.${subdomainPrefix}`;
+          }
+
+          await ensureDnsRecord(companyFullDomain, companyDnsSubdomain);
+          logger.info('Company 3D tunnel ingress configured', { companyFullDomain });
+
           // Set tunnel ingress rules via API so all hostnames route to the right service
           await cfApi.updateTunnelConfig(accountId, tunnel.id, [
             { hostname: fullDomain, service: `http://localhost:${PORT}` },
             { hostname: dashboardFullDomain, service: `http://localhost:${dashboardPort}` },
             { hostname: terminalFullDomain, service: `http://localhost:${ttydPort}` },
+            { hostname: companyFullDomain, service: `http://localhost:${companyPort}` },
             { service: 'http_status:404' },
           ]);
 
