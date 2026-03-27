@@ -7,7 +7,8 @@
         "dashboard": "ダッシュボード",
         "settings": "設定",
         "devConsole": "開発者コンソール",
-        "docs": "ガイド"
+        "docs": "ガイド",
+        "company3d": "Company 3D"
     },
     "actions": {
         "save": "保存",
