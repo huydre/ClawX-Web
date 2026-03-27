@@ -48,7 +48,8 @@
     "generateQRCode": "Tạo mã QR",
     "updateAndReconnect": "Cập nhật & Kết nối lại",
     "saveAndConnect": "Lưu & Kết nối",
-    "envVar": "Biến môi trường: {{var}}"
+    "envVar": "Biến môi trường: {{var}}",
+    "doneScan": "Quét xong"
   },
   "meta": {
     "telegram": {
@@ -291,5 +292,43 @@
       ]
     }
   },
-  "viewDocs": "Xem tài liệu"
+  "viewDocs": "Xem tài liệu",
+  "card": {
+    "online": "Trực tuyến",
+    "offline": "Ngoại tuyến",
+    "error": "Lỗi",
+    "active": "Hoạt động",
+    "inactive": "Không hoạt động",
+    "connection": "Kết nối",
+    "lastMessage": "Tin nhắn cuối",
+    "settings": "Cài đặt",
+    "remove": "Xóa",
+    "docs": "Tài liệu"
+  },
+  "settings": {
+    "title": "Cài đặt kênh",
+    "groupPolicy": "Chính sách nhóm",
+    "groupPolicyDesc": "Cho phép bot phản hồi trong group",
+    "pairingPolicy": "Chính sách ghép nối",
+    "pairingPolicyDesc": "Cách pair user với bot",
+    "allowFrom": "Cho phép từ (DM)",
+    "allowFromDesc": "Danh sách user ID được phép gửi DM",
+    "groupAllowFrom": "Cho phép từ nhóm",
+    "groupAllowFromDesc": "Danh sách group ID được phép (khi groupPolicy = allowlist)",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "open": "Mở",
+    "allowlist": "Danh sách cho phép",
+    "code": "Mã",
+    "disabled": "Tắt"
+  },
+  "configured": "Kênh đã cấu hình",
+  "empty": {
+    "title": "Chưa cấu hình kênh nào",
+    "desc": "Kết nối kênh nhắn tin để bắt đầu nhận và gửi tin nhắn.",
+    "cta": "Thêm kênh đầu tiên"
+  },
+  "deleteConfirm": "Bạn có chắc chắn muốn xóa kênh này không?",
+  "configuredBadge": "Đã cấu hình",
+  "doneScan": "Quét xong"
 }

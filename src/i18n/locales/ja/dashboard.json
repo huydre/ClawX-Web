@@ -24,5 +24,10 @@
     "activeSkills": "アクティブなスキル",
     "noSkills": "有効なスキルがありません",
     "enableSome": "スキルを有効にする",
-    "more": "+{{count}} 件"
+    "more": "+{{count}} 件",
+    "analytics": {
+        "title": "分析",
+        "messages": "メッセージ",
+        "activity": "アクティビティ"
+    }
 }

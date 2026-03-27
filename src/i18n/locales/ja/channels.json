@@ -48,7 +48,8 @@
         "generateQRCode": "QRコードを生成",
         "updateAndReconnect": "更新して再接続",
         "saveAndConnect": "保存して接続",
-        "envVar": "環境変数: {{var}}"
+        "envVar": "環境変数: {{var}}",
+        "doneScan": "スキャン完了"
     },
     "meta": {
         "telegram": {
@@ -254,5 +255,43 @@
             ]
         }
     },
-    "viewDocs": "ドキュメントを表示"
+    "viewDocs": "ドキュメントを表示",
+    "card": {
+        "online": "オンライン",
+        "offline": "オフライン",
+        "error": "エラー",
+        "active": "アクティブ",
+        "inactive": "非アクティブ",
+        "connection": "接続",
+        "lastMessage": "最後のメッセージ",
+        "settings": "設定",
+        "remove": "削除",
+        "docs": "ドキュメント"
+    },
+    "settings": {
+        "title": "チャンネル設定",
+        "groupPolicy": "グループポリシー",
+        "groupPolicyDesc": "グループでボットの応答を許可する",
+        "pairingPolicy": "ペアリングポリシー",
+        "pairingPolicyDesc": "ユーザーがボットとペアリングする方法",
+        "allowFrom": "許可元 (DM)",
+        "allowFromDesc": "DMを送信できるユーザーID",
+        "groupAllowFrom": "グループ許可元",
+        "groupAllowFromDesc": "ボットを使用できるグループID",
+        "save": "保存",
+        "cancel": "キャンセル",
+        "open": "オープン",
+        "allowlist": "許可リスト",
+        "code": "コード",
+        "disabled": "無効"
+    },
+    "configured": "設定済みチャンネル",
+    "empty": {
+        "title": "チャンネルが設定されていません",
+        "desc": "メッセージングチャンネルを接続して、メッセージの送受信を開始しましょう。",
+        "cta": "最初のチャンネルを追加"
+    },
+    "deleteConfirm": "このチャンネルを削除してもよろしいですか？",
+    "configuredBadge": "設定済み",
+    "doneScan": "スキャン完了"
 }

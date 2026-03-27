@@ -3,6 +3,7 @@ import { app, dashboardProxy } from './app.js';
 import { logger } from './utils/logger.js';
 import { createWebSocketServer } from './websocket/server.js';
 import { initStorage, getCloudflareSettings } from './services/storage.js';
+import { initAnalytics } from './services/analytics.js';
 import { gatewayManager } from './services/gateway-manager.js';
 import { tunnelManager } from './services/tunnel-manager.js';
 import { startAutoPairing } from './services/auto-pairing.js';
@@ -16,6 +17,9 @@ async function start() {
     // Initialize storage
     await initStorage();
     logger.info('Storage initialized');
+
+    await initAnalytics();
+    logger.info('Analytics initialized');
 
     // Start HTTP server
     const server = app.listen(PORT, HOST, () => {
