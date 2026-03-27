@@ -507,26 +507,29 @@ ENVEOF
   local pm="npm"
   [[ -f "$claw3d_dir/pnpm-lock.yaml" ]] && pm="pnpm"
 
-  # Fix ownership before install so npm can write freely
+  # Install deps as correct user with full permissions
   if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
-    # Run npm as the target user with node_modules/.bin in PATH
     sudo -u "$CLAWX_USER" bash -c "
       export HOME='$USER_HOME'
       export npm_config_cache='$USER_HOME/.npm'
       $NVM_SOURCE_CMD
       cd '$claw3d_dir'
-      export PATH=\"\$PWD/node_modules/.bin:\$PATH\"
-      $pm install 2>&1 | tail -10 || true
-      # Ensure TypeScript deps are installed (Next.js needs them)
-      $pm install --save-dev typescript @types/node @types/react 2>&1 | tail -5 || true
+      # Install with ignore-scripts to avoid permission issues on postinstall
+      $pm install --ignore-scripts 2>&1 | tail -5 || true
+      # Fix bin permissions and run postinstall manually
+      chmod -R +x node_modules/.bin/ 2>/dev/null || true
+      # Pre-install TypeScript deps (Next.js dev needs them)
+      $pm install --save-dev typescript @types/node @types/react --ignore-scripts 2>&1 | tail -3 || true
+      chmod -R +x node_modules/.bin/ 2>/dev/null || true
     "
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
   else
     cd "$claw3d_dir"
-    export PATH="$PWD/node_modules/.bin:$PATH"
-    $pm install 2>&1 | tail -10 || true
-    $pm install --save-dev typescript @types/node @types/react 2>&1 | tail -5 || true
+    $pm install --ignore-scripts 2>&1 | tail -5 || true
+    chmod -R +x node_modules/.bin/ 2>/dev/null || true
+    $pm install --save-dev typescript @types/node @types/react --ignore-scripts 2>&1 | tail -3 || true
+    chmod -R +x node_modules/.bin/ 2>/dev/null || true
   fi
   log "Claw3D dependencies installed"
 
@@ -534,9 +537,6 @@ ENVEOF
   if [[ $EUID -eq 0 ]]; then
     local node_path
     node_path=$(which node)
-
-    local pm_path
-    pm_path=$(which $pm 2>/dev/null || echo "/usr/local/bin/$pm")
 
     cat > /etc/systemd/system/claw3d.service <<SVCEOF
 [Unit]
@@ -548,7 +548,7 @@ Wants=clawx.service
 Type=simple
 User=${CLAWX_USER}
 WorkingDirectory=${claw3d_dir}
-ExecStart=${pm_path} run dev
+ExecStart=${node_path} ${claw3d_dir}/node_modules/.bin/next dev -p ${claw3d_port}
 Restart=on-failure
 RestartSec=10
 StartLimitInterval=60
