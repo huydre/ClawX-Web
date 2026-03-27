@@ -700,7 +700,7 @@ configure_openclaw() {
     t_domain=$(grep '^CLOUDFLARE_TUNNEL_DOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
     t_sub=$(grep '^CLOUDFLARE_TUNNEL_SUBDOMAIN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
     if [[ -n "$t_domain" && -n "$t_sub" ]]; then
-      tunnel_origins="https://${t_sub}.${t_domain},https://dashboard-${t_sub}.${t_domain}"
+      tunnel_origins="https://${t_sub}.${t_domain},https://dashboard-${t_sub}.${t_domain},https://company-${t_sub}.${t_domain}"
     fi
   fi
 
