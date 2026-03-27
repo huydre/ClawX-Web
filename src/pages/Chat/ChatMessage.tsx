@@ -67,16 +67,19 @@ export const ChatMessage = memo(function ChatMessage({
     <div
       className={cn(
         'flex gap-3 group',
+        'animate-in fade-in-0 slide-in-from-bottom-4 duration-300',
         isUser ? 'flex-row-reverse' : 'flex-row',
       )}
+      style={{ animationFillMode: 'both' }}
     >
       {/* Avatar */}
       <div
         className={cn(
           'flex h-8 w-8 shrink-0 items-center justify-center rounded-full mt-1',
+          'transition-transform duration-200 group-hover:scale-105',
           isUser
             ? 'bg-primary text-primary-foreground'
-            : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white',
+            : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/20',
         )}
       >
         {isUser ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
@@ -357,6 +360,7 @@ function MessageBubble({
     <div
       className={cn(
         'relative rounded-2xl px-4 py-3 overflow-hidden',
+        'transition-shadow duration-200 hover:shadow-sm',
         !isUser && 'w-full',
         isUser
           ? 'bg-primary text-primary-foreground'
