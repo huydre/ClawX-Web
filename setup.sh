@@ -508,9 +508,17 @@ install_claw3d() {
     fi
   fi
 
+  # Read gateway token from openclaw config
+  local gw_token=""
+  local oc_config="${USER_HOME}/.openclaw/openclaw.json"
+  if [[ -f "$oc_config" ]]; then
+    gw_token=$(python3 -c "import json; d=json.load(open('${oc_config}')); print(d.get('gateway',{}).get('auth',{}).get('token',''))" 2>/dev/null || echo "")
+  fi
+
   # Write .env
   cat > "$claw3d_dir/.env" <<ENVEOF
 NEXT_PUBLIC_GATEWAY_URL=${gw_url}
+STUDIO_ACCESS_TOKEN=${gw_token}
 DEBUG=true
 PORT=${claw3d_port}
 HOST=0.0.0.0
