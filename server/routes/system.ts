@@ -180,15 +180,12 @@ PORT=3333
 HOST=0.0.0.0
 ENVFILE
 
-        # Build
-        node_modules/.bin/next build 2>&1 | tail -5 || true
-
         # Install PM2 if needed
         command -v pm2 >/dev/null || npm install -g pm2
 
-        # Start/restart via PM2
+        # Start/restart via PM2 (dev mode — no build needed)
         pm2 delete claw3d 2>/dev/null || true
-        pm2 start node_modules/.bin/next --name claw3d -- start -p 3333
+        pm2 start node_modules/.bin/next --name claw3d -- dev -p 3333
         pm2 save 2>/dev/null || true
 
         echo "Claw3D started on port 3333"
