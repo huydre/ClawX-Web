@@ -418,7 +418,7 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                           {/* QR Code */}
                           <div className="text-center space-y-2">
                             <img
-                              src={`https://img.vietqr.io/image/970407-39156868-compact.png?amount=200000&addInfo=CODEX%20${encodeURIComponent(buyEmail.trim())}&accountName=TECHLA%20AI%20CO.,%20LTD`}
+                              src={`https://img.vietqr.io/image/970407-MS01T17213302551927-compact.png?amount=200000&addInfo=CODEX%20${encodeURIComponent(buyEmail.trim())}&accountName=TECHLA%20AI%20CO.,%20LTD`}
                               alt="VietQR Payment"
                               className="mx-auto rounded-lg border max-w-[220px]"
                             />
