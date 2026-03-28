@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { spawn, execSync } from 'child_process';
 import { logger } from '../utils/logger.js';
 import { updateChecker } from '../services/update-checker.js';
+import { systemMonitor } from '../services/system-monitor.js';
 import { wss } from '../websocket/server.js';
 import { WebSocket } from 'ws';
 const router = Router();
@@ -20,6 +21,24 @@ function broadcast(payload) {
         }
     });
 }
+// GET /api/system/metrics
+// Returns current system metrics (CPU, RAM, disk, network, temp, containers)
+router.get('/metrics', async (_req, res) => {
+    try {
+        const cached = systemMonitor.getCached();
+        if (cached) {
+            res.json(cached);
+        }
+        else {
+            const metrics = await systemMonitor.collect();
+            res.json(metrics);
+        }
+    }
+    catch (err) {
+        logger.error('Failed to get system metrics', { error: String(err) });
+        res.status(500).json({ error: 'Failed to collect system metrics' });
+    }
+});
 // GET /api/system/info
 // Returns local + remote version info, whether update is available
 router.get('/info', async (_req, res) => {

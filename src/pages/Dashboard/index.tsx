@@ -16,6 +16,7 @@ import {
   Zap,
   ArrowUpRight,
   X,
+  Monitor,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,12 +26,23 @@ import { useGatewayStore } from '@/stores/gateway';
 import { useChannelsStore } from '@/stores/channels';
 import { useSkillsStore } from '@/stores/skills';
 import { useSettingsStore } from '@/stores/settings';
+import { useSystemMonitorStore } from '@/stores/system-monitor';
 import { api } from '@/lib/api';
+import { ws } from '@/lib/websocket';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import { Skeleton } from '@/components/common/Skeleton';
 import { MessageAreaChart, ActivityHeatmap } from '@/components/charts/DashboardCharts';
+import {
+  CpuGauge,
+  MemoryBar,
+  DiskBars,
+  NetworkSparkline,
+  GpuInfo,
+  ContainerList,
+  SystemInfoBadges,
+} from '@/components/charts/SystemCharts';
 
 export function Dashboard() {
   const { t } = useTranslation('dashboard');
@@ -45,6 +57,26 @@ export function Dashboard() {
   const [analyticsDaily, setAnalyticsDaily] = useState<Array<{ date: string; sent: number; received: number }>>([]);
   const [analyticsHourly, setAnalyticsHourly] = useState<Record<string, number>>({});
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
+  // System monitor
+  const systemMetrics = useSystemMonitorStore((s) => s.metrics);
+  const networkHistory = useSystemMonitorStore((s) => s.networkHistory);
+  const setSystemMetrics = useSystemMonitorStore((s) => s.setMetrics);
+
+  // Listen for real-time system metrics via WebSocket
+  useEffect(() => {
+    const handler = (data: any) => {
+      setSystemMetrics(data);
+    };
+    ws.on('system.metrics', handler);
+
+    // Also fetch initial metrics via REST if no cached data
+    if (!systemMetrics) {
+      api.getSystemMetrics().then(setSystemMetrics).catch(() => {});
+    }
+
+    return () => { ws.off('system.metrics', handler); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isGatewayRunning) {
@@ -257,17 +289,96 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* System Monitor */}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '230ms', animationFillMode: 'both' }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Monitor className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-muted-foreground">{t('systemMonitor.title', 'System Monitor')}</h3>
+          {systemMetrics && (
+            <SystemInfoBadges os={systemMetrics.os} />
+          )}
+        </div>
+
+        {!systemMetrics ? (
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <Card key={i}><CardContent className="p-4"><Skeleton className="w-full" height={120} /></CardContent></Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {/* CPU */}
+            <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '240ms', animationFillMode: 'both' }}>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.cpu', 'CPU')}</p>
+                <CpuGauge
+                  usage={systemMetrics.cpu.usage}
+                  temp={systemMetrics.cpu.temp}
+                  model={systemMetrics.cpu.model}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Memory */}
+            <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '260ms', animationFillMode: 'both' }}>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.memory', 'Memory')}</p>
+                <MemoryBar memory={systemMetrics.memory} />
+              </CardContent>
+            </Card>
+
+            {/* Network */}
+            <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '280ms', animationFillMode: 'both' }}>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.networkTitle', 'Network I/O')}</p>
+                <NetworkSparkline history={networkHistory} current={systemMetrics.network} />
+              </CardContent>
+            </Card>
+
+            {/* Disk */}
+            {systemMetrics.disk.length > 0 && (
+              <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+                <CardContent className="p-4">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.storage', 'Storage')}</p>
+                  <DiskBars disks={systemMetrics.disk} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* GPU */}
+            {systemMetrics.gpu.length > 0 && (
+              <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '320ms', animationFillMode: 'both' }}>
+                <CardContent className="p-4">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.gpu', 'GPU')}</p>
+                  <GpuInfo gpus={systemMetrics.gpu} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Docker Containers */}
+            {systemMetrics.containers.length > 0 && (
+              <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '340ms', animationFillMode: 'both' }}>
+                <CardContent className="p-4">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.docker', 'Docker')}</p>
+                  <ContainerList containers={systemMetrics.containers} />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Analytics */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
+      <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
         <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('analytics.title')}</h3>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+          <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
             <CardContent className="p-4">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('analytics.messages')}</p>
               <MessageAreaChart data={analyticsDaily} loading={analyticsLoading} />
             </CardContent>
           </Card>
-          <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
+          <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '450ms', animationFillMode: 'both' }}>
             <CardContent className="p-4">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('analytics.activity')}</p>
               <ActivityHeatmap data={analyticsHourly} loading={analyticsLoading} />
@@ -277,7 +388,7 @@ export function Dashboard() {
       </div>
 
       {/* Bottom Grid: Channels + Skills */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '500ms', animationFillMode: 'both' }}>
         {/* Connected Channels */}
         <Card>
           <div className="flex items-center justify-between p-4 pb-0">
