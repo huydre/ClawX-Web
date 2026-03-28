@@ -175,7 +175,7 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <>
               <span className="flex-1 text-left">{t('sidebar.company3d', 'Company 3D')}</span>
-              <ExternalLink className="h-3 w-3 text-muted-foreground/50" />
+              <span className="text-[9px] font-medium bg-primary/15 text-primary px-1 py-0.5 rounded">Beta</span>
             </>
           )}
         </button>
