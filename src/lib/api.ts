@@ -458,6 +458,20 @@ class ApiClient {
     return this.request<{ data: Record<string, number> }>('/analytics/hourly');
   }
 
+  // System Metrics API
+  async getSystemMetrics() {
+    return this.request<{
+      cpu: { usage: number; cores: number; model: string; speed: number; temp: number | null };
+      memory: { total: number; used: number; free: number; usagePercent: number; swapTotal: number; swapUsed: number };
+      disk: Array<{ fs: string; mount: string; type: string; size: number; used: number; available: number; usagePercent: number }>;
+      network: { rxSec: number; txSec: number; rxTotal: number; txTotal: number; interface: string };
+      os: { platform: string; distro: string; release: string; hostname: string; arch: string; uptime: number };
+      gpu: Array<{ model: string; vendor: string; vram: number; temp: number | null }>;
+      containers: Array<{ id: string; name: string; image: string; state: string; cpuPercent: number; memUsage: number; memLimit: number; netIO: { rx: number; tx: number } }>;
+      timestamp: number;
+    }>('/system/metrics');
+  }
+
   // System / Update API (web-only)
   async getSystemInfo() {
     return this.request<{

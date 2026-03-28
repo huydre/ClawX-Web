@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 import { gatewayManager } from '../services/gateway-manager.js';
 import { tunnelManager } from '../services/tunnel-manager.js';
 import { updateChecker } from '../services/update-checker.js';
+import { systemMonitor } from '../services/system-monitor.js';
 import { getSettings } from '../services/storage.js';
 import { trackEvent } from '../services/analytics.js';
 // Exported so routes can broadcast to all clients
@@ -144,6 +145,11 @@ export function createWebSocketServer(server) {
             state: tunnelManager.getState(),
             status: tunnelManager.getStatus(),
         }));
+        // Send cached system metrics if available
+        const cachedMetrics = systemMonitor.getCached();
+        if (cachedMetrics) {
+            ws.send(JSON.stringify({ type: 'system.metrics', ...cachedMetrics }));
+        }
         ws.on('message', (data) => {
             try {
                 const message = JSON.parse(data.toString());
@@ -171,6 +177,16 @@ export function createWebSocketServer(server) {
         });
         ws.on('error', (error) => {
             logger.error('WebSocket error', { error: error.message });
+        });
+    });
+    // Start system monitor and broadcast metrics to all clients
+    systemMonitor.start(5000);
+    systemMonitor.on('metrics', (metrics) => {
+        const msg = JSON.stringify({ type: 'system.metrics', ...metrics });
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN && client.isAuthenticated) {
+                client.send(msg);
+            }
         });
     });
     logger.info('WebSocket server created');

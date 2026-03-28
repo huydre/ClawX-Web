@@ -29,5 +29,23 @@
         "title": "分析",
         "messages": "メッセージ",
         "activity": "アクティビティ"
+    },
+    "systemMonitor": {
+        "title": "システムモニター",
+        "cpu": "CPU",
+        "memory": "メモリ",
+        "ram": "RAM",
+        "disk": "ディスク",
+        "storage": "ストレージ",
+        "network": "ネットワーク",
+        "networkTitle": "ネットワーク I/O",
+        "gpu": "GPU",
+        "docker": "Docker",
+        "containers": "コンテナ",
+        "temp": "温度",
+        "free": "空き",
+        "download": "DL",
+        "upload": "UL",
+        "sysUptime": "稼働"
     }
 }

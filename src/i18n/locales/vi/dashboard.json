@@ -29,5 +29,23 @@
         "title": "Thống kê",
         "messages": "Tin nhắn",
         "activity": "Hoạt động"
+    },
+    "systemMonitor": {
+        "title": "Giám sát hệ thống",
+        "cpu": "CPU",
+        "memory": "Bộ nhớ",
+        "ram": "RAM",
+        "disk": "Ổ đĩa",
+        "storage": "Lưu trữ",
+        "network": "Mạng",
+        "networkTitle": "Mạng I/O",
+        "gpu": "GPU",
+        "docker": "Docker",
+        "containers": "Container",
+        "temp": "Nhiệt độ",
+        "free": "trống",
+        "download": "Tải xuống",
+        "upload": "Tải lên",
+        "sysUptime": "Hoạt động"
     }
 }

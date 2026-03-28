@@ -29,5 +29,23 @@
         "title": "Analytics",
         "messages": "Messages",
         "activity": "Activity"
+    },
+    "systemMonitor": {
+        "title": "System Monitor",
+        "cpu": "CPU",
+        "memory": "Memory",
+        "ram": "RAM",
+        "disk": "Disk",
+        "storage": "Storage",
+        "network": "Network",
+        "networkTitle": "Network I/O",
+        "gpu": "GPU",
+        "docker": "Docker",
+        "containers": "Containers",
+        "temp": "Temp",
+        "free": "free",
+        "download": "DL",
+        "upload": "UL",
+        "sysUptime": "Up"
     }
 }
