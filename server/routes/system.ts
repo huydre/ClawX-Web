@@ -115,12 +115,86 @@ router.post('/update', async (_req, res) => {
       send('log', { line: 'Pre-built dist found, skipping build' });
     }
 
-    // 4. Setup/Update Claw3D via setup.sh (handles clone, patch, build, PM2)
+    // 4. Setup/Update Claw3D (all-in-one, no terminal needed)
     send('updating_claw3d');
     try {
-      // Use bash -l to get full login shell (NVM, PM2 in PATH)
-      await runStream('bash', ['-lc', `cd "${cwd}" && bash setup.sh --update-claw3d 2>&1`], cwd, send)
-        .catch(() => send('log', { line: 'Claw3D setup.sh returned non-zero (may still work)' }));
+      const { homedir } = await import('os');
+      const { join } = await import('path');
+      const claw3dDir = join(homedir(), '.clawx', 'claw3d');
+      const claw3dScript = `
+        set -e
+        export HOME="${homedir()}"
+        # Source NVM
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+        CLAW3D_DIR="${claw3dDir}"
+        REPO="https://github.com/iamlukethedev/Claw3D.git"
+
+        # Clone or pull
+        if [ -d "$CLAW3D_DIR/.git" ]; then
+          cd "$CLAW3D_DIR" && git pull origin main 2>/dev/null || git pull || true
+        else
+          git clone --depth 1 "$REPO" "$CLAW3D_DIR"
+        fi
+
+        cd "$CLAW3D_DIR"
+
+        # Install deps
+        npm install --ignore-scripts 2>/dev/null || true
+        chmod -R +x node_modules/.bin/ 2>/dev/null || true
+        npm install --save-dev typescript @types/node @types/react --ignore-scripts 2>/dev/null || true
+
+        # Patch proxy-url.ts
+        cat > src/lib/gateway/proxy-url.ts << 'PATCH'
+export const resolveStudioProxyGatewayUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
+  if (envUrl) return envUrl;
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const host = window.location.host;
+  return \\\`\\\${protocol}://\\\${host}/api/gateway/ws\\\`;
+};
+PATCH
+
+        # Patch settings.ts to expose token
+        sed -i 's/export type StudioGatewaySettingsPublic = {/export type StudioGatewaySettingsPublic = {\\n  token: string;/' src/lib/studio/settings.ts 2>/dev/null || true
+        sed -i 's/tokenConfigured: value\\.token\\.length > 0,$/tokenConfigured: value.token.length > 0, token: value.token,/' src/lib/studio/settings.ts 2>/dev/null || true
+
+        # Write .env
+        GW_PORT=\${OPENCLAW_GATEWAY_PORT:-18789}
+        GW_URL="ws://localhost:\$GW_PORT"
+        if [ -f "${cwd}/.env" ]; then
+          CF_DOMAIN=\$(grep '^CLOUDFLARE_TUNNEL_DOMAIN=' "${cwd}/.env" 2>/dev/null | cut -d= -f2-)
+          CF_SUB=\$(grep '^CLOUDFLARE_TUNNEL_SUBDOMAIN=' "${cwd}/.env" 2>/dev/null | cut -d= -f2-)
+          if [ -n "\$CF_DOMAIN" ] && [ -n "\$CF_SUB" ]; then
+            GW_URL="wss://dashboard-\${CF_SUB}.\${CF_DOMAIN}"
+          fi
+        fi
+        GW_TOKEN=\$(python3 -c "import json; d=json.load(open('$HOME/.openclaw/openclaw.json')); print(d.get('gateway',{}).get('auth',{}).get('token',''))" 2>/dev/null || echo "")
+
+        cat > .env << ENVFILE
+NEXT_PUBLIC_GATEWAY_URL=\$GW_URL
+STUDIO_ACCESS_TOKEN=\$GW_TOKEN
+DEBUG=true
+PORT=3333
+HOST=0.0.0.0
+ENVFILE
+
+        # Build
+        node_modules/.bin/next build 2>&1 | tail -5 || true
+
+        # Install PM2 if needed
+        command -v pm2 >/dev/null || npm install -g pm2
+
+        # Start/restart via PM2
+        pm2 delete claw3d 2>/dev/null || true
+        pm2 start node_modules/.bin/next --name claw3d -- start -p 3333
+        pm2 save 2>/dev/null || true
+
+        echo "Claw3D started on port 3333"
+      `;
+      await runStream('bash', ['-c', claw3dScript], cwd, send)
+        .catch(() => send('log', { line: 'Claw3D setup had errors (may still work)' }));
       send('log', { line: 'Claw3D updated' });
     } catch {
       send('log', { line: 'Claw3D update skipped (non-critical)' });
