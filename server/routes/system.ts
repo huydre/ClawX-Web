@@ -123,9 +123,9 @@ router.post('/update', async (_req, res) => {
     } catch {
       send('log', { line: 'Claw3D update skipped (non-critical)' });
     }
-    // Restart claw3d service (sudoers rule allows this)
+    // Restart claw3d via PM2 (no root needed)
     try {
-      execSync('sudo systemctl restart claw3d 2>/dev/null || true', { stdio: 'ignore' });
+      execSync('pm2 restart claw3d 2>/dev/null || true', { stdio: 'ignore' });
       send('log', { line: 'Claw3D service restarted' });
     } catch { /* ignore */ }
 
