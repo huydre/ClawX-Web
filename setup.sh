@@ -594,12 +594,13 @@ PATCHEOF
   fi
   log "Claw3D dependencies installed and built"
 
-  # Setup systemd service
-  if [[ $EUID -eq 0 ]]; then
-    local node_path
-    node_path=$(which node)
+  # Setup systemd service (works both as root and non-root via sudo)
+  local node_path
+  node_path=$(which node)
+  local _sudo=""
+  [[ $EUID -ne 0 ]] && _sudo="sudo"
 
-    cat > /etc/systemd/system/claw3d.service <<SVCEOF
+  $_sudo tee /etc/systemd/system/claw3d.service > /dev/null <<SVCEOF
 [Unit]
 Description=Claw3D - Company 3D Visualization
 After=network.target clawx.service
@@ -624,19 +625,15 @@ EnvironmentFile=${claw3d_dir}/.env
 WantedBy=multi-user.target
 SVCEOF
 
-    systemctl daemon-reload
-    systemctl enable claw3d >/dev/null 2>&1
-    systemctl restart claw3d
+  $_sudo systemctl daemon-reload 2>/dev/null || true
+  $_sudo systemctl enable claw3d >/dev/null 2>&1 || true
+  $_sudo systemctl restart claw3d 2>/dev/null || true
 
-    sleep 2
-    if systemctl is-active --quiet claw3d; then
-      log "Claw3D running on port $claw3d_port"
-    else
-      warn "Claw3D may have failed to start. Check: journalctl -u claw3d -n 20"
-    fi
+  sleep 2
+  if systemctl is-active --quiet claw3d 2>/dev/null; then
+    log "Claw3D running on port $claw3d_port"
   else
-    # Not root — try sudo restart (sudoers rule should allow it)
-    sudo systemctl restart claw3d 2>/dev/null && log "Claw3D service restarted" || warn "Could not restart claw3d service (run initial setup with sudo first)"
+    warn "Claw3D may have failed to start. Check: journalctl -u claw3d -n 20"
   fi
 }
 

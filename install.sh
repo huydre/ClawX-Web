@@ -210,7 +210,7 @@ chown -R "$CLAWX_USER":"$CLAWX_USER" "$CLAWX_DIR"
 
 # Allow service user to restart its own service (for auto-update)
 SUDOERS_FILE="/etc/sudoers.d/clawx-restart"
-echo "$CLAWX_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart clawx, /bin/systemctl restart claw3d" > "$SUDOERS_FILE"
+echo "$CLAWX_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart clawx, /bin/systemctl restart claw3d, /bin/systemctl daemon-reload, /bin/systemctl enable claw3d, /usr/bin/tee /etc/systemd/system/claw3d.service" > "$SUDOERS_FILE"
 chmod 440 "$SUDOERS_FILE"
 log "Sudoers rule added: $CLAWX_USER can restart clawx service"
 
