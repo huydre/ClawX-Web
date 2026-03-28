@@ -380,7 +380,11 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                       {!showQR ? (
                         /* Step 1: Email input */
                         <div className="space-y-3">
-                          <div className="p-3 rounded-lg bg-muted text-center">
+                          <div className="p-3 rounded-lg bg-muted text-center space-y-1">
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="text-sm text-muted-foreground line-through">{t('aiProviders.codexBuy.originalPrice')}</span>
+                              <span className="text-xs font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded">{t('aiProviders.codexBuy.discount')}</span>
+                            </div>
                             <p className="text-lg font-bold">{t('aiProviders.codexBuy.price')}</p>
                           </div>
                           <div className="space-y-2">
