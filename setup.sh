@@ -583,7 +583,7 @@ PATCHEOF
       $pm install --save-dev typescript @types/node @types/react --ignore-scripts 2>&1 | tail -3 || true
       chmod -R +x node_modules/.bin/ 2>/dev/null || true
       # Build for production
-      node_modules/.bin/next build 2>&1 | tail -5 || true
+      # next build skipped — using dev mode
     "
     chown -R "$CLAWX_USER":"$CLAWX_USER" "$claw3d_dir"
   else
@@ -612,12 +612,12 @@ PATCHEOF
     sudo -u "$CLAWX_USER" bash -c "
       $NVM_SOURCE_CMD
       pm2 delete claw3d 2>/dev/null || true
-      cd '$claw3d_dir' && pm2 start '$next_bin' --name claw3d -- start -p $claw3d_port
+      cd '$claw3d_dir' && pm2 start '$next_bin' --name claw3d -- dev -p $claw3d_port
       pm2 save
     " 2>&1 | tail -5
   else
     pm2 delete claw3d 2>/dev/null || true
-    cd "$claw3d_dir" && pm2 start "$next_bin" --name claw3d -- start -p "$claw3d_port"
+    cd "$claw3d_dir" && pm2 start "$next_bin" --name claw3d -- dev -p "$claw3d_port"
     pm2 save 2>/dev/null || true
   fi
 
