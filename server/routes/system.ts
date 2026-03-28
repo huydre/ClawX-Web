@@ -140,25 +140,10 @@ router.post('/update', async (_req, res) => {
 
         cd "$CLAW3D_DIR"
 
-        # Install deps
+        # Install all deps with --ignore-scripts to avoid permission errors
         npm install --ignore-scripts 2>/dev/null || true
+        npm install --save-exact --save-dev typescript @types/node @types/react --ignore-scripts 2>/dev/null || true
         chmod -R +x node_modules/.bin/ 2>/dev/null || true
-        npm install --save-dev typescript @types/node @types/react --ignore-scripts 2>/dev/null || true
-
-        # Patch proxy-url.ts
-        cat > src/lib/gateway/proxy-url.ts << 'PATCH'
-export const resolveStudioProxyGatewayUrl = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
-  if (envUrl) return envUrl;
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const host = window.location.host;
-  return \\\`\\\${protocol}://\\\${host}/api/gateway/ws\\\`;
-};
-PATCH
-
-        # Patch settings.ts to expose token
-        sed -i 's/export type StudioGatewaySettingsPublic = {/export type StudioGatewaySettingsPublic = {\\n  token: string;/' src/lib/studio/settings.ts 2>/dev/null || true
-        sed -i 's/tokenConfigured: value\\.token\\.length > 0,$/tokenConfigured: value.token.length > 0, token: value.token,/' src/lib/studio/settings.ts 2>/dev/null || true
 
         # Write .env
         GW_PORT=\${OPENCLAW_GATEWAY_PORT:-18789}
@@ -170,7 +155,7 @@ PATCH
             GW_URL="wss://dashboard-\${CF_SUB}.\${CF_DOMAIN}"
           fi
         fi
-        GW_TOKEN=\$(python3 -c "import json; d=json.load(open('$HOME/.openclaw/openclaw.json')); print(d.get('gateway',{}).get('auth',{}).get('token',''))" 2>/dev/null || echo "")
+        GW_TOKEN=\$(python3 -c "import json; d=json.load(open('${homedir()}/.openclaw/openclaw.json')); print(d.get('gateway',{}).get('auth',{}).get('token',''))" 2>/dev/null || echo "")
 
         cat > .env << ENVFILE
 NEXT_PUBLIC_GATEWAY_URL=\$GW_URL
@@ -180,15 +165,13 @@ PORT=3333
 HOST=0.0.0.0
 ENVFILE
 
-        # Ensure TypeScript is installed
-        npm install --save-dev typescript @types/node @types/react 2>/dev/null || true
-
         # Install PM2 if needed
         command -v pm2 >/dev/null || npm install -g pm2
 
-        # Start/restart via PM2 (dev mode — no build needed)
+        # Start/restart via PM2 (dev mode — no build needed, no NODE_ENV conflict)
         pm2 delete claw3d 2>/dev/null || true
-        NODE_ENV=development pm2 start node_modules/.bin/next --name claw3d -- dev -p 3333
+        unset NODE_ENV
+        pm2 start node_modules/.bin/next --name claw3d -- dev -p 3333
         pm2 save 2>/dev/null || true
 
         echo "Claw3D started on port 3333"
