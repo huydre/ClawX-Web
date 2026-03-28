@@ -617,7 +617,7 @@ export function Settings() {
               OpenClaw v2026.3.2
             </p>
             <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-0.5 leading-relaxed">
-              Vui lòng không update OpenClaw để tránh lỗi ngoài ý muốn. Nếu cố tình update OpenClaw sẽ không bảo hành phần mềm.
+              Vui lòng không update OpenClaw để tránh lỗi ngoài ý muốn. Nếu cố tình update OpenClaw sẽ phát sinh chi phí khắc phục.
             </p>
           </div>
         </div>

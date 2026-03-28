@@ -47,6 +47,8 @@
             "tabHaveAccount": "Đã có tài khoản",
             "tabBuySlot": "Mua slot Codex",
             "price": "200,000đ / slot / tháng",
+            "originalPrice": "500,000đ",
+            "discount": "Giảm 60%",
             "emailLabel": "Email đăng ký",
             "emailPlaceholder": "email@example.com",
             "generateQR": "Tạo QR thanh toán",

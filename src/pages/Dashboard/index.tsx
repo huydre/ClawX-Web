@@ -58,13 +58,21 @@ export function Dashboard() {
     async function fetchAnalytics() {
       setAnalyticsLoading(true);
       try {
-        const [daily, hourly] = await Promise.all([
-          api.getAnalyticsDaily(7).catch(() => ({ data: [] })),
-          api.getAnalyticsHourly().catch(() => ({ data: {} })),
+        const [dailyRaw, hourlyRaw] = await Promise.all([
+          api.getAnalyticsDaily(7).catch(() => ({})),
+          api.getAnalyticsHourly().catch(() => ({})),
         ]);
         if (!cancelled) {
-          setAnalyticsDaily(daily.data ?? []);
-          setAnalyticsHourly(hourly.data ?? {});
+          // Transform daily stats object to array for chart
+          const dailyArray = Object.entries(dailyRaw as Record<string, { sent: number; received: number }>)
+            .map(([date, stats]) => ({
+              date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+              sent: stats?.sent ?? 0,
+              received: stats?.received ?? 0,
+            }))
+            .reverse();
+          setAnalyticsDaily(dailyArray);
+          setAnalyticsHourly((hourlyRaw ?? {}) as Record<string, number>);
         }
       } catch {
         // graceful fallback — charts will show empty state
