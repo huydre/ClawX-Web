@@ -115,19 +115,16 @@ router.post('/update', async (_req, res) => {
       send('log', { line: 'Pre-built dist found, skipping build' });
     }
 
-    // 4. Setup/Update Claw3D (clone if missing, update if exists)
+    // 4. Setup/Update Claw3D via setup.sh (handles clone, patch, build, PM2)
     send('updating_claw3d');
     try {
-      await runStream('bash', ['-c', `cd "${cwd}" && bash setup.sh --update-claw3d 2>&1 || true`], cwd, send);
+      // Use bash -l to get full login shell (NVM, PM2 in PATH)
+      await runStream('bash', ['-lc', `cd "${cwd}" && bash setup.sh --update-claw3d 2>&1`], cwd, send)
+        .catch(() => send('log', { line: 'Claw3D setup.sh returned non-zero (may still work)' }));
       send('log', { line: 'Claw3D updated' });
     } catch {
       send('log', { line: 'Claw3D update skipped (non-critical)' });
     }
-    // Restart claw3d via PM2 (no root needed)
-    try {
-      execSync('pm2 restart claw3d 2>/dev/null || true', { stdio: 'ignore' });
-      send('log', { line: 'Claw3D service restarted' });
-    } catch { /* ignore */ }
 
     send('restarting');
 
