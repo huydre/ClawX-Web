@@ -172,7 +172,9 @@ cmd_status() {
   fi
 
   # Claw3D status
-  if systemctl is-active --quiet claw3d 2>/dev/null; then
+  if pm2 list 2>/dev/null | grep -q "claw3d.*online"; then
+    echo -e "  Company3D: ${GREEN}● running (PM2)${NC}"
+  elif systemctl is-active --quiet claw3d 2>/dev/null; then
     echo -e "  Company3D: ${GREEN}● running${NC}"
   else
     echo -e "  Company3D: ${DIM}○ stopped${NC}"
@@ -594,46 +596,36 @@ PATCHEOF
   fi
   log "Claw3D dependencies installed and built"
 
-  # Setup systemd service (works both as root and non-root via sudo)
-  local node_path
-  node_path=$(which node)
-  local _sudo=""
-  [[ $EUID -ne 0 ]] && _sudo="sudo"
+  # Start via PM2 (no root needed)
+  if ! command -v pm2 &>/dev/null; then
+    info "Installing PM2..."
+    if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+      sudo -u "$CLAWX_USER" bash -c "$NVM_SOURCE_CMD && npm install -g pm2" 2>&1 | tail -3 || npm install -g pm2 2>&1 | tail -3
+    else
+      npm install -g pm2 2>&1 | tail -3
+    fi
+  fi
 
-  $_sudo tee /etc/systemd/system/claw3d.service > /dev/null <<SVCEOF
-[Unit]
-Description=Claw3D - Company 3D Visualization
-After=network.target clawx.service
-Wants=clawx.service
+  local next_bin="${claw3d_dir}/node_modules/.bin/next"
 
-[Service]
-Type=simple
-User=${CLAWX_USER}
-WorkingDirectory=${claw3d_dir}
-ExecStart=${node_path} ${claw3d_dir}/node_modules/.bin/next start -p ${claw3d_port}
-Restart=on-failure
-RestartSec=10
-StartLimitInterval=60
-StartLimitBurst=3
-Environment=NODE_ENV=production
-Environment=PORT=${claw3d_port}
-Environment=HOME=${USER_HOME}
-Environment=PATH=${claw3d_dir}/node_modules/.bin:$(dirname "$node_path"):/usr/local/bin:/usr/bin:/bin
-EnvironmentFile=${claw3d_dir}/.env
-
-[Install]
-WantedBy=multi-user.target
-SVCEOF
-
-  $_sudo systemctl daemon-reload 2>/dev/null || true
-  $_sudo systemctl enable claw3d >/dev/null 2>&1 || true
-  $_sudo systemctl restart claw3d 2>/dev/null || true
+  if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
+    sudo -u "$CLAWX_USER" bash -c "
+      $NVM_SOURCE_CMD
+      pm2 delete claw3d 2>/dev/null || true
+      cd '$claw3d_dir' && pm2 start '$next_bin' --name claw3d -- start -p $claw3d_port
+      pm2 save
+    " 2>&1 | tail -5
+  else
+    pm2 delete claw3d 2>/dev/null || true
+    cd "$claw3d_dir" && pm2 start "$next_bin" --name claw3d -- start -p "$claw3d_port"
+    pm2 save 2>/dev/null || true
+  fi
 
   sleep 2
-  if systemctl is-active --quiet claw3d 2>/dev/null; then
-    log "Claw3D running on port $claw3d_port"
+  if pm2 list 2>/dev/null | grep -q "claw3d"; then
+    log "Claw3D running on port $claw3d_port (PM2)"
   else
-    warn "Claw3D may have failed to start. Check: journalctl -u claw3d -n 20"
+    warn "Claw3D may have failed to start. Check: pm2 logs claw3d"
   fi
 }
 
