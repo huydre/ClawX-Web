@@ -635,8 +635,8 @@ SVCEOF
       warn "Claw3D may have failed to start. Check: journalctl -u claw3d -n 20"
     fi
   else
-    warn "Not running as root — skipping Claw3D systemd setup"
-    warn "Start manually: cd $claw3d_dir && $pm run dev"
+    # Not root — try sudo restart (sudoers rule should allow it)
+    sudo systemctl restart claw3d 2>/dev/null && log "Claw3D service restarted" || warn "Could not restart claw3d service (run initial setup with sudo first)"
   fi
 }
 

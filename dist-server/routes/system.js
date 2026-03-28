@@ -4,8 +4,6 @@
  */
 import { Router } from 'express';
 import { spawn, execSync } from 'child_process';
-import { join } from 'path';
-import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
 import { updateChecker } from '../services/update-checker.js';
 import { wss } from '../websocket/server.js';
@@ -87,33 +85,21 @@ router.post('/update', async (_req, res) => {
         else {
             send('log', { line: 'Pre-built dist found, skipping build' });
         }
-        // 4. Update Claw3D if installed
-        const claw3dDir = join(homedir(), '.clawx', 'claw3d');
-        if (fs.existsSync(join(claw3dDir, 'package.json'))) {
-            send('updating_claw3d');
-            try {
-                // Pull latest
-                await runStream('git', ['-C', claw3dDir, 'pull', 'origin', 'main'], cwd, send)
-                    .catch(() => runStream('git', ['-C', claw3dDir, 'pull'], cwd, send));
-                // Install deps
-                await runStream('npm', ['install', '--ignore-scripts'], claw3dDir, send).catch(() => { });
-                // Fix bin permissions
-                execSync(`chmod -R +x ${claw3dDir}/node_modules/.bin/ 2>/dev/null || true`, { stdio: 'ignore' });
-                // Re-run setup patches + rebuild via setup.sh
-                await runStream('bash', ['-c', `cd "${cwd}" && bash setup.sh --update-claw3d 2>&1 || true`], cwd, send)
-                    .catch(() => send('log', { line: 'Claw3D setup patches skipped' }));
-                send('log', { line: 'Claw3D updated' });
-            }
-            catch {
-                send('log', { line: 'Claw3D update skipped (non-critical)' });
-            }
-            // Restart claw3d service (sudoers rule allows this)
-            try {
-                execSync('sudo systemctl restart claw3d 2>/dev/null || true', { stdio: 'ignore' });
-                send('log', { line: 'Claw3D service restarted' });
-            }
-            catch { /* ignore */ }
+        // 4. Setup/Update Claw3D (clone if missing, update if exists)
+        send('updating_claw3d');
+        try {
+            await runStream('bash', ['-c', `cd "${cwd}" && bash setup.sh --update-claw3d 2>&1 || true`], cwd, send);
+            send('log', { line: 'Claw3D updated' });
         }
+        catch {
+            send('log', { line: 'Claw3D update skipped (non-critical)' });
+        }
+        // Restart claw3d service (sudoers rule allows this)
+        try {
+            execSync('sudo systemctl restart claw3d 2>/dev/null || true', { stdio: 'ignore' });
+            send('log', { line: 'Claw3D service restarted' });
+        }
+        catch { /* ignore */ }
         send('restarting');
         // 5. Restart: exit with non-zero so systemd Restart=on-failure restarts us
         setTimeout(() => {
