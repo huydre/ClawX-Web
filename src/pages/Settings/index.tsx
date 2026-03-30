@@ -794,15 +794,16 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {/* WiFi Settings (temporarily hidden) */}
-      {false && platform.isWeb && (
+      {/* WiFi Settings */}
+      {platform.isWeb && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wifi className="h-5 w-5" />
               WiFi
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Thử nghiệm</Badge>
             </CardTitle>
-            <CardDescription>Quản lý kết nối WiFi — quét, kết nối, ngắt mạng</CardDescription>
+            <CardDescription>Quản lý kết nối WiFi — quét, kết nối, ngắt mạng (tính năng thử nghiệm)</CardDescription>
           </CardHeader>
           <CardContent>
             <WifiSettings />
