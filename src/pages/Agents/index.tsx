@@ -38,10 +38,20 @@ export function Agents() {
   const [search, setSearch] = useState('');
 
   const handleChat = useCallback(async (agent: Agent) => {
-    // Switch chat session to this agent and navigate to chat
     const { useChatStore } = await import('@/stores/chat');
+    const store = useChatStore.getState();
     const sessionKey = `agent:${agent.id}:main`;
-    useChatStore.getState().switchSession(sessionKey);
+    const displayName = agent.identity?.name || agent.name || agent.id;
+
+    // Ensure session exists in the list before switching
+    const sessions = store.sessions;
+    if (!sessions.find((s) => s.key === sessionKey)) {
+      useChatStore.setState({
+        sessions: [...sessions, { key: sessionKey, displayName }],
+      });
+    }
+
+    store.switchSession(sessionKey);
     navigate('/');
   }, [navigate]);
 

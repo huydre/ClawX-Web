@@ -186,11 +186,16 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
               {availableModels.length > 0 ? (
                 <Select value={model} onChange={(e) => setModel(e.target.value)}>
                   <option value="">{t('create.modelHint')}</option>
-                  {availableModels.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.provider})
-                    </option>
-                  ))}
+                  {availableModels.map((m) => {
+                    // id is "provider/model", name is display name
+                    // Show: "Claude Sonnet 4 (anthropic)" or just id if name equals id
+                    const label = m.name !== m.id ? `${m.name} (${m.provider})` : m.id;
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </Select>
               ) : (
                 <Input
