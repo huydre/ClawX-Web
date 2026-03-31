@@ -24,9 +24,13 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
 
   const [name, setName] = useState('');
   const [workspace, setWorkspace] = useState('');
+  const [workspaceManual, setWorkspaceManual] = useState(false);
   const [emoji, setEmoji] = useState('🤖');
   const [creating, setCreating] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const slugify = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
   const handleCreate = async () => {
     if (!name.trim() || !workspace.trim()) return;
@@ -99,7 +103,13 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
             <Input
               id="agentName"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (!workspaceManual) {
+                  const slug = slugify(e.target.value);
+                  setWorkspace(slug ? `~/.openclaw/workspace-${slug}` : '');
+                }
+              }}
               placeholder={t('create.displayNameHint')}
             />
           </div>
@@ -111,7 +121,10 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
           <Input
             id="workspace"
             value={workspace}
-            onChange={(e) => setWorkspace(e.target.value)}
+            onChange={(e) => {
+              setWorkspace(e.target.value);
+              setWorkspaceManual(true);
+            }}
             placeholder={t('create.workspaceHint')}
             className="font-mono text-sm"
           />

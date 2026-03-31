@@ -35,7 +35,7 @@
         "agentTypePredefined": "Định sẵn — ngữ cảnh chung với lớp phủ người dùng",
         "description": "Mô tả",
         "workspace": "Đường dẫn Workspace",
-        "workspaceHint": "Đường dẫn workspace của agent (VD: ~/.openclaw/workspace-myagent)",
+        "workspaceHint": "Workspace phải là thư mục riêng, không trùng file config (VD: ~/.openclaw/workspace-myagent)",
         "model": "Mô hình",
         "modelHint": "Provider/model (VD: anthropic/claude-sonnet-4-20250514)",
         "creating": "Đang tạo...",

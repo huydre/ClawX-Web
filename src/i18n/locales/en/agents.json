@@ -35,7 +35,7 @@
         "agentTypePredefined": "Predefined — shared context with user overlay",
         "description": "Description",
         "workspace": "Workspace Path",
-        "workspaceHint": "Path to agent workspace (e.g. ~/.openclaw/workspace-myagent)",
+        "workspaceHint": "Workspace must be a separate directory (e.g. ~/.openclaw/workspace-myagent)",
         "model": "Model",
         "modelHint": "Provider/model (e.g. anthropic/claude-sonnet-4-20250514)",
         "creating": "Creating...",

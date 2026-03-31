@@ -35,7 +35,7 @@
         "agentTypePredefined": "定義済み — 共有コンテキスト＋ユーザーオーバーレイ",
         "description": "説明",
         "workspace": "ワークスペースパス",
-        "workspaceHint": "エージェントのワークスペースパス（例: ~/.openclaw/workspace-myagent）",
+        "workspaceHint": "ワークスペースは専用ディレクトリが必要です（例: ~/.openclaw/workspace-myagent）",
         "model": "モデル",
         "modelHint": "プロバイダー/モデル（例: anthropic/claude-sonnet-4-20250514）",
         "creating": "作成中...",
