@@ -1,74 +1,71 @@
 /**
  * Agent Type Definitions
- * Types for AI agent management
+ * Based on OpenClaw Gateway RPC schemas (additionalProperties: false)
+ *
+ * agents.create: { name, workspace, emoji?, avatar? }
+ * agents.update: { agentId, name?, workspace?, model?, avatar? }
+ * agents.delete: { agentId, deleteFiles? }
+ * agents.list:   {} → { defaultId, mainKey, scope, agents[] }
+ * agents.files.list: { agentId }
+ * agents.files.get:  { agentId, name }
+ * agents.files.set:  { agentId, name, content }
  */
 
 /**
- * Agent type — how context is scoped
+ * Agent status (derived from presence in config)
  */
-export type AgentType = 'open' | 'predefined';
+export type AgentStatus = 'active' | 'inactive';
 
 /**
- * Agent status
- */
-export type AgentStatus = 'active' | 'inactive' | 'error';
-
-/**
- * Agent data structure
+ * Agent summary from agents.list response
  */
 export interface Agent {
   id: string;
-  agent_key: string;
-  display_name: string;
-  emoji?: string;
-  description?: string;
-  agent_type: AgentType;
-  status: AgentStatus;
-  provider?: string;
+  name?: string;
+  identity?: {
+    name?: string;
+    theme?: string;
+    emoji?: string;
+    avatar?: string;
+    avatarUrl?: string;
+  };
+  /** Whether this is the default agent (derived from defaultId) */
+  isDefault?: boolean;
+  /** Model string (from agents.update, not in list response) */
   model?: string;
-  context_window?: number;
-  max_tool_iterations?: number;
-  is_default?: boolean;
-  created_at?: string;
-  updated_at?: string;
 }
 
 /**
- * Agent creation input
+ * Agent creation input — only these 4 fields are allowed
  */
 export interface AgentCreateInput {
-  display_name: string;
+  name: string;
+  workspace: string;
   emoji?: string;
-  description?: string;
-  agent_type: AgentType;
-  provider?: string;
-  model?: string;
-  context_window?: number;
-  max_tool_iterations?: number;
+  avatar?: string;
 }
 
 /**
- * Agent update input
+ * Agent update input — only these 5 fields are allowed
  */
 export interface AgentUpdateInput {
-  display_name?: string;
-  emoji?: string;
-  description?: string;
-  provider?: string;
+  agentId: string;
+  name?: string;
+  workspace?: string;
   model?: string;
-  context_window?: number;
-  max_tool_iterations?: number;
-  is_default?: boolean;
-  status?: AgentStatus;
+  avatar?: string;
 }
 
 /**
- * Agent context file (SOUL.md, IDENTITY.md, etc.)
+ * Agent context file entry from agents.files.list
  */
 export interface AgentFile {
   name: string;
-  content: string;
-  readonly?: boolean;
+  path: string;
+  missing: boolean;
+  size?: number;
+  updatedAtMs?: number;
+  content?: string;
 }
 
 /**
@@ -78,17 +75,4 @@ export const AGENT_EMOJIS = [
   '🤖', '🧠', '💡', '⚡', '🔮', '🎯', '🛡️', '🔧',
   '📊', '🎨', '🔬', '📝', '🌐', '🚀', '💬', '🦾',
   '🐾', '🦊', '🐱', '🐶', '🦅', '🐝', '🦋', '🐙',
-];
-
-/**
- * Default context window sizes
- */
-export const CONTEXT_WINDOW_OPTIONS = [
-  { value: 4096, label: '4K' },
-  { value: 8192, label: '8K' },
-  { value: 16384, label: '16K' },
-  { value: 32768, label: '32K' },
-  { value: 65536, label: '64K' },
-  { value: 131072, label: '128K' },
-  { value: 200000, label: '200K' },
 ];

@@ -1,7 +1,7 @@
 /**
  * AgentCard — Displays a single agent in the grid view
  */
-import { MoreVertical, Star, Pencil, Trash2, Shield } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Star } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,15 +13,13 @@ interface AgentCardProps {
   agent: Agent;
   onEdit: (agent: Agent) => void;
   onDelete: (agent: Agent) => void;
-  onSetDefault: (agent: Agent) => void;
 }
 
-export function AgentCard({ agent, onEdit, onDelete, onSetDefault }: AgentCardProps) {
+export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
   const { t } = useTranslation('agents');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -33,11 +31,8 @@ export function AgentCard({ agent, onEdit, onDelete, onSetDefault }: AgentCardPr
     return () => document.removeEventListener('mousedown', handler);
   }, [menuOpen]);
 
-  const statusColor = agent.status === 'active'
-    ? 'bg-green-500'
-    : agent.status === 'error'
-      ? 'bg-red-500'
-      : 'bg-gray-400';
+  const emoji = agent.identity?.emoji || '🤖';
+  const displayName = agent.identity?.name || agent.name || agent.id;
 
   return (
     <Card
@@ -47,17 +42,13 @@ export function AgentCard({ agent, onEdit, onDelete, onSetDefault }: AgentCardPr
       <div className="p-4">
         {/* Header: emoji + name + menu */}
         <div className="flex items-start gap-3">
-          <div className="text-3xl shrink-0 select-none">{agent.emoji || '🤖'}</div>
+          <div className="text-3xl shrink-0 select-none">{emoji}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm truncate">{agent.display_name}</h3>
-              <span className={cn('h-2 w-2 rounded-full shrink-0', statusColor)} />
+              <h3 className="font-semibold text-sm truncate">{displayName}</h3>
+              <span className={cn('h-2 w-2 rounded-full shrink-0', 'bg-green-500')} />
             </div>
-            {agent.description && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                {agent.description}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground mt-0.5 font-mono">{agent.id}</p>
           </div>
 
           {/* Menu button */}
@@ -79,34 +70,25 @@ export function AgentCard({ agent, onEdit, onDelete, onSetDefault }: AgentCardPr
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);
-                    onSetDefault(agent);
-                  }}
-                >
-                  <Star className="h-3.5 w-3.5" />
-                  {t('card.setDefault')}
-                </button>
-                <button
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpen(false);
                     onEdit(agent);
                   }}
                 >
                   <Pencil className="h-3.5 w-3.5" />
                   {t('card.edit')}
                 </button>
-                <button
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpen(false);
-                    onDelete(agent);
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  {t('card.delete')}
-                </button>
+                {!agent.isDefault && (
+                  <button
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onDelete(agent);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t('card.delete')}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -114,30 +96,15 @@ export function AgentCard({ agent, onEdit, onDelete, onSetDefault }: AgentCardPr
 
         {/* Meta info */}
         <div className="flex flex-wrap items-center gap-1.5 mt-3">
-          {agent.is_default && (
+          {agent.isDefault && (
             <Badge className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800">
               <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />
               {t('card.default')}
             </Badge>
           )}
-          <Badge variant="secondary" className="text-[10px]">
-            <Shield className="h-2.5 w-2.5 mr-0.5" />
-            {agent.agent_type === 'predefined' ? t('card.predefined') : t('card.open')}
-          </Badge>
-          {agent.model ? (
-            <Badge variant="outline" className="text-[10px] font-mono">
-              {agent.model}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-[10px] text-muted-foreground">
-              {t('card.noModel')}
-            </Badge>
-          )}
-          {agent.context_window && (
-            <Badge variant="outline" className="text-[10px]">
-              {agent.context_window >= 1000
-                ? `${Math.round(agent.context_window / 1024)}K`
-                : agent.context_window}
+          {agent.identity?.theme && (
+            <Badge variant="secondary" className="text-[10px]">
+              {agent.identity.theme}
             </Badge>
           )}
         </div>

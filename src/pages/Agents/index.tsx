@@ -1,6 +1,6 @@
 /**
  * Agents Page
- * Manage AI agents — view, create, edit, delete agents
+ * Manage AI agents — view, create, edit, delete
  */
 import { useState, useEffect } from 'react';
 import {
@@ -26,7 +26,7 @@ import { AgentDetailDialog } from './AgentDetailDialog';
 
 export function Agents() {
   const { t } = useTranslation('agents');
-  const { agents, loading, error, fetchAgents, deleteAgent, setDefaultAgent } = useAgentsStore();
+  const { agents, loading, error, fetchAgents, deleteAgent } = useAgentsStore();
   const isGatewayRunning = useGatewayStore((state) => state.isRunning());
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -35,20 +35,17 @@ export function Agents() {
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Fetch agents on mount
   useEffect(() => {
     fetchAgents();
   }, [fetchAgents]);
 
-  // Filter agents by search
   const filteredAgents = agents.filter((a) => {
     if (!search) return true;
     const q = search.toLowerCase();
+    const displayName = a.identity?.name || a.name || '';
     return (
-      a.display_name.toLowerCase().includes(q) ||
-      a.agent_key.toLowerCase().includes(q) ||
-      a.description?.toLowerCase().includes(q) ||
-      a.model?.toLowerCase().includes(q)
+      displayName.toLowerCase().includes(q) ||
+      a.id.toLowerCase().includes(q)
     );
   });
 
@@ -63,15 +60,6 @@ export function Agents() {
       toast.error(t('delete.error') + ': ' + String(err));
     } finally {
       setDeleting(false);
-    }
-  };
-
-  const handleSetDefault = async (agent: Agent) => {
-    try {
-      await setDefaultAgent(agent.id);
-      toast.success(t('toast.defaultSet'));
-    } catch (err) {
-      toast.error(t('toast.defaultError') + ': ' + String(err));
     }
   };
 
@@ -127,7 +115,7 @@ export function Agents() {
         </div>
       )}
 
-      {/* Search bar (show when agents exist) */}
+      {/* Search */}
       {agents.length > 0 && (
         <SearchInput
           value={search}
@@ -152,7 +140,6 @@ export function Agents() {
                 agent={agent}
                 onEdit={setSelectedAgent}
                 onDelete={setDeleteTarget}
-                onSetDefault={handleSetDefault}
               />
             ))}
           </div>
@@ -218,7 +205,7 @@ export function Agents() {
         }
       >
         <p className="text-sm text-muted-foreground">
-          {t('delete.message', { name: deleteTarget?.display_name })}
+          {t('delete.message', { name: deleteTarget?.identity?.name || deleteTarget?.name || deleteTarget?.id })}
         </p>
       </ModalDialog>
     </div>
