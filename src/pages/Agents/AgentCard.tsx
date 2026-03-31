@@ -5,6 +5,7 @@ import { MoreVertical, Pencil, Trash2, Star, MessageSquare } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Agent } from '@/types/agent';
 import { useTranslation } from 'react-i18next';
@@ -59,7 +60,7 @@ export function AgentCard({ agent, onEdit, onDelete, onChat }: AgentCardProps) {
                 e.stopPropagation();
                 setMenuOpen(!menuOpen);
               }}
-              className="p-1 rounded-md hover:bg-accent transition-colors opacity-0 group-hover:opacity-100"
+              className="p-1 rounded-md hover:bg-accent transition-colors"
             >
               <MoreVertical className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -120,6 +121,20 @@ export function AgentCard({ agent, onEdit, onDelete, onChat }: AgentCardProps) {
             </Badge>
           )}
         </div>
+
+        {/* Chat button */}
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-3"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChat(agent);
+          }}
+        >
+          <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+          {t('card.chat')}
+        </Button>
       </div>
     </Card>
   );
