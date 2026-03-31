@@ -458,6 +458,26 @@ class ApiClient {
     return this.request<{ data: Record<string, number> }>('/analytics/hourly');
   }
 
+  // Agents Config API
+  async getCrossAgentConfig() {
+    return this.request<{
+      sessionsVisibility: string;
+      agentToAgentEnabled: boolean;
+      agentToAgentAllow: string[];
+    }>('/agents-config/cross-agent');
+  }
+
+  async setCrossAgentConfig(config: {
+    sessionsVisibility?: string;
+    agentToAgentEnabled?: boolean;
+    agentToAgentAllow?: string[];
+  }) {
+    return this.request<{ success: boolean }>('/agents-config/cross-agent', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
   // System Metrics API
   async getSystemMetrics() {
     return this.request<{

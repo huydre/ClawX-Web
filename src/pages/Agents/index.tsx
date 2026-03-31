@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { AgentCard } from './AgentCard';
 import { AgentCreateDialog } from './AgentCreateDialog';
 import { AgentDetailDialog } from './AgentDetailDialog';
+import { CrossAgentSettings } from './CrossAgentSettings';
 
 export function Agents() {
   const { t } = useTranslation('agents');
@@ -134,6 +135,9 @@ export function Agents() {
           <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
         </div>
       )}
+
+      {/* Cross-Agent Settings */}
+      <CrossAgentSettings />
 
       {/* Search */}
       {agents.length > 0 && (

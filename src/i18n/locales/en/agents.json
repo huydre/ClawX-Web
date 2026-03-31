@@ -65,6 +65,14 @@
         "success": "Agent deleted successfully",
         "error": "Failed to delete agent"
     },
+    "crossAgent": {
+        "title": "Cross-Agent Communication",
+        "visibility": "Session Visibility",
+        "visibilityDesc": "Which sessions each agent can see (self / tree / agent / all)",
+        "agentToAgent": "Agent-to-Agent",
+        "agentToAgentDesc": "Allow agents to send messages to each other",
+        "saved": "Settings saved. Restart gateway to apply."
+    },
     "toast": {
         "defaultSet": "Default agent updated",
         "defaultError": "Failed to set default agent"

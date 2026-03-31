@@ -65,6 +65,14 @@
         "success": "エージェントが削除されました",
         "error": "エージェントの削除に失敗しました"
     },
+    "crossAgent": {
+        "title": "エージェント間通信",
+        "visibility": "セッション可視性",
+        "visibilityDesc": "各エージェントが見えるセッション範囲 (self / tree / agent / all)",
+        "agentToAgent": "エージェント間通信",
+        "agentToAgentDesc": "エージェント同士のメッセージ送信を許可",
+        "saved": "保存しました。ゲートウェイを再起動して適用してください。"
+    },
     "toast": {
         "defaultSet": "デフォルトエージェントが更新されました",
         "defaultError": "デフォルトエージェントの設定に失敗しました"

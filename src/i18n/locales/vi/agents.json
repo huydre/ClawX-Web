@@ -65,6 +65,14 @@
         "success": "Đã xóa agent",
         "error": "Không thể xóa agent"
     },
+    "crossAgent": {
+        "title": "Giao tiếp giữa các Agent",
+        "visibility": "Phạm vi nhìn thấy session",
+        "visibilityDesc": "Agent nhìn thấy session nào (self / tree / agent / all)",
+        "agentToAgent": "Agent-to-Agent",
+        "agentToAgentDesc": "Cho phép các agent gửi tin nhắn cho nhau",
+        "saved": "Đã lưu. Khởi động lại gateway để áp dụng."
+    },
     "toast": {
         "defaultSet": "Đã cập nhật agent mặc định",
         "defaultError": "Không thể đặt agent mặc định"
