@@ -18,7 +18,7 @@ const loginLimiter = rateLimit({
     message: { error: 'Too many login attempts. Try again in 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => req.ip || req.socket.remoteAddress || 'unknown',
+    validate: { ip: false },
 });
 
 // GET /api/auth/status
