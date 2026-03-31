@@ -18,6 +18,7 @@
         "predefined": "定義済み",
         "contextWindow": "コンテキスト",
         "setDefault": "デフォルトに設定",
+        "chat": "チャット",
         "edit": "編集",
         "delete": "削除",
         "noModel": "モデル未設定"

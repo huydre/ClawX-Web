@@ -10,10 +10,13 @@ import { ModalDialog } from '@/components/common/ModalDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentsStore } from '@/stores/agents';
+import { platform } from '@/lib/platform';
+import { api } from '@/lib/api';
 import type { Agent, AgentFile } from '@/types/agent';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -35,6 +38,23 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
   const [name, setName] = useState(agent.name || '');
   const [model, setModel] = useState(agent.model || '');
   const [saving, setSaving] = useState(false);
+
+  // Available models from gateway
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = platform.isElectron
+          ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'models.list', {})
+          : await api.gatewayRpc('models.list', {});
+        const typedResult = result as { success: boolean; result?: { models?: Array<{ id: string; name: string; provider: string }> } };
+        if (typedResult.success && typedResult.result?.models) {
+          setAvailableModels(typedResult.result.models);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   // Files tab state
   const [files, setFiles] = useState<AgentFile[]>([]);
@@ -163,11 +183,22 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
             </h3>
             <div className="space-y-1.5">
               <Label>{t('create.model')}</Label>
-              <Input
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder={t('create.modelHint')}
-              />
+              {availableModels.length > 0 ? (
+                <Select value={model} onChange={(e) => setModel(e.target.value)}>
+                  <option value="">{t('create.modelHint')}</option>
+                  {availableModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.provider})
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder={t('create.modelHint')}
+                />
+              )}
             </div>
           </div>
 

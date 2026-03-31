@@ -2,7 +2,8 @@
  * Agents Page
  * Manage AI agents — view, create, edit, delete
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   RefreshCw,
@@ -26,6 +27,7 @@ import { AgentDetailDialog } from './AgentDetailDialog';
 
 export function Agents() {
   const { t } = useTranslation('agents');
+  const navigate = useNavigate();
   const { agents, loading, error, fetchAgents, deleteAgent } = useAgentsStore();
   const isGatewayRunning = useGatewayStore((state) => state.isRunning());
 
@@ -34,6 +36,14 @@ export function Agents() {
   const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
+
+  const handleChat = useCallback(async (agent: Agent) => {
+    // Switch chat session to this agent and navigate to chat
+    const { useChatStore } = await import('@/stores/chat');
+    const sessionKey = `agent:${agent.id}:main`;
+    useChatStore.getState().switchSession(sessionKey);
+    navigate('/');
+  }, [navigate]);
 
   useEffect(() => {
     fetchAgents();
@@ -140,6 +150,7 @@ export function Agents() {
                 agent={agent}
                 onEdit={setSelectedAgent}
                 onDelete={setDeleteTarget}
+                onChat={handleChat}
               />
             ))}
           </div>

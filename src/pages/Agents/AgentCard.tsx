@@ -1,7 +1,7 @@
 /**
  * AgentCard — Displays a single agent in the grid view
  */
-import { MoreVertical, Pencil, Trash2, Star } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Star, MessageSquare } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,9 +13,10 @@ interface AgentCardProps {
   agent: Agent;
   onEdit: (agent: Agent) => void;
   onDelete: (agent: Agent) => void;
+  onChat: (agent: Agent) => void;
 }
 
-export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
+export function AgentCard({ agent, onEdit, onDelete, onChat }: AgentCardProps) {
   const { t } = useTranslation('agents');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -65,6 +66,17 @@ export function AgentCard({ agent, onEdit, onDelete }: AgentCardProps) {
 
             {menuOpen && (
               <div className="absolute right-0 top-8 z-50 min-w-[160px] rounded-md border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95">
+                <button
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onChat(agent);
+                  }}
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  {t('card.chat')}
+                </button>
                 <button
                   className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
                   onClick={(e) => {

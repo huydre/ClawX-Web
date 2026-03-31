@@ -18,6 +18,7 @@
         "predefined": "Predefined",
         "contextWindow": "Context",
         "setDefault": "Set as Default",
+        "chat": "Chat",
         "edit": "Edit",
         "delete": "Delete",
         "noModel": "No model set"
