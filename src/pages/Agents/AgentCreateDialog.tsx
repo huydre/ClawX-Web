@@ -24,7 +24,6 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
   const { t } = useTranslation('agents');
   const createAgent = useAgentsStore((s) => s.createAgent);
 
-  const [agentKey, setAgentKey] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [emoji, setEmoji] = useState('🤖');
   const [agentType, setAgentType] = useState<AgentType>('open');
@@ -36,16 +35,12 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
   const [creating, setCreating] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const slugify = (value: string) =>
-    value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
   const handleCreate = async () => {
-    if (!agentKey.trim() || !displayName.trim()) return;
+    if (!displayName.trim()) return;
 
     setCreating(true);
     try {
       await createAgent({
-        agent_key: slugify(agentKey),
         display_name: displayName.trim(),
         emoji,
         description: description.trim() || undefined,
@@ -75,7 +70,7 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
       footer={
         <>
           <Button variant="outline" onClick={onClose}>{t('common:actions.cancel')}</Button>
-          <Button onClick={handleCreate} disabled={creating || !agentKey.trim() || !displayName.trim()}>
+          <Button onClick={handleCreate} disabled={creating || !displayName.trim()}>
             {creating ? t('create.creating') : t('common:actions.save')}
           </Button>
         </>
@@ -117,25 +112,10 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
             <Input
               id="displayName"
               value={displayName}
-              onChange={(e) => {
-                setDisplayName(e.target.value);
-                if (!agentKey) setAgentKey(slugify(e.target.value));
-              }}
+              onChange={(e) => setDisplayName(e.target.value)}
               placeholder={t('create.displayNameHint')}
             />
           </div>
-        </div>
-
-        {/* Agent Key */}
-        <div className="space-y-1.5">
-          <Label htmlFor="agentKey">{t('create.agentKey')}</Label>
-          <Input
-            id="agentKey"
-            value={agentKey}
-            onChange={(e) => setAgentKey(slugify(e.target.value))}
-            placeholder={t('create.agentKeyHint')}
-            className="font-mono text-sm"
-          />
         </div>
 
         {/* Agent Type */}

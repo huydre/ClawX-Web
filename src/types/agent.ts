@@ -37,7 +37,6 @@ export interface Agent {
  * Agent creation input
  */
 export interface AgentCreateInput {
-  agent_key: string;
   display_name: string;
   emoji?: string;
   description?: string;

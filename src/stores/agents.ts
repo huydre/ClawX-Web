@@ -1,6 +1,7 @@
 /**
  * Agents State Store
  * Manages AI agent state and CRUD operations
+ * Gateway RPC uses: name (not display_name), agentId (not id), workspace
  */
 import { create } from 'zustand';
 import type { Agent, AgentCreateInput, AgentUpdateInput, AgentFile } from '../types/agent';
@@ -20,13 +21,19 @@ interface AgentsState {
   setDefaultAgent: (id: string) => Promise<void>;
 
   // File operations
-  getAgentFiles: (agentKey: string) => Promise<AgentFile[]>;
-  getAgentFile: (agentKey: string, fileName: string) => Promise<string>;
-  setAgentFile: (agentKey: string, fileName: string, content: string) => Promise<void>;
+  getAgentFiles: (agentId: string) => Promise<AgentFile[]>;
+  getAgentFile: (agentId: string, fileName: string) => Promise<string>;
+  setAgentFile: (agentId: string, fileName: string, content: string) => Promise<void>;
 
   // Local state
   setAgents: (agents: Agent[]) => void;
   clearError: () => void;
+}
+
+async function rpc(method: string, params: unknown) {
+  return platform.isElectron
+    ? await window.electron.ipcRenderer.invoke('gateway:rpc', method, params)
+    : await api.gatewayRpc(method, params);
 }
 
 export const useAgentsStore = create<AgentsState>((set, get) => ({
@@ -37,20 +44,22 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
   fetchAgents: async () => {
     set({ loading: true, error: null });
     try {
-      const result = platform.isElectron
-        ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.list', {})
-        : await api.gatewayRpc('agents.list', {});
+      const result = await rpc('agents.list', {});
 
       const typedResult = result as {
         success: boolean;
-        result?: { agents?: Agent[] };
+        result?: { agents?: any[] } | any[];
         error?: string;
       };
 
       if (typedResult.success && typedResult.result) {
-        const rawAgents = typedResult.result.agents || [];
+        // Handle both { agents: [...] } and direct array
+        const rawAgents = Array.isArray(typedResult.result)
+          ? typedResult.result
+          : (typedResult.result.agents || []);
+
         const agents: Agent[] = rawAgents.map((a: any) => ({
-          id: a.id || a.agent_key,
+          id: a.id || a.agent_key || a.agentKey,
           agent_key: a.agent_key || a.agentKey || a.id,
           display_name: a.display_name || a.displayName || a.name || a.agent_key || 'Unnamed',
           emoji: a.emoji || a.other_config?.emoji || '🤖',
@@ -76,25 +85,40 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
 
   createAgent: async (input) => {
     try {
-      const result = platform.isElectron
-        ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.create', input)
-        : await api.gatewayRpc('agents.create', input);
+      // Gateway expects: name (required), workspace (optional),
+      // emoji, provider, model, agent_type, context_window, max_tool_iterations
+      // and other_config for extra fields like description
+      const gatewayParams: Record<string, unknown> = {
+        name: input.display_name,
+        emoji: input.emoji || '🤖',
+        agent_type: input.agent_type,
+      };
 
+      if (input.provider) gatewayParams.provider = input.provider;
+      if (input.model) gatewayParams.model = input.model;
+      if (input.context_window) gatewayParams.context_window = input.context_window;
+      if (input.max_tool_iterations) gatewayParams.max_tool_iterations = input.max_tool_iterations;
+      if (input.description) {
+        gatewayParams.other_config = { description: input.description };
+      }
+
+      const result = await rpc('agents.create', gatewayParams);
       const typedResult = result as { success: boolean; result?: any; error?: string };
 
       if (typedResult.success && typedResult.result) {
+        const r = typedResult.result;
         const agent: Agent = {
-          id: typedResult.result.id || input.agent_key,
-          agent_key: input.agent_key,
-          display_name: input.display_name,
-          emoji: input.emoji || '🤖',
+          id: r.id || r.agent_key || r.agentKey,
+          agent_key: r.agent_key || r.agentKey || r.id,
+          display_name: r.name || r.display_name || input.display_name,
+          emoji: r.emoji || input.emoji || '🤖',
           description: input.description,
-          agent_type: input.agent_type,
-          status: 'active',
-          provider: input.provider,
-          model: input.model,
-          context_window: input.context_window,
-          max_tool_iterations: input.max_tool_iterations,
+          agent_type: r.agent_type || input.agent_type,
+          status: r.status || 'active',
+          provider: r.provider || input.provider,
+          model: r.model || input.model,
+          context_window: r.context_window || input.context_window,
+          max_tool_iterations: r.max_tool_iterations || input.max_tool_iterations,
           is_default: false,
         };
         set((state) => ({ agents: [...state.agents, agent] }));
@@ -111,10 +135,24 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
       const agent = get().agents.find((a) => a.id === id);
       if (!agent) throw new Error('Agent not found');
 
-      const result = platform.isElectron
-        ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.update', { id: agent.agent_key, ...input })
-        : await api.gatewayRpc('agents.update', { id: agent.agent_key, ...input });
+      // Gateway expects: agentId (required), then optional fields
+      const gatewayParams: Record<string, unknown> = {
+        agentId: agent.agent_key,
+      };
 
+      if (input.display_name !== undefined) gatewayParams.name = input.display_name;
+      if (input.emoji !== undefined) gatewayParams.emoji = input.emoji;
+      if (input.provider !== undefined) gatewayParams.provider = input.provider;
+      if (input.model !== undefined) gatewayParams.model = input.model;
+      if (input.context_window !== undefined) gatewayParams.context_window = input.context_window;
+      if (input.max_tool_iterations !== undefined) gatewayParams.max_tool_iterations = input.max_tool_iterations;
+      if (input.is_default !== undefined) gatewayParams.is_default = input.is_default;
+      if (input.status !== undefined) gatewayParams.status = input.status;
+      if (input.description !== undefined) {
+        gatewayParams.other_config = { description: input.description };
+      }
+
+      const result = await rpc('agents.update', gatewayParams);
       const typedResult = result as { success: boolean; error?: string };
 
       if (typedResult.success) {
@@ -136,10 +174,8 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
       const agent = get().agents.find((a) => a.id === id);
       if (!agent) throw new Error('Agent not found');
 
-      const result = platform.isElectron
-        ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.delete', { id: agent.agent_key })
-        : await api.gatewayRpc('agents.delete', { id: agent.agent_key });
-
+      // Gateway expects: agentId (required)
+      const result = await rpc('agents.delete', { agentId: agent.agent_key });
       const typedResult = result as { success: boolean; error?: string };
 
       if (typedResult.success) {
@@ -159,10 +195,11 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
       const agent = get().agents.find((a) => a.id === id);
       if (!agent) throw new Error('Agent not found');
 
-      const result = platform.isElectron
-        ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.setDefault', { id: agent.agent_key })
-        : await api.gatewayRpc('agents.setDefault', { id: agent.agent_key });
-
+      // No agents.setDefault method — use agents.update with is_default
+      const result = await rpc('agents.update', {
+        agentId: agent.agent_key,
+        is_default: true,
+      });
       const typedResult = result as { success: boolean; error?: string };
 
       if (typedResult.success) {
@@ -178,16 +215,17 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     }
   },
 
-  getAgentFiles: async (agentKey) => {
+  // Gateway expects: agentId (optional, defaults to "default")
+  getAgentFiles: async (agentId) => {
     try {
-      const result = platform.isElectron
-        ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.files.list', { agentKey })
-        : await api.gatewayRpc('agents.files.list', { agentKey });
-
-      const typedResult = result as { success: boolean; result?: { files?: AgentFile[] }; error?: string };
+      const result = await rpc('agents.files.list', { agentId });
+      const typedResult = result as { success: boolean; result?: { files?: AgentFile[] } | AgentFile[]; error?: string };
 
       if (typedResult.success && typedResult.result) {
-        return typedResult.result.files || [];
+        const files = Array.isArray(typedResult.result)
+          ? typedResult.result
+          : (typedResult.result.files || []);
+        return files;
       }
       return [];
     } catch {
@@ -195,15 +233,14 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     }
   },
 
-  getAgentFile: async (agentKey, fileName) => {
+  // Gateway expects: agentId, name (file name)
+  getAgentFile: async (agentId, fileName) => {
     try {
-      const result = platform.isElectron
-        ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.files.get', { agentKey, fileName })
-        : await api.gatewayRpc('agents.files.get', { agentKey, fileName });
-
-      const typedResult = result as { success: boolean; result?: { content?: string }; error?: string };
+      const result = await rpc('agents.files.get', { agentId, name: fileName });
+      const typedResult = result as { success: boolean; result?: { content?: string } | string; error?: string };
 
       if (typedResult.success && typedResult.result) {
+        if (typeof typedResult.result === 'string') return typedResult.result;
         return typedResult.result.content || '';
       }
       return '';
@@ -212,11 +249,9 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     }
   },
 
-  setAgentFile: async (agentKey, fileName, content) => {
-    const result = platform.isElectron
-      ? await window.electron.ipcRenderer.invoke('gateway:rpc', 'agents.files.set', { agentKey, fileName, content })
-      : await api.gatewayRpc('agents.files.set', { agentKey, fileName, content });
-
+  // Gateway expects: agentId, name (file name), content
+  setAgentFile: async (agentId, fileName, content) => {
+    const result = await rpc('agents.files.set', { agentId, name: fileName, content });
     const typedResult = result as { success: boolean; error?: string };
     if (!typedResult.success) {
       throw new Error(typedResult.error || 'Failed to save file');
