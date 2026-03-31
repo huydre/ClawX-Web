@@ -1,0 +1,74 @@
+{
+    "title": "Agents",
+    "subtitle": "Manage your AI agents — configure personalities, models, and capabilities",
+    "addAgent": "New Agent",
+    "refresh": "Refresh agents",
+    "gatewayWarning": "Gateway is not running. Start it from Settings to manage agents.",
+    "configured": "Your Agents",
+    "empty": {
+        "title": "No Agents Yet",
+        "desc": "Create your first AI agent to get started. Each agent has its own personality, model, and context.",
+        "cta": "Create Agent"
+    },
+    "card": {
+        "default": "Default",
+        "model": "Model",
+        "type": "Type",
+        "open": "Open",
+        "predefined": "Predefined",
+        "contextWindow": "Context",
+        "setDefault": "Set as Default",
+        "edit": "Edit",
+        "delete": "Delete",
+        "noModel": "No model set"
+    },
+    "create": {
+        "title": "Create New Agent",
+        "description": "Set up a new AI agent with its own identity and configuration",
+        "agentKey": "Agent Key",
+        "agentKeyHint": "Unique identifier (lowercase, no spaces). e.g. my-assistant",
+        "displayName": "Display Name",
+        "displayNameHint": "Friendly name shown in the UI",
+        "emoji": "Emoji",
+        "agentType": "Agent Type",
+        "agentTypeOpen": "Open — separate context per user",
+        "agentTypePredefined": "Predefined — shared context with user overlay",
+        "description": "Description",
+        "descriptionHint": "Brief description of what this agent does",
+        "provider": "Provider",
+        "providerHint": "LLM provider (e.g. anthropic, openai)",
+        "model": "Model",
+        "modelHint": "Model ID (e.g. claude-sonnet-4-20250514)",
+        "contextWindow": "Context Window",
+        "maxToolIterations": "Max Tool Iterations",
+        "creating": "Creating...",
+        "success": "Agent created successfully",
+        "error": "Failed to create agent"
+    },
+    "detail": {
+        "title": "Agent Details",
+        "overview": "Overview",
+        "files": "Files",
+        "personality": "Personality",
+        "modelConfig": "Model & Configuration",
+        "selectFile": "Select a file to edit",
+        "noFiles": "No context files found for this agent",
+        "fileSaved": "File saved successfully",
+        "fileSaveError": "Failed to save file",
+        "saveFile": "Save",
+        "saving": "Saving...",
+        "updated": "Agent updated successfully",
+        "updateError": "Failed to update agent"
+    },
+    "delete": {
+        "title": "Delete Agent",
+        "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+        "confirm": "Delete Agent",
+        "success": "Agent deleted successfully",
+        "error": "Failed to delete agent"
+    },
+    "toast": {
+        "defaultSet": "Default agent updated",
+        "defaultError": "Failed to set default agent"
+    }
+}

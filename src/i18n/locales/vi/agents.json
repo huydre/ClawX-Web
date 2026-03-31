@@ -1,0 +1,74 @@
+{
+    "title": "Agents",
+    "subtitle": "Quản lý các AI agent — cấu hình tính cách, mô hình và khả năng",
+    "addAgent": "Tạo Agent",
+    "refresh": "Làm mới danh sách agent",
+    "gatewayWarning": "Gateway chưa chạy. Khởi động từ Cài đặt để quản lý agents.",
+    "configured": "Agents của bạn",
+    "empty": {
+        "title": "Chưa có Agent",
+        "desc": "Tạo AI agent đầu tiên để bắt đầu. Mỗi agent có tính cách, mô hình và ngữ cảnh riêng.",
+        "cta": "Tạo Agent"
+    },
+    "card": {
+        "default": "Mặc định",
+        "model": "Mô hình",
+        "type": "Loại",
+        "open": "Mở",
+        "predefined": "Định sẵn",
+        "contextWindow": "Ngữ cảnh",
+        "setDefault": "Đặt làm mặc định",
+        "edit": "Chỉnh sửa",
+        "delete": "Xóa",
+        "noModel": "Chưa đặt mô hình"
+    },
+    "create": {
+        "title": "Tạo Agent Mới",
+        "description": "Thiết lập AI agent mới với danh tính và cấu hình riêng",
+        "agentKey": "Agent Key",
+        "agentKeyHint": "Định danh duy nhất (chữ thường, không dấu cách). VD: tro-ly-ai",
+        "displayName": "Tên hiển thị",
+        "displayNameHint": "Tên thân thiện hiển thị trên giao diện",
+        "emoji": "Emoji",
+        "agentType": "Loại Agent",
+        "agentTypeOpen": "Mở — ngữ cảnh riêng cho mỗi người dùng",
+        "agentTypePredefined": "Định sẵn — ngữ cảnh chung với lớp phủ người dùng",
+        "description": "Mô tả",
+        "descriptionHint": "Mô tả ngắn về chức năng của agent này",
+        "provider": "Provider",
+        "providerHint": "Nhà cung cấp LLM (VD: anthropic, openai)",
+        "model": "Mô hình",
+        "modelHint": "ID mô hình (VD: claude-sonnet-4-20250514)",
+        "contextWindow": "Cửa sổ ngữ cảnh",
+        "maxToolIterations": "Số lần lặp công cụ tối đa",
+        "creating": "Đang tạo...",
+        "success": "Tạo agent thành công",
+        "error": "Không thể tạo agent"
+    },
+    "detail": {
+        "title": "Chi tiết Agent",
+        "overview": "Tổng quan",
+        "files": "Tập tin",
+        "personality": "Tính cách",
+        "modelConfig": "Mô hình & Cấu hình",
+        "selectFile": "Chọn tập tin để chỉnh sửa",
+        "noFiles": "Không tìm thấy tập tin ngữ cảnh cho agent này",
+        "fileSaved": "Đã lưu tập tin",
+        "fileSaveError": "Không thể lưu tập tin",
+        "saveFile": "Lưu",
+        "saving": "Đang lưu...",
+        "updated": "Đã cập nhật agent",
+        "updateError": "Không thể cập nhật agent"
+    },
+    "delete": {
+        "title": "Xóa Agent",
+        "message": "Bạn có chắc muốn xóa \"{{name}}\"? Hành động này không thể hoàn tác.",
+        "confirm": "Xóa Agent",
+        "success": "Đã xóa agent",
+        "error": "Không thể xóa agent"
+    },
+    "toast": {
+        "defaultSet": "Đã cập nhật agent mặc định",
+        "defaultError": "Không thể đặt agent mặc định"
+    }
+}
