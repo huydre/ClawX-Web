@@ -206,8 +206,8 @@ router.post('/save', (req, res) => {
                 }
             }
 
-            // OpenClaw requires allowFrom to include "*" when dmPolicy is "open"
-            const dmPolicy = transformedConfig.dmPolicy || currentConfig.channels?.[type]?.dmPolicy || 'open';
+            // Only add allowFrom: ["*"] when dmPolicy is explicitly "open"
+            const dmPolicy = transformedConfig.dmPolicy as string | undefined;
             if (dmPolicy === 'open') {
                 let af = transformedConfig.allowFrom as string[] | undefined;
                 if (!af || !Array.isArray(af)) af = ['*'];
@@ -215,10 +215,7 @@ router.post('/save', (req, res) => {
                 transformedConfig.allowFrom = af;
             }
 
-            // Default dmPolicy to "open" if not set
-            if (!transformedConfig.dmPolicy) {
-                transformedConfig.dmPolicy = 'open';
-            }
+            // Do NOT default dmPolicy — OpenClaw defaults to "pairing"
         }
 
         // Discord: build guilds structure

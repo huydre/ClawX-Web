@@ -117,6 +117,9 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
         // Set allowFrom based on dmPolicy
         if (dmPolicy === 'open') {
           channelConfig.allowFrom = ['*'];
+        } else if (dmPolicy === 'pairing') {
+          // Do NOT set allowFrom:["*"] — that bypasses pairing
+          // Leave allowFrom empty or unset so pairing works
         }
 
         await api.saveChannelConfig(channelType, channelConfig, agentId);
