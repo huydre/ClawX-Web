@@ -90,6 +90,68 @@ router.put('/cross-agent', (req, res) => {
   }
 });
 
+// ── Workspace Skills ────────────────────────────────────────
+
+// GET /api/agents-config/workspace-skills/:agentId
+// Lists skill directories in agent's workspace/skills/
+router.get('/workspace-skills/:agentId', (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const config = readConfig();
+    const agents = config.agents as any;
+    const agentList = agents?.list || [];
+    const agent = agentList.find((a: any) => a.id === agentId);
+
+    if (!agent) {
+      return res.json({ skills: [], workspace: '' });
+    }
+
+    const workspace = agent.workspace || agents?.defaults?.workspace || '';
+    if (!workspace) {
+      return res.json({ skills: [], workspace: '' });
+    }
+
+    const { readdirSync, statSync, readFileSync: readF } = require('fs');
+    const { join: joinPath } = require('path');
+    const skillsDir = joinPath(workspace, 'skills');
+
+    const skills: Array<{ name: string; hasSkillMd: boolean; description: string }> = [];
+
+    try {
+      const entries = readdirSync(skillsDir);
+      for (const entry of entries) {
+        try {
+          const entryPath = joinPath(skillsDir, entry);
+          if (statSync(entryPath).isDirectory()) {
+            const skillMdPath = joinPath(entryPath, 'SKILL.md');
+            let hasSkillMd = false;
+            let description = '';
+            try {
+              const content = readF(skillMdPath, 'utf-8');
+              hasSkillMd = true;
+              // Extract first non-empty, non-heading line as description
+              const lines = content.split('\n');
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('---')) {
+                  description = trimmed.slice(0, 120);
+                  break;
+                }
+              }
+            } catch { /* no SKILL.md */ }
+            skills.push({ name: entry, hasSkillMd, description });
+          }
+        } catch { /* skip */ }
+      }
+    } catch { /* skills dir doesn't exist */ }
+
+    res.json({ skills, workspace });
+  } catch (error) {
+    logger.error('Get workspace skills error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 // ── Bindings ────────────────────────────────────────────────
 
 // GET /api/agents-config/bindings

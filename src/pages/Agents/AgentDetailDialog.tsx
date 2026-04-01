@@ -5,7 +5,7 @@
  * OpenClaw agents.update only accepts: { agentId, name?, workspace?, model?, avatar? }
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Save, FileText, Settings2, Link2 } from 'lucide-react';
+import { Save, FileText, Settings2, Link2, FolderOpen, Puzzle } from 'lucide-react';
 import { ModalDialog } from '@/components/common/ModalDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,7 +58,9 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
   }, []);
 
   // Files tab state
+  const [workspace, setWorkspace] = useState('');
   const [files, setFiles] = useState<AgentFile[]>([]);
+  const [skills, setSkills] = useState<Array<{ name: string; hasSkillMd: boolean; description: string }>>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState('');
   const [fileLoading, setFileLoading] = useState(false);
@@ -67,17 +69,26 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
 
   useEffect(() => {
     loadFiles();
+    loadSkills();
   }, [agent.id]);
 
   const loadFiles = useCallback(async () => {
     const result = await getAgentFiles(agent.id);
-    setFiles(result);
-    if (result.length > 0 && !selectedFile) {
-      // Select first non-missing file
-      const first = result.find((f) => !f.missing) || result[0];
+    setWorkspace(result.workspace);
+    setFiles(result.files);
+    if (result.files.length > 0 && !selectedFile) {
+      const first = result.files.find((f) => !f.missing) || result.files[0];
       setSelectedFile(first.name);
     }
   }, [agent.id, getAgentFiles, selectedFile]);
+
+  const loadSkills = useCallback(async () => {
+    try {
+      const result = await api.getWorkspaceSkills(agent.id);
+      setSkills(result.skills || []);
+      if (!workspace && result.workspace) setWorkspace(result.workspace);
+    } catch { /* ignore */ }
+  }, [agent.id]);
 
   // Load file content when selected
   useEffect(() => {
@@ -227,6 +238,39 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
 
         {/* Files Tab */}
         <TabsContent value="files" className="mt-4">
+          {/* Workspace path */}
+          {workspace && (
+            <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-md">
+              <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <code className="text-xs text-muted-foreground truncate">{workspace}</code>
+            </div>
+          )}
+
+          {/* Skills list */}
+          {skills.length > 0 && (
+            <div className="mb-4 space-y-2">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Puzzle className="h-3 w-3" />
+                Skills ({skills.length})
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {skills.map((s) => (
+                  <div
+                    key={s.name}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted text-xs"
+                    title={s.description || s.name}
+                  >
+                    <span>{s.hasSkillMd ? '📦' : '📁'}</span>
+                    <span className="font-medium">{s.name}</span>
+                    {s.description && (
+                      <span className="text-muted-foreground max-w-[150px] truncate">— {s.description}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {files.length === 0 ? (
             <div className="text-center py-8 text-sm text-muted-foreground">
               {t('detail.noFiles')}

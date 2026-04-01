@@ -153,13 +153,13 @@ export const useAgentsStore = create<AgentsState>((set) => ({
   getAgentFiles: async (agentId) => {
     try {
       const result = await rpc('agents.files.list', { agentId });
-      const typedResult = result as { success: boolean; result?: { files: AgentFile[] }; error?: string };
+      const typedResult = result as { success: boolean; result?: { workspace?: string; files: AgentFile[] }; error?: string };
       if (typedResult.success && typedResult.result) {
-        return typedResult.result.files || [];
+        return { workspace: typedResult.result.workspace || '', files: typedResult.result.files || [] };
       }
-      return [];
+      return { workspace: '', files: [] };
     } catch {
-      return [];
+      return { workspace: '', files: [] };
     }
   },
 

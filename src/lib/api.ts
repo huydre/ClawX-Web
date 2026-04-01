@@ -478,6 +478,14 @@ class ApiClient {
     });
   }
 
+  // Agent Workspace Skills API
+  async getWorkspaceSkills(agentId: string) {
+    return this.request<{
+      skills: Array<{ name: string; hasSkillMd: boolean; description: string }>;
+      workspace: string;
+    }>(`/agents-config/workspace-skills/${agentId}`);
+  }
+
   // Agent Bindings API
   async getAgentBindings(agentId: string) {
     return this.request<{
