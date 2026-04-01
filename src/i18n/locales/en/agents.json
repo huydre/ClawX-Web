@@ -49,6 +49,7 @@
         "files": "Files",
         "personality": "Personality",
         "modelConfig": "Model & Configuration",
+        "bindings": "Bindings",
         "selectFile": "Select a file to edit",
         "noFiles": "No context files found for this agent",
         "fileSaved": "File saved successfully",
@@ -64,6 +65,20 @@
         "confirm": "Delete Agent",
         "success": "Agent deleted successfully",
         "error": "Failed to delete agent"
+    },
+    "bindings": {
+        "description": "Route incoming messages from specific channels to this agent. First matching rule wins.",
+        "empty": "No channel bindings. This agent uses default routing.",
+        "add": "Add Binding",
+        "rule": "Rule",
+        "channel": "Channel",
+        "accountId": "Account ID",
+        "accountIdHint": "Optional (e.g. personal, biz)",
+        "peerKind": "Peer Type",
+        "peerId": "Peer ID",
+        "peerIdHint": "Phone, group ID, etc.",
+        "saved": "Bindings saved. Restart gateway to apply.",
+        "saveError": "Failed to save bindings"
     },
     "crossAgent": {
         "title": "Cross-Agent Communication",

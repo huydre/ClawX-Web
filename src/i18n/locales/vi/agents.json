@@ -49,6 +49,7 @@
         "files": "Tập tin",
         "personality": "Tính cách",
         "modelConfig": "Mô hình & Cấu hình",
+        "bindings": "Liên kết kênh",
         "selectFile": "Chọn tập tin để chỉnh sửa",
         "noFiles": "Không tìm thấy tập tin ngữ cảnh cho agent này",
         "fileSaved": "Đã lưu tập tin",
@@ -64,6 +65,20 @@
         "confirm": "Xóa Agent",
         "success": "Đã xóa agent",
         "error": "Không thể xóa agent"
+    },
+    "bindings": {
+        "description": "Điều hướng tin nhắn từ kênh cụ thể đến agent này. Quy tắc đầu tiên khớp sẽ được áp dụng.",
+        "empty": "Chưa có liên kết kênh. Agent này dùng routing mặc định.",
+        "add": "Thêm liên kết",
+        "rule": "Quy tắc",
+        "channel": "Kênh",
+        "accountId": "Account ID",
+        "accountIdHint": "Tùy chọn (VD: personal, biz)",
+        "peerKind": "Loại peer",
+        "peerId": "Peer ID",
+        "peerIdHint": "SĐT, group ID, v.v.",
+        "saved": "Đã lưu liên kết. Khởi động lại gateway để áp dụng.",
+        "saveError": "Không thể lưu liên kết"
     },
     "crossAgent": {
         "title": "Giao tiếp giữa các Agent",

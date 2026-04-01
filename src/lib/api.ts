@@ -478,6 +478,20 @@ class ApiClient {
     });
   }
 
+  // Agent Bindings API
+  async getAgentBindings(agentId: string) {
+    return this.request<{
+      bindings: Array<{ agentId: string; match: { channel?: string; accountId?: string; peer?: { kind: string; id: string } } }>;
+    }>(`/agents-config/bindings/${agentId}`);
+  }
+
+  async setAgentBindings(agentId: string, bindings: Array<{ match: { channel?: string; accountId?: string; peer?: { kind: string; id: string } } }>) {
+    return this.request<{ success: boolean }>(`/agents-config/bindings/${agentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ bindings }),
+    });
+  }
+
   // System Metrics API
   async getSystemMetrics() {
     return this.request<{

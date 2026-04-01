@@ -90,4 +90,67 @@ router.put('/cross-agent', (req, res) => {
   }
 });
 
+// ── Bindings ────────────────────────────────────────────────
+
+// GET /api/agents-config/bindings
+// Returns all bindings from openclaw.json
+router.get('/bindings', (_req, res) => {
+  try {
+    const config = readConfig();
+    const bindings = Array.isArray(config.bindings) ? config.bindings : [];
+    res.json({ bindings });
+  } catch (error) {
+    logger.error('Get bindings error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// GET /api/agents-config/bindings/:agentId
+// Returns bindings for a specific agent
+router.get('/bindings/:agentId', (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const config = readConfig();
+    const allBindings = Array.isArray(config.bindings) ? config.bindings : [];
+    const agentBindings = allBindings.filter(
+      (b: any) => b.agentId === agentId
+    );
+    res.json({ bindings: agentBindings });
+  } catch (error) {
+    logger.error('Get agent bindings error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// PUT /api/agents-config/bindings/:agentId
+// Replace all bindings for a specific agent
+router.put('/bindings/:agentId', (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const { bindings: newBindings } = req.body as { bindings: Array<{ match: any }> };
+
+    if (!Array.isArray(newBindings)) {
+      return res.status(400).json({ error: 'bindings must be an array' });
+    }
+
+    const config = readConfig();
+    const allBindings = Array.isArray(config.bindings) ? config.bindings : [];
+
+    // Remove existing bindings for this agent, add new ones
+    const otherBindings = allBindings.filter((b: any) => b.agentId !== agentId);
+    const agentBindings = newBindings.map((b) => ({
+      agentId,
+      match: b.match,
+    }));
+
+    config.bindings = [...otherBindings, ...agentBindings];
+    writeConfig(config);
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Set agent bindings error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 export default router;
