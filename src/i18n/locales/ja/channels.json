@@ -281,12 +281,17 @@
         "boundAgent": "担当エージェント",
         "boundAgentDesc": "このチャンネルのメッセージを処理するエージェント",
         "defaultAgent": "デフォルトエージェント（オーバーライドなし）",
+        "dmPolicy": "DMポリシー",
+        "dmPolicyDesc": "ボットにDMを送信できるユーザーを制御",
+        "dmPolicy_open": "オープン",
+        "dmPolicy_pairing": "ペアリング",
+        "dmPolicy_allowlist": "許可リスト",
+        "dmPolicy_disabled": "無効",
+        "groupPolicy_open": "オープン",
+        "groupPolicy_allowlist": "許可リスト",
+        "groupPolicy_disabled": "無効",
         "save": "保存",
-        "cancel": "キャンセル",
-        "open": "オープン",
-        "allowlist": "許可リスト",
-        "code": "コード",
-        "disabled": "無効"
+        "cancel": "キャンセル"
     },
     "configured": "設定済みチャンネル",
     "empty": {

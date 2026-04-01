@@ -119,11 +119,6 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
           channelConfig.allowFrom = ['*'];
         }
 
-        // Set pairingPolicy to match dmPolicy for pairing flow
-        if (dmPolicy === 'pairing') {
-          channelConfig.pairingPolicy = 'code';
-        }
-
         await api.saveChannelConfig(channelType, channelConfig, agentId);
         await api.setAgentBindings(agentId, [
           { match: { channel: channelType, accountId: agentId } },

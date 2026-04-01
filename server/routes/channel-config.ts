@@ -45,8 +45,8 @@ router.get('/:channelType', (req, res) => {
     );
 
     res.json({
-      groupPolicy: channelCfg.groupPolicy || 'allowlist',
-      pairingPolicy: channelCfg.pairingPolicy || 'code',
+      dmPolicy: channelCfg.dmPolicy || 'open',
+      groupPolicy: channelCfg.groupPolicy || 'open',
       allowFrom: Array.isArray(channelCfg.allowFrom) ? channelCfg.allowFrom : [],
       groupAllowFrom: Array.isArray(channelCfg.groupAllowFrom) ? channelCfg.groupAllowFrom : [],
       boundAgentId: channelBinding?.agentId || '',
@@ -62,17 +62,23 @@ router.get('/:channelType', (req, res) => {
 router.put('/:channelType', (req, res) => {
   try {
     const { channelType } = req.params;
-    const { groupPolicy, pairingPolicy, allowFrom, groupAllowFrom, boundAgentId } = req.body;
+    const { dmPolicy, groupPolicy, allowFrom, groupAllowFrom, boundAgentId } = req.body;
 
     const config = readConfig();
     const channels = (config.channels || {}) as Record<string, unknown>;
     const channelCfg = (channels[channelType] || {}) as Record<string, unknown>;
 
-    // Only update fields that are provided
+    // Only update valid OpenClaw fields
+    if (dmPolicy !== undefined) channelCfg.dmPolicy = dmPolicy;
     if (groupPolicy !== undefined) channelCfg.groupPolicy = groupPolicy;
-    if (pairingPolicy !== undefined) channelCfg.pairingPolicy = pairingPolicy;
     if (allowFrom !== undefined) channelCfg.allowFrom = allowFrom;
     if (groupAllowFrom !== undefined) channelCfg.groupAllowFrom = groupAllowFrom;
+
+    // When dmPolicy is open, ensure allowFrom includes "*"
+    if (dmPolicy === 'open') {
+      const af = Array.isArray(channelCfg.allowFrom) ? channelCfg.allowFrom as string[] : [];
+      if (!af.includes('*')) channelCfg.allowFrom = [...af, '*'];
+    }
 
     channels[channelType] = channelCfg;
     config.channels = channels;
@@ -92,7 +98,10 @@ router.put('/:channelType', (req, res) => {
     }
 
     writeConfig(config);
-    logger.info('Updated channel config', { channelType, groupPolicy, pairingPolicy, boundAgentId });
+    // Remove any invalid keys that may have been written before
+    delete channelCfg.pairingPolicy;
+
+    logger.info('Updated channel config', { channelType, dmPolicy, groupPolicy, boundAgentId });
 
     res.json({ success: true });
   } catch (error) {
