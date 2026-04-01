@@ -255,28 +255,36 @@ router.post('/save', (req, res) => {
             const channelCfg = currentConfig.channels[type] || {};
             if (!channelCfg.accounts) channelCfg.accounts = {};
             const accounts = channelCfg.accounts as Record<string, Record<string, unknown>>;
+
+            // ALWAYS move root-level token to accounts.main when adding any account
+            // This prevents root config from overriding per-account settings
+            const rootTokenKey = type === 'discord' ? 'token' : 'botToken';
+            if (channelCfg[rootTokenKey]) {
+                const mainId = 'main';
+                if (!accounts[mainId]) {
+                    accounts[mainId] = {};
+                }
+                // Move root fields to main account (don't overwrite if already set)
+                if (!accounts[mainId][rootTokenKey]) {
+                    accounts[mainId][rootTokenKey] = channelCfg[rootTokenKey];
+                }
+                if (!accounts[mainId].dmPolicy && channelCfg.dmPolicy) {
+                    accounts[mainId].dmPolicy = channelCfg.dmPolicy;
+                }
+                // Remove from root level
+                delete channelCfg[rootTokenKey];
+                delete channelCfg.dmPolicy;
+                delete channelCfg.allowFrom;
+                delete channelCfg.groupPolicy;
+                logger.info('Moved root token to accounts.main', { type });
+            }
+
+            // Save the new account config
             accounts[acctId] = {
                 ...accounts[acctId],
                 ...transformedConfig,
             };
-            // If root level has a botToken from old config, move it to "default" account
-            // so it doesn't conflict with the new account
-            if (channelCfg.botToken && !accounts['default']) {
-                accounts['default'] = {
-                    botToken: channelCfg.botToken as string,
-                    dmPolicy: (channelCfg.dmPolicy as string) || 'open',
-                    allowFrom: channelCfg.allowFrom || ['*'],
-                };
-                delete channelCfg.botToken;
-                delete channelCfg.dmPolicy;
-                delete channelCfg.allowFrom;
-            } else if (channelCfg.token && !accounts['default']) {
-                // Discord uses "token" instead of "botToken"
-                accounts['default'] = {
-                    token: channelCfg.token as string,
-                };
-                delete channelCfg.token;
-            }
+
             channelCfg.accounts = accounts;
             channelCfg.enabled = true;
             currentConfig.channels[type] = channelCfg;
