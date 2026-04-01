@@ -42,6 +42,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
   const { addChannel } = useChannelsStore();
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
   const [channelName, setChannelName] = useState('');
+  const [accountId, setAccountId] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
@@ -71,6 +72,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
     if (!selectedType) {
       setConfigValues({});
       setChannelName('');
+      setAccountId('');
       setIsExistingConfig(false);
       if (platform.isElectron) {
         window.electron.ipcRenderer.invoke('channel:cancelWhatsAppQr').catch(() => { });
@@ -373,13 +375,13 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
         setValidationResult({ valid: true, errors: [], warnings });
       }
 
-      // Step 2: Save channel configuration
+      // Step 2: Save channel configuration (with optional accountId for multi-account)
       const config: Record<string, unknown> = { ...configValues };
 
       if (platform.isElectron) {
         await window.electron.ipcRenderer.invoke('channel:saveConfig', selectedType, config);
       } else {
-        await api.saveChannelConfig(selectedType, config);
+        await api.saveChannelConfig(selectedType, config, accountId || undefined);
       }
 
       // Step 3: Register channel + restart
@@ -566,11 +568,25 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
           ) : (
             // Connection form
             <div className="space-y-4">
-              {/* Existing config hint */}
+              {/* Multi-account: Account ID field when existing config */}
               {isExistingConfig && (
-                <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 shrink-0" />
-                  <span>{t('dialog.existingHint')}</span>
+                <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 shrink-0" />
+                    <span>{t('dialog.existingHintMulti', { defaultValue: 'This channel already has a default config. Add an Account ID to create a new account, or leave empty to update the default.' })}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="accountId" className="text-xs text-blue-600 dark:text-blue-400">
+                      {t('dialog.accountId', { defaultValue: 'Account ID (for multi-account)' })}
+                    </Label>
+                    <Input
+                      id="accountId"
+                      placeholder={t('dialog.accountIdHint', { defaultValue: 'e.g. bot2, alerts, work (leave empty for default)' })}
+                      value={accountId}
+                      onChange={(e) => setAccountId(e.target.value.trim().replace(/[^a-zA-Z0-9_-]/g, ''))}
+                      className="bg-white dark:bg-background text-foreground text-sm"
+                    />
+                  </div>
                 </div>
               )}
 

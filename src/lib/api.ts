@@ -428,10 +428,10 @@ class ApiClient {
     });
   }
 
-  async saveChannelConfig(type: string, config: Record<string, unknown>) {
+  async saveChannelConfig(type: string, config: Record<string, unknown>, accountId?: string) {
     return this.request<{ success: boolean }>('/channels/save', {
       method: 'POST',
-      body: JSON.stringify({ type, config }),
+      body: JSON.stringify({ type, config, ...(accountId ? { accountId } : {}) }),
     });
   }
 
