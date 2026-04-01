@@ -147,6 +147,8 @@ router.post('/save', (req, res) => {
     try {
         const { type, config, accountId } = req.body as { type: string; config: Record<string, unknown>; accountId?: string };
 
+        logger.info('Channel save request', { type, accountId: accountId || '(default)', configKeys: Object.keys(config || {}) });
+
         if (!type) {
             return res.status(400).json({ success: false, error: 'Missing channel type' });
         }

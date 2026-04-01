@@ -571,36 +571,37 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
           ) : (
             // Connection form
             <div className="space-y-4">
-              {/* Multi-account: choose update existing or add new */}
+              {/* When channel exists and user hasn't chosen mode yet: show choice */}
               {isExistingConfig && !addNewMode && (
-                <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm space-y-3">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-3">
+                  <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 shrink-0" />
                     <span>{t('dialog.existingHint')}</span>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setAddNewMode(true);
-                      setConfigValues({});
-                      setAccountId('');
-                      setChannelName('');
-                      setValidationResult(null);
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    {t('dialog.addNewAccount', { defaultValue: 'Add New Account (multi-bot)' })}
-                  </Button>
+                  <div className="p-4 border border-dashed rounded-lg text-center space-y-2">
+                    <p className="text-sm font-medium">{t('dialog.addNewAccountPrompt', { defaultValue: 'Want to add another bot for this channel?' })}</p>
+                    <p className="text-xs text-muted-foreground">{t('dialog.addNewAccountDesc', { defaultValue: 'Each account gets its own token and can be assigned to a different agent.' })}</p>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setAddNewMode(true);
+                        setConfigValues({});
+                        setAccountId('');
+                        setChannelName('');
+                        setValidationResult(null);
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      {t('dialog.addNewAccount', { defaultValue: 'Add New Bot Account' })}
+                    </Button>
+                  </div>
                 </div>
               )}
 
-              {/* New account mode: require Account ID */}
+              {/* New account mode: require Account ID + clean form */}
               {addNewMode && (
-                <div className="bg-green-500/10 text-green-600 dark:text-green-400 p-3 rounded-lg text-sm space-y-2">
-                  <p className="font-medium">{t('dialog.newAccountTitle', { defaultValue: 'Adding new account' })}</p>
-                  <p className="text-xs">{t('dialog.newAccountDesc', { defaultValue: 'Enter a unique Account ID and configure the new bot token below.' })}</p>
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-3 rounded-lg text-sm space-y-2">
+                  <p className="font-medium">{t('dialog.newAccountTitle', { defaultValue: 'New account' })}</p>
                   <div className="space-y-1">
                     <Label htmlFor="accountId" className="text-xs font-medium">
                       {t('dialog.accountId', { defaultValue: 'Account ID' })} <span className="text-red-500">*</span>
@@ -612,9 +613,13 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
                       onChange={(e) => setAccountId(e.target.value.trim().replace(/[^a-zA-Z0-9_-]/g, ''))}
                       className="bg-white dark:bg-background text-foreground text-sm"
                     />
+                    <p className="text-xs text-muted-foreground">{t('dialog.accountIdExplain', { defaultValue: 'Unique name to identify this bot. Used in agent bindings.' })}</p>
                   </div>
                 </div>
               )}
+
+              {/* Hide form when showing existing choice (not addNewMode) */}
+              {(!isExistingConfig || addNewMode) && <>
 
               {/* Instructions */}
               <div className="bg-muted p-4 rounded-lg space-y-3">
@@ -713,11 +718,22 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
 
               <Separator />
 
+              </>}
+
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => onSelectType(null)}>
+                <Button variant="outline" onClick={() => {
+                  if (addNewMode) {
+                    setAddNewMode(false);
+                    // Reload existing config
+                    setConfigValues({});
+                    setAccountId('');
+                  } else {
+                    onSelectType(null);
+                  }
+                }}>
                   {t('dialog.back')}
                 </Button>
-                <div className="flex gap-2">
+                {(!isExistingConfig || addNewMode) && <div className="flex gap-2">
                   {/* Validation Button - Only for token-based channels for now */}
                   {meta?.connectionType === 'token' && (
                     <Button
@@ -756,7 +772,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
                       </>
                     )}
                   </Button>
-                </div>
+                </div>}
               </div>
             </div>
           )}
