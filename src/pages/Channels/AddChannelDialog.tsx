@@ -8,7 +8,6 @@ import {
   AlertCircle,
   CheckCircle,
   ShieldCheck,
-  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,13 +42,11 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
   const { addChannel } = useChannelsStore();
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
   const [channelName, setChannelName] = useState('');
-  const [accountId, setAccountId] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [isExistingConfig, setIsExistingConfig] = useState(false);
-  const [addNewMode, setAddNewMode] = useState(false);
   const [validationResult, setValidationResult] = useState<{
     valid: boolean;
     errors: string[];
@@ -74,9 +71,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
     if (!selectedType) {
       setConfigValues({});
       setChannelName('');
-      setAccountId('');
       setIsExistingConfig(false);
-      setAddNewMode(false);
       if (platform.isElectron) {
         window.electron.ipcRenderer.invoke('channel:cancelWhatsAppQr').catch(() => { });
       }
@@ -384,7 +379,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
       if (platform.isElectron) {
         await window.electron.ipcRenderer.invoke('channel:saveConfig', selectedType, config);
       } else {
-        await api.saveChannelConfig(selectedType, config, accountId || undefined);
+        await api.saveChannelConfig(selectedType, config);
       }
 
       // Step 3: Register channel + restart
@@ -571,55 +566,13 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
           ) : (
             // Connection form
             <div className="space-y-4">
-              {/* When channel exists and user hasn't chosen mode yet: show choice */}
-              {isExistingConfig && !addNewMode && (
-                <div className="space-y-3">
-                  <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 shrink-0" />
-                    <span>{t('dialog.existingHint')}</span>
-                  </div>
-                  <div className="p-4 border border-dashed rounded-lg text-center space-y-2">
-                    <p className="text-sm font-medium">{t('dialog.addNewAccountPrompt', { defaultValue: 'Want to add another bot for this channel?' })}</p>
-                    <p className="text-xs text-muted-foreground">{t('dialog.addNewAccountDesc', { defaultValue: 'Each account gets its own token and can be assigned to a different agent.' })}</p>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setAddNewMode(true);
-                        setConfigValues({});
-                        setAccountId('');
-                        setChannelName('');
-                        setValidationResult(null);
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
-                      {t('dialog.addNewAccount', { defaultValue: 'Add New Bot Account' })}
-                    </Button>
-                  </div>
+              {/* Existing config hint */}
+              {isExistingConfig && (
+                <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 shrink-0" />
+                  <span>{t('dialog.existingHint')}</span>
                 </div>
               )}
-
-              {/* New account mode: require Account ID + clean form */}
-              {addNewMode && (
-                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-3 rounded-lg text-sm space-y-2">
-                  <p className="font-medium">{t('dialog.newAccountTitle', { defaultValue: 'New account' })}</p>
-                  <div className="space-y-1">
-                    <Label htmlFor="accountId" className="text-xs font-medium">
-                      {t('dialog.accountId', { defaultValue: 'Account ID' })} <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="accountId"
-                      placeholder={t('dialog.accountIdHint', { defaultValue: 'e.g. bot2, alerts, work' })}
-                      value={accountId}
-                      onChange={(e) => setAccountId(e.target.value.trim().replace(/[^a-zA-Z0-9_-]/g, ''))}
-                      className="bg-white dark:bg-background text-foreground text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">{t('dialog.accountIdExplain', { defaultValue: 'Unique name to identify this bot. Used in agent bindings.' })}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Hide form when showing existing choice (not addNewMode) */}
-              {(!isExistingConfig || addNewMode) && <>
 
               {/* Instructions */}
               <div className="bg-muted p-4 rounded-lg space-y-3">
@@ -718,22 +671,11 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
 
               <Separator />
 
-              </>}
-
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => {
-                  if (addNewMode) {
-                    setAddNewMode(false);
-                    // Reload existing config
-                    setConfigValues({});
-                    setAccountId('');
-                  } else {
-                    onSelectType(null);
-                  }
-                }}>
+                <Button variant="outline" onClick={() => onSelectType(null)}>
                   {t('dialog.back')}
                 </Button>
-                {(!isExistingConfig || addNewMode) && <div className="flex gap-2">
+                <div className="flex gap-2">
                   {/* Validation Button - Only for token-based channels for now */}
                   {meta?.connectionType === 'token' && (
                     <Button
@@ -756,7 +698,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
                   )}
                   <Button
                     onClick={handleConnect}
-                    disabled={connecting || !isFormValid() || (addNewMode && !accountId)}
+                    disabled={connecting || !isFormValid()}
                   >
                     {connecting ? (
                       <>
@@ -772,7 +714,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
                       </>
                     )}
                   </Button>
-                </div>}
+                </div>
               </div>
             </div>
           )}
