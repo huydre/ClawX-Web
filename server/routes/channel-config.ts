@@ -38,11 +38,18 @@ router.get('/:channelType', (req, res) => {
     const channels = (config.channels || {}) as Record<string, unknown>;
     const channelCfg = (channels[channelType] || {}) as Record<string, unknown>;
 
+    // Find bound agent from bindings[]
+    const bindings = Array.isArray(config.bindings) ? config.bindings : [];
+    const channelBinding = bindings.find(
+      (b: any) => b.match?.channel === channelType && !b.match?.accountId && !b.match?.peer
+    );
+
     res.json({
       groupPolicy: channelCfg.groupPolicy || 'allowlist',
       pairingPolicy: channelCfg.pairingPolicy || 'code',
       allowFrom: Array.isArray(channelCfg.allowFrom) ? channelCfg.allowFrom : [],
       groupAllowFrom: Array.isArray(channelCfg.groupAllowFrom) ? channelCfg.groupAllowFrom : [],
+      boundAgentId: channelBinding?.agentId || '',
     });
   } catch (error) {
     logger.error('Get channel config error:', error);
@@ -55,7 +62,7 @@ router.get('/:channelType', (req, res) => {
 router.put('/:channelType', (req, res) => {
   try {
     const { channelType } = req.params;
-    const { groupPolicy, pairingPolicy, allowFrom, groupAllowFrom } = req.body;
+    const { groupPolicy, pairingPolicy, allowFrom, groupAllowFrom, boundAgentId } = req.body;
 
     const config = readConfig();
     const channels = (config.channels || {}) as Record<string, unknown>;
@@ -70,8 +77,22 @@ router.put('/:channelType', (req, res) => {
     channels[channelType] = channelCfg;
     config.channels = channels;
 
+    // Update bindings[] for agent routing
+    if (boundAgentId !== undefined) {
+      const bindings = Array.isArray(config.bindings) ? config.bindings : [];
+      // Remove existing channel-level binding for this channel (no accountId/peer)
+      const filtered = bindings.filter(
+        (b: any) => !(b.match?.channel === channelType && !b.match?.accountId && !b.match?.peer)
+      );
+      // Add new binding if agent is selected
+      if (boundAgentId) {
+        filtered.push({ agentId: boundAgentId, match: { channel: channelType } });
+      }
+      config.bindings = filtered;
+    }
+
     writeConfig(config);
-    logger.info('Updated channel config', { channelType, groupPolicy, pairingPolicy });
+    logger.info('Updated channel config', { channelType, groupPolicy, pairingPolicy, boundAgentId });
 
     res.json({ success: true });
   } catch (error) {
