@@ -1,12 +1,9 @@
 /**
  * AgentCreateDialog — Create agent + assign channel in one step
- *
- * Flow: name/emoji → channel type + token → creates:
- *   1. Agent via agents.create RPC
- *   2. Channel account in openclaw.json (channels.{type}.accounts.{agentId})
- *   3. Binding in openclaw.json (bindings[])
+ * Includes: validate bot token + DM Policy selector
  */
 import { useState } from 'react';
+import { Check, Loader2, ShieldCheck, AlertCircle, CheckCircle } from 'lucide-react';
 import { ModalDialog } from '@/components/common/ModalDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +12,7 @@ import { Select } from '@/components/ui/select';
 import { SecretInput } from '@/components/common/SecretInput';
 import { useAgentsStore } from '@/stores/agents';
 import { AGENT_EMOJIS } from '@/types/agent';
-import { CHANNEL_META, type ChannelType } from '@/types/channel';
+import type { ChannelType } from '@/types/channel';
 import { api } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -27,8 +24,14 @@ const CHANNEL_OPTIONS: { value: ChannelType | ''; label: string; tokenKey: strin
   { value: 'whatsapp', label: 'WhatsApp (QR later)', tokenKey: '', tokenLabel: '' },
   { value: 'signal', label: 'Signal', tokenKey: 'number', tokenLabel: 'Phone Number' },
   { value: 'feishu', label: 'Feishu / Lark', tokenKey: 'appId', tokenLabel: 'App ID' },
-  { value: 'msteams', label: 'Microsoft Teams', tokenKey: 'appId', tokenLabel: 'App ID' },
   { value: 'openzalo', label: 'Zalo', tokenKey: '', tokenLabel: '' },
+];
+
+const DM_POLICY_OPTIONS = [
+  { value: 'open', label: 'Open — anyone can message' },
+  { value: 'pairing', label: 'Pairing — approve users individually' },
+  { value: 'allowlist', label: 'Allowlist — only specific user IDs' },
+  { value: 'disabled', label: 'Disabled — block all DMs' },
 ];
 
 interface AgentCreateDialogProps {
@@ -51,11 +54,42 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
   // Channel config
   const [channelType, setChannelType] = useState<ChannelType | ''>('');
   const [channelToken, setChannelToken] = useState('');
+  const [dmPolicy, setDmPolicy] = useState('open');
+
+  // Validation
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    valid: boolean;
+    errors: string[];
+    details?: Record<string, string>;
+  } | null>(null);
 
   const slugify = (value: string) =>
     value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
   const selectedChannel = CHANNEL_OPTIONS.find((c) => c.value === channelType);
+
+  const handleValidate = async () => {
+    if (!channelType || !selectedChannel?.tokenKey || !channelToken.trim()) return;
+
+    setValidating(true);
+    setValidationResult(null);
+    try {
+      const result = await api.validateChannelCredentials(
+        channelType,
+        { [selectedChannel.tokenKey]: channelToken.trim() }
+      );
+      setValidationResult({
+        valid: result.valid || false,
+        errors: result.errors || [],
+        details: result.details,
+      });
+    } catch (err) {
+      setValidationResult({ valid: false, errors: [String(err)] });
+    } finally {
+      setValidating(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!name.trim() || !workspace.trim()) return;
@@ -71,27 +105,30 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
 
       const agentId = agent.id;
 
-      // 2. If channel selected, save channel account + binding
+      // 2. If channel selected with token, save channel account + binding
       if (channelType && selectedChannel?.tokenKey && channelToken.trim()) {
-        // Save channel account: channels.{type}.accounts.{agentId} = { tokenKey: value }
-        await api.saveChannelConfig(
-          channelType,
-          { [selectedChannel.tokenKey]: channelToken.trim(), dmPolicy: 'open' },
-          agentId
-        );
+        const channelConfig: Record<string, unknown> = {
+          [selectedChannel.tokenKey]: channelToken.trim(),
+          dmPolicy,
+        };
 
-        // Save binding: agentId → channel + accountId
+        // For open dmPolicy, add allowFrom: ["*"]
+        if (dmPolicy === 'open') {
+          channelConfig.allowFrom = ['*'];
+        }
+
+        await api.saveChannelConfig(channelType, channelConfig, agentId);
         await api.setAgentBindings(agentId, [
           { match: { channel: channelType, accountId: agentId } },
         ]);
 
         toast.success(t('create.successWithChannel', { defaultValue: 'Agent created with channel binding' }));
       } else if (channelType && !selectedChannel?.tokenKey) {
-        // Channel without token (WhatsApp/Zalo — QR later), just create binding
+        // QR-based channel, just binding
         await api.setAgentBindings(agentId, [
           { match: { channel: channelType } },
         ]);
-        toast.success(t('create.successWithBinding', { defaultValue: 'Agent created. Configure channel token in Channel Settings.' }));
+        toast.success(t('create.successWithBinding', { defaultValue: 'Agent created. Configure channel in Settings.' }));
       } else {
         toast.success(t('create.success'));
       }
@@ -105,8 +142,6 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
     }
   };
 
-  const canSave = name.trim() && workspace.trim();
-
   return (
     <ModalDialog
       open={open}
@@ -117,14 +152,14 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
       footer={
         <>
           <Button variant="outline" onClick={onClose}>{t('common:actions.cancel')}</Button>
-          <Button onClick={handleCreate} disabled={creating || !canSave}>
+          <Button onClick={handleCreate} disabled={creating || !name.trim() || !workspace.trim()}>
             {creating ? t('create.creating') : t('common:actions.save')}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        {/* Emoji + Name row */}
+        {/* Emoji + Name */}
         <div className="flex gap-3">
           <div className="shrink-0">
             <Label className="text-xs mb-1.5 block">{t('create.emoji')}</Label>
@@ -152,7 +187,6 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
               )}
             </div>
           </div>
-
           <div className="flex-1 space-y-1.5">
             <Label htmlFor="agentName">{t('create.displayName')}</Label>
             <Input
@@ -176,10 +210,7 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
           <Input
             id="workspace"
             value={workspace}
-            onChange={(e) => {
-              setWorkspace(e.target.value);
-              setWorkspaceManual(true);
-            }}
+            onChange={(e) => { setWorkspace(e.target.value); setWorkspaceManual(true); }}
             placeholder={t('create.workspaceHint')}
             className="font-mono text-sm"
           />
@@ -190,9 +221,6 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
             {t('create.channelSection', { defaultValue: 'Channel (optional)' })}
           </h3>
-          <p className="text-xs text-muted-foreground">
-            {t('create.channelDesc', { defaultValue: 'Assign a messaging channel to this agent. Each agent can have its own bot.' })}
-          </p>
 
           {/* Channel type */}
           <div className="space-y-1.5">
@@ -202,6 +230,7 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
               onChange={(e) => {
                 setChannelType(e.target.value as ChannelType | '');
                 setChannelToken('');
+                setValidationResult(null);
               }}
             >
               {CHANNEL_OPTIONS.map((ch) => (
@@ -210,29 +239,84 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
             </Select>
           </div>
 
-          {/* Token field — only show for channels that need token */}
+          {/* Token + Validate */}
           {selectedChannel?.tokenKey && channelType && (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>{selectedChannel.tokenLabel} <span className="text-red-500">*</span></Label>
-              <SecretInput
-                value={channelToken}
-                onChange={(e) => setChannelToken(e.target.value)}
-                placeholder={`Enter ${selectedChannel.tokenLabel.toLowerCase()}...`}
-                className="font-mono text-sm"
-                fullWidth
-              />
-              {CHANNEL_META[channelType]?.configFields[0]?.envVar && (
-                <p className="text-xs text-muted-foreground">
-                  Env: {CHANNEL_META[channelType].configFields[0].envVar}
-                </p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <SecretInput
+                    value={channelToken}
+                    onChange={(e) => { setChannelToken(e.target.value); setValidationResult(null); }}
+                    placeholder={`Enter ${selectedChannel.tokenLabel.toLowerCase()}...`}
+                    className="font-mono text-sm"
+                    fullWidth
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleValidate}
+                  disabled={validating || !channelToken.trim()}
+                  className="shrink-0 h-10"
+                >
+                  {validating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              {/* Validation result */}
+              {validationResult && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  validationResult.valid
+                    ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {validationResult.valid ? (
+                      <CheckCircle className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                    )}
+                    <div>
+                      {validationResult.valid ? (
+                        <span>
+                          <Check className="h-3 w-3 inline mr-1" />
+                          Valid
+                          {validationResult.details?.botUsername && ` — @${validationResult.details.botUsername}`}
+                        </span>
+                      ) : (
+                        <span>{validationResult.errors.join(', ')}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
 
-          {/* Info for QR-based channels */}
+          {/* DM Policy */}
+          {channelType && channelType !== '' && (
+            <div className="space-y-1.5">
+              <Label>{t('create.dmPolicy', { defaultValue: 'DM Policy' })}</Label>
+              <Select value={dmPolicy} onChange={(e) => setDmPolicy(e.target.value)}>
+                {DM_POLICY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('create.dmPolicyHint', { defaultValue: 'Controls who can send direct messages to this bot' })}
+              </p>
+            </div>
+          )}
+
+          {/* QR note */}
           {channelType && !selectedChannel?.tokenKey && channelType !== '' && (
             <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-              {t('create.channelQrNote', { defaultValue: 'This channel uses QR code login. After creating the agent, configure it in Channel Settings.' })}
+              {t('create.channelQrNote', { defaultValue: 'This channel uses QR code login. Configure it in Channel Settings after creating.' })}
             </p>
           )}
         </div>

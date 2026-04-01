@@ -1,12 +1,12 @@
 /**
  * AgentCard — Displays a single agent in the grid view
+ * Data from agents.list: { id, name?, identity?: { name?, emoji?, theme?, avatar? } }
  */
 import { MoreVertical, Pencil, Trash2, Star, MessageSquare } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import type { Agent } from '@/types/agent';
 import { useTranslation } from 'react-i18next';
 
@@ -46,10 +46,7 @@ export function AgentCard({ agent, onEdit, onDelete, onChat }: AgentCardProps) {
         <div className="flex items-start gap-3">
           <div className="text-3xl shrink-0 select-none">{emoji}</div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm truncate">{displayName}</h3>
-              <span className={cn('h-2 w-2 rounded-full shrink-0', 'bg-green-500')} />
-            </div>
+            <h3 className="font-semibold text-sm truncate">{displayName}</h3>
             <p className="text-xs text-muted-foreground mt-0.5 font-mono">{agent.id}</p>
           </div>
 
@@ -107,7 +104,7 @@ export function AgentCard({ agent, onEdit, onDelete, onChat }: AgentCardProps) {
           </div>
         </div>
 
-        {/* Meta info */}
+        {/* Badges */}
         <div className="flex flex-wrap items-center gap-1.5 mt-3">
           {agent.isDefault && (
             <Badge className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800">
