@@ -48,6 +48,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
   const [validating, setValidating] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [isExistingConfig, setIsExistingConfig] = useState(false);
+  const [addNewMode, setAddNewMode] = useState(false);
   const [validationResult, setValidationResult] = useState<{
     valid: boolean;
     errors: string[];
@@ -74,6 +75,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
       setChannelName('');
       setAccountId('');
       setIsExistingConfig(false);
+      setAddNewMode(false);
       if (platform.isElectron) {
         window.electron.ipcRenderer.invoke('channel:cancelWhatsAppQr').catch(() => { });
       }
@@ -568,20 +570,43 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
           ) : (
             // Connection form
             <div className="space-y-4">
-              {/* Multi-account: Account ID field when existing config */}
-              {isExistingConfig && (
-                <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm space-y-2">
+              {/* Multi-account: choose update existing or add new */}
+              {isExistingConfig && !addNewMode && (
+                <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-lg text-sm space-y-3">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 shrink-0" />
-                    <span>{t('dialog.existingHintMulti', { defaultValue: 'This channel already has a default config. Add an Account ID to create a new account, or leave empty to update the default.' })}</span>
+                    <span>{t('dialog.existingHint')}</span>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setAddNewMode(true);
+                      setConfigValues({});
+                      setAccountId('');
+                      setChannelName('');
+                      setValidationResult(null);
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    {t('dialog.addNewAccount', { defaultValue: 'Add New Account (multi-bot)' })}
+                  </Button>
+                </div>
+              )}
+
+              {/* New account mode: require Account ID */}
+              {addNewMode && (
+                <div className="bg-green-500/10 text-green-600 dark:text-green-400 p-3 rounded-lg text-sm space-y-2">
+                  <p className="font-medium">{t('dialog.newAccountTitle', { defaultValue: 'Adding new account' })}</p>
+                  <p className="text-xs">{t('dialog.newAccountDesc', { defaultValue: 'Enter a unique Account ID and configure the new bot token below.' })}</p>
                   <div className="space-y-1">
-                    <Label htmlFor="accountId" className="text-xs text-blue-600 dark:text-blue-400">
-                      {t('dialog.accountId', { defaultValue: 'Account ID (for multi-account)' })}
+                    <Label htmlFor="accountId" className="text-xs font-medium">
+                      {t('dialog.accountId', { defaultValue: 'Account ID' })} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="accountId"
-                      placeholder={t('dialog.accountIdHint', { defaultValue: 'e.g. bot2, alerts, work (leave empty for default)' })}
+                      placeholder={t('dialog.accountIdHint', { defaultValue: 'e.g. bot2, alerts, work' })}
                       value={accountId}
                       onChange={(e) => setAccountId(e.target.value.trim().replace(/[^a-zA-Z0-9_-]/g, ''))}
                       className="bg-white dark:bg-background text-foreground text-sm"
@@ -714,7 +739,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
                   )}
                   <Button
                     onClick={handleConnect}
-                    disabled={connecting || !isFormValid()}
+                    disabled={connecting || !isFormValid() || (addNewMode && !accountId)}
                   >
                     {connecting ? (
                       <>
