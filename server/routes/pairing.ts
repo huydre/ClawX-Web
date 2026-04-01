@@ -72,8 +72,10 @@ function readPairingFile(channel: string): PairingRequest[] {
                 id: req.id || '',
                 code: req.code || '',
                 channel,
+                accountId: req.meta?.accountId || 'default',
                 senderName: req.meta?.firstName || req.meta?.displayName || '',
                 username: req.meta?.username || '',
+                senderId: String(req.id || ''),
                 createdAt: req.createdAt || '',
             }));
         }

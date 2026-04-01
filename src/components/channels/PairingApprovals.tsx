@@ -14,6 +14,7 @@ interface PairingRequest {
     id: string;
     code: string;
     channel: string;
+    accountId: string;
     senderId: string;
     senderName: string;
     username: string;
@@ -142,6 +143,11 @@ export function PairingApprovals() {
                                                     <Badge variant="outline" className={`text-xs ${CHANNEL_COLORS[req.channel] || ''}`}>
                                                         {CHANNEL_LABELS[req.channel] || req.channel}
                                                     </Badge>
+                                                    {req.accountId && req.accountId !== 'default' && (
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            🤖 {req.accountId}
+                                                        </Badge>
+                                                    )}
                                                     <code className="text-sm font-bold tracking-wider">{req.code}</code>
                                                 </div>
                                                 {(req.senderName || req.username || req.senderId) && (
