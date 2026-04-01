@@ -15,6 +15,8 @@ interface PairingRequest {
     id: string;
     code: string;
     channel: string;
+    accountId: string;
+    senderId: string;
     senderName: string;
     username: string;
     createdAt: string;
