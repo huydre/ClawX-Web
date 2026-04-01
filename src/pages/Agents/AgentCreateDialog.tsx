@@ -106,15 +106,22 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
       const agentId = agent.id;
 
       // 2. If channel selected with token, save channel account + binding
+      let needsRestart = false;
+
       if (channelType && selectedChannel?.tokenKey && channelToken.trim()) {
         const channelConfig: Record<string, unknown> = {
           [selectedChannel.tokenKey]: channelToken.trim(),
           dmPolicy,
         };
 
-        // For open dmPolicy, add allowFrom: ["*"]
+        // Set allowFrom based on dmPolicy
         if (dmPolicy === 'open') {
           channelConfig.allowFrom = ['*'];
+        }
+
+        // Set pairingPolicy to match dmPolicy for pairing flow
+        if (dmPolicy === 'pairing') {
+          channelConfig.pairingPolicy = 'code';
         }
 
         await api.saveChannelConfig(channelType, channelConfig, agentId);
@@ -122,15 +129,25 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
           { match: { channel: channelType, accountId: agentId } },
         ]);
 
+        needsRestart = true;
         toast.success(t('create.successWithChannel', { defaultValue: 'Agent created with channel binding' }));
       } else if (channelType && !selectedChannel?.tokenKey) {
-        // QR-based channel, just binding
         await api.setAgentBindings(agentId, [
           { match: { channel: channelType } },
         ]);
         toast.success(t('create.successWithBinding', { defaultValue: 'Agent created. Configure channel in Settings.' }));
       } else {
         toast.success(t('create.success'));
+      }
+
+      // 3. Restart gateway to apply new channel config
+      if (needsRestart) {
+        try {
+          toast.info(t('create.restarting', { defaultValue: 'Restarting gateway to apply changes...' }));
+          await api.restartOpenClaw();
+        } catch {
+          toast.info(t('create.restartManual', { defaultValue: 'Restart gateway manually in Settings to apply channel config.' }));
+        }
       }
 
       onCreated();
