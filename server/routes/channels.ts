@@ -262,6 +262,24 @@ router.post('/save', (req, res) => {
                 ...accounts[acctId],
                 ...transformedConfig,
             };
+            // If root level has a botToken from old config, move it to "default" account
+            // so it doesn't conflict with the new account
+            if (channelCfg.botToken && !accounts['default']) {
+                accounts['default'] = {
+                    botToken: channelCfg.botToken as string,
+                    dmPolicy: (channelCfg.dmPolicy as string) || 'open',
+                    allowFrom: channelCfg.allowFrom || ['*'],
+                };
+                delete channelCfg.botToken;
+                delete channelCfg.dmPolicy;
+                delete channelCfg.allowFrom;
+            } else if (channelCfg.token && !accounts['default']) {
+                // Discord uses "token" instead of "botToken"
+                accounts['default'] = {
+                    token: channelCfg.token as string,
+                };
+                delete channelCfg.token;
+            }
             channelCfg.accounts = accounts;
             channelCfg.enabled = true;
             currentConfig.channels[type] = channelCfg;
