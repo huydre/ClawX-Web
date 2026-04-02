@@ -42,7 +42,6 @@ import { WebUpdateSettings } from '@/components/settings/WebUpdateSettings';
 import { TunnelSettings } from '@/components/settings/TunnelSettings';
 import { ExecSettings } from '@/components/settings/ExecSettings';
 import { WifiSettings } from '@/components/settings/WifiSettings';
-import { WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { platform } from '@/lib/platform';
@@ -421,38 +420,14 @@ function DoctorFixCard() {
 }
 
 function WifiCard() {
-  const [wifiStatus, setWifiStatus] = useState<{ connected: boolean; ssid: string; ip: string } | null>(null);
-
-  useEffect(() => {
-    fetch('/api/wifi/status')
-      .then(r => r.json())
-      .then(d => { if (d.success) setWifiStatus(d); })
-      .catch(() => {});
-  }, []);
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {wifiStatus?.connected ? (
-            <Wifi className="h-5 w-5 text-green-500" />
-          ) : (
-            <WifiOff className="h-5 w-5 text-muted-foreground" />
-          )}
+          <Wifi className="h-5 w-5" />
           WiFi
-          {wifiStatus?.connected ? (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-green-500/15 text-green-600 border-green-500/30">
-              {wifiStatus.ssid}
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Chưa kết nối</Badge>
-          )}
         </CardTitle>
-        <CardDescription>
-          {wifiStatus?.connected
-            ? `Đang kết nối: ${wifiStatus.ssid}${wifiStatus.ip ? ` • IP: ${wifiStatus.ip}` : ''}`
-            : 'Quản lý kết nối WiFi — quét, kết nối, ngắt mạng'}
-        </CardDescription>
+        <CardDescription>Trạng thái kết nối WiFi</CardDescription>
       </CardHeader>
       <CardContent>
         <WifiSettings />
