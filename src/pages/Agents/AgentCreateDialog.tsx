@@ -112,6 +112,8 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
         const channelConfig: Record<string, unknown> = {
           [selectedChannel.tokenKey]: channelToken.trim(),
           dmPolicy,
+          groupPolicy: 'open',
+          groups: { '*': { requireMention: true, groupPolicy: 'open' } },
         };
 
         // Set allowFrom based on dmPolicy
