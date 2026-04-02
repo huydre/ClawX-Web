@@ -8,7 +8,7 @@
  *   tools.agentToAgent.allow: string[]
  */
 import { Router } from 'express';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, copyFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { logger } from '../utils/logger.js';
@@ -103,6 +103,7 @@ router.get('/detail/:agentId', (req, res) => {
     const agent = agentList.find((a: any) => a.id === agentId);
 
     if (!agent) {
+      logger.warn('Agent not found in config', { agentId, availableIds: agentList.map((a: any) => a.id) });
       return res.json({ found: false });
     }
 
@@ -133,17 +134,15 @@ router.get('/detail/:agentId', (req, res) => {
     }
 
     // Check auth profiles
-    const { existsSync: exists, readFileSync: readF } = require('fs');
-    const { join: joinPath } = require('path');
-    const authPath = joinPath(
-      agent.agentDir || joinPath(require('os').homedir(), '.openclaw', 'agents', agentId, 'agent'),
+    const authPath = join(
+      agent.agentDir || join(homedir(), '.openclaw', 'agents', agentId, 'agent'),
       'auth-profiles.json'
     );
     let hasAuth = false;
     let authProviders: string[] = [];
     try {
-      if (exists(authPath)) {
-        const authData = JSON.parse(readF(authPath, 'utf-8'));
+      if (existsSync(authPath)) {
+        const authData = JSON.parse(readFileSync(authPath, 'utf-8'));
         const profiles = authData.profiles || {};
         authProviders = [...new Set(Object.keys(profiles).map((k: string) => k.split(':')[0]))];
         hasAuth = authProviders.length > 0;
@@ -204,9 +203,7 @@ router.post('/copy-auth/:agentId', (req, res) => {
   try {
     const { agentId } = req.params;
     const { sourceAgentId = 'main' } = req.body || {};
-    const { existsSync: exists, readFileSync: readF, writeFileSync: writeF, mkdirSync: mkDir } = require('fs');
-    const { join: joinPath } = require('path');
-    const home = require('os').homedir();
+    const home = homedir();
 
     const config = readConfig();
     const agents = (config.agents as any)?.list || [];
@@ -215,22 +212,21 @@ router.post('/copy-auth/:agentId', (req, res) => {
     const sourceAgent = agents.find((a: any) => a.id === sourceAgentId);
     const targetAgent = agents.find((a: any) => a.id === agentId);
 
-    const sourceDir = sourceAgent?.agentDir || joinPath(home, '.openclaw', 'agents', sourceAgentId, 'agent');
-    const targetDir = targetAgent?.agentDir || joinPath(home, '.openclaw', 'agents', agentId, 'agent');
+    const sourceDir = sourceAgent?.agentDir || join(home, '.openclaw', 'agents', sourceAgentId, 'agent');
+    const targetDir = targetAgent?.agentDir || join(home, '.openclaw', 'agents', agentId, 'agent');
 
-    const sourceFile = joinPath(sourceDir, 'auth-profiles.json');
-    const targetFile = joinPath(targetDir, 'auth-profiles.json');
+    const sourceFile = join(sourceDir, 'auth-profiles.json');
+    const targetFile = join(targetDir, 'auth-profiles.json');
 
-    if (!exists(sourceFile)) {
+    if (!existsSync(sourceFile)) {
       return res.status(400).json({ error: `Source agent "${sourceAgentId}" has no auth-profiles.json` });
     }
 
     // Ensure target dir exists
-    mkDir(targetDir, { recursive: true });
+    mkdirSync(targetDir, { recursive: true });
 
     // Copy
-    const content = readF(sourceFile, 'utf-8');
-    writeF(targetFile, content, 'utf-8');
+    copyFileSync(sourceFile, targetFile);
 
     logger.info('Copied auth profiles', { from: sourceAgentId, to: agentId });
     res.json({ success: true });
@@ -244,20 +240,17 @@ router.post('/copy-auth/:agentId', (req, res) => {
 // List agents that have auth-profiles configured
 router.get('/auth-sources', (_req, res) => {
   try {
-    const { existsSync: exists, readFileSync: readF } = require('fs');
-    const { join: joinPath } = require('path');
-    const home = require('os').homedir();
-
     const config = readConfig();
     const agents = (config.agents as any)?.list || [];
     const sources: Array<{ id: string; name: string; providers: string[] }> = [];
+    const home = homedir();
 
     for (const agent of agents) {
-      const agentDir = agent.agentDir || joinPath(home, '.openclaw', 'agents', agent.id, 'agent');
-      const authFile = joinPath(agentDir, 'auth-profiles.json');
+      const agentDir = agent.agentDir || join(home, '.openclaw', 'agents', agent.id, 'agent');
+      const authFile = join(agentDir, 'auth-profiles.json');
       try {
-        if (exists(authFile)) {
-          const data = JSON.parse(readF(authFile, 'utf-8'));
+        if (existsSync(authFile)) {
+          const data = JSON.parse(readFileSync(authFile, 'utf-8'));
           const profiles = data.profiles || {};
           const providers = [...new Set(Object.keys(profiles).map((k: string) => k.split(':')[0]))];
           if (providers.length > 0) {
@@ -295,9 +288,7 @@ router.get('/workspace-skills/:agentId', (req, res) => {
       return res.json({ skills: [], workspace: '' });
     }
 
-    const { readdirSync, statSync, readFileSync: readF } = require('fs');
-    const { join: joinPath } = require('path');
-    const skillsDir = joinPath(workspace, 'skills');
+    const skillsDir = join(workspace, 'skills');
 
     const skills: Array<{ name: string; hasSkillMd: boolean; description: string }> = [];
 
@@ -305,13 +296,13 @@ router.get('/workspace-skills/:agentId', (req, res) => {
       const entries = readdirSync(skillsDir);
       for (const entry of entries) {
         try {
-          const entryPath = joinPath(skillsDir, entry);
+          const entryPath = join(skillsDir, entry);
           if (statSync(entryPath).isDirectory()) {
-            const skillMdPath = joinPath(entryPath, 'SKILL.md');
+            const skillMdPath = join(entryPath, 'SKILL.md');
             let hasSkillMd = false;
             let description = '';
             try {
-              const content = readF(skillMdPath, 'utf-8');
+              const content = readFileSync(skillMdPath, 'utf-8');
               hasSkillMd = true;
               // Extract first non-empty, non-heading line as description
               const lines = content.split('\n');
