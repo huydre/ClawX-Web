@@ -90,6 +90,112 @@ router.put('/cross-agent', (req, res) => {
   }
 });
 
+// ── Agent Detail from config ────────────────────────────────
+
+// GET /api/agents-config/detail/:agentId
+// Returns agent config details from openclaw.json (model, workspace, etc.)
+router.get('/detail/:agentId', (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const config = readConfig();
+    const agents = config.agents as any;
+    const agentList = agents?.list || [];
+    const agent = agentList.find((a: any) => a.id === agentId);
+
+    if (!agent) {
+      return res.json({ found: false });
+    }
+
+    // Get default model
+    const defaultModel = typeof agents?.defaults?.model === 'string'
+      ? agents.defaults.model
+      : agents?.defaults?.model?.primary || '';
+
+    // Get channel binding info
+    const bindings = Array.isArray(config.bindings) ? config.bindings : [];
+    const agentBindings = bindings.filter((b: any) => b.agentId === agentId);
+
+    // Get channel account info (botToken masked)
+    const channels = config.channels as any || {};
+    let channelInfo: { type: string; accountId: string; dmPolicy: string } | null = null;
+    for (const binding of agentBindings) {
+      const chType = binding.match?.channel;
+      const acctId = binding.match?.accountId;
+      if (chType && channels[chType]?.accounts?.[acctId]) {
+        const acct = channels[chType].accounts[acctId];
+        channelInfo = {
+          type: chType,
+          accountId: acctId,
+          dmPolicy: acct.dmPolicy || 'pairing',
+        };
+        break;
+      }
+    }
+
+    // Check auth profiles
+    const { existsSync: exists, readFileSync: readF } = require('fs');
+    const { join: joinPath } = require('path');
+    const authPath = joinPath(
+      agent.agentDir || joinPath(require('os').homedir(), '.openclaw', 'agents', agentId, 'agent'),
+      'auth-profiles.json'
+    );
+    let hasAuth = false;
+    let authProviders: string[] = [];
+    try {
+      if (exists(authPath)) {
+        const authData = JSON.parse(readF(authPath, 'utf-8'));
+        const profiles = authData.profiles || {};
+        authProviders = [...new Set(Object.keys(profiles).map((k: string) => k.split(':')[0]))];
+        hasAuth = authProviders.length > 0;
+      }
+    } catch { /* ignore */ }
+
+    res.json({
+      found: true,
+      model: agent.model || defaultModel,
+      defaultModel,
+      workspace: agent.workspace || agents?.defaults?.workspace || '',
+      channelInfo,
+      hasAuth,
+      authProviders,
+    });
+  } catch (error) {
+    logger.error('Get agent detail error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// PUT /api/agents-config/detail/:agentId
+// Update agent config in openclaw.json directly (model, etc.)
+router.put('/detail/:agentId', (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const { model } = req.body;
+    const config = readConfig();
+    const agents = config.agents as any;
+    const agentList = agents?.list || [];
+    const agentIdx = agentList.findIndex((a: any) => a.id === agentId);
+
+    if (agentIdx < 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+
+    if (model !== undefined) {
+      if (model) {
+        agentList[agentIdx].model = model;
+      } else {
+        delete agentList[agentIdx].model;
+      }
+    }
+
+    writeConfig(config);
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Update agent detail error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 // ── Workspace Skills ────────────────────────────────────────
 
 // GET /api/agents-config/workspace-skills/:agentId

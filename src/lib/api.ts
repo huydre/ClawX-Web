@@ -478,6 +478,26 @@ class ApiClient {
     });
   }
 
+  // Agent Detail Config API (reads from openclaw.json directly)
+  async getAgentDetail(agentId: string) {
+    return this.request<{
+      found: boolean;
+      model?: string;
+      defaultModel?: string;
+      workspace?: string;
+      channelInfo?: { type: string; accountId: string; dmPolicy: string } | null;
+      hasAuth?: boolean;
+      authProviders?: string[];
+    }>(`/agents-config/detail/${agentId}`);
+  }
+
+  async updateAgentDetail(agentId: string, updates: { model?: string }) {
+    return this.request<{ success: boolean }>(`/agents-config/detail/${agentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
   // Agent Workspace Skills API
   async getWorkspaceSkills(agentId: string) {
     return this.request<{

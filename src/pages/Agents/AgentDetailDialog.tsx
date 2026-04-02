@@ -37,13 +37,20 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
 
   // Overview form state
   const [name, setName] = useState(agent.name || '');
-  const [model, setModel] = useState(agent.model || '');
+  const [model, setModel] = useState('');
+  const [defaultModel, setDefaultModel] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Agent config detail from openclaw.json
+  const [channelInfo, setChannelInfo] = useState<{ type: string; accountId: string; dmPolicy: string } | null>(null);
+  const [hasAuth, setHasAuth] = useState(false);
+  const [authProviders, setAuthProviders] = useState<string[]>([]);
 
   // Available models from gateway
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
 
   useEffect(() => {
+    // Load models list
     (async () => {
       try {
         const result = platform.isElectron
@@ -55,7 +62,22 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
         }
       } catch { /* ignore */ }
     })();
-  }, []);
+
+    // Load agent detail from config
+    (async () => {
+      try {
+        const detail = await api.getAgentDetail(agent.id);
+        if (detail.found) {
+          setModel(detail.model || '');
+          setDefaultModel(detail.defaultModel || '');
+          if (detail.channelInfo) setChannelInfo(detail.channelInfo);
+          setHasAuth(detail.hasAuth || false);
+          setAuthProviders(detail.authProviders || []);
+          if (detail.workspace) setWorkspace(detail.workspace);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [agent.id]);
 
   // Files tab state
   const [workspace, setWorkspace] = useState('');
@@ -106,11 +128,14 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
   const handleSaveOverview = async () => {
     setSaving(true);
     try {
+      // Update via RPC (name)
       await updateAgent({
         agentId: agent.id,
         ...(name.trim() ? { name: name.trim() } : {}),
         ...(model.trim() ? { model: model.trim() } : {}),
       });
+      // Also save model to openclaw.json directly (RPC may not persist model)
+      await api.updateAgentDetail(agent.id, { model: model.trim() || undefined });
       toast.success(t('detail.updated'));
       onUpdated();
     } catch (err) {
@@ -179,6 +204,7 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4 mt-4">
+          {/* Name */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               {t('detail.personality')}
@@ -193,6 +219,7 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
             </div>
           </div>
 
+          {/* Model */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               {t('detail.modelConfig')}
@@ -201,15 +228,11 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
               <Label>{t('create.model')}</Label>
               {availableModels.length > 0 ? (
                 <Select value={model} onChange={(e) => setModel(e.target.value)}>
-                  <option value="">{t('create.modelHint')}</option>
+                  <option value="">{defaultModel ? `Default: ${defaultModel}` : t('create.modelHint')}</option>
                   {availableModels.map((m) => {
-                    // id is "provider/model", name is display name
-                    // Show: "Claude Sonnet 4 (anthropic)" or just id if name equals id
                     const label = m.name !== m.id ? `${m.name} (${m.provider})` : m.id;
                     return (
-                      <option key={m.id} value={m.id}>
-                        {label}
-                      </option>
+                      <option key={m.id} value={m.id}>{label}</option>
                     );
                   })}
                 </Select>
@@ -217,8 +240,61 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
                 <Input
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  placeholder={t('create.modelHint')}
+                  placeholder={defaultModel ? `Default: ${defaultModel}` : t('create.modelHint')}
                 />
+              )}
+              {model && model !== defaultModel && (
+                <p className="text-xs text-muted-foreground">Override: {model}</p>
+              )}
+              {!model && defaultModel && (
+                <p className="text-xs text-muted-foreground">Using default: {defaultModel}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Channel Info */}
+          {channelInfo && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Channel
+              </h3>
+              <div className="p-3 bg-muted/50 rounded-md space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs capitalize">{channelInfo.type}</Badge>
+                  <Badge variant="secondary" className="text-xs">{channelInfo.accountId}</Badge>
+                  <Badge variant={channelInfo.dmPolicy === 'pairing' ? 'default' : 'secondary'} className="text-xs">
+                    DM: {channelInfo.dmPolicy}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Auth Status */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Auth
+            </h3>
+            <div className="p-3 bg-muted/50 rounded-md">
+              {hasAuth ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    <span className="text-xs font-medium">Authenticated</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {authProviders.map((p) => (
+                      <Badge key={p} variant="outline" className="text-[10px] font-mono">{p}</Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                  <span className="text-xs text-muted-foreground">
+                    No auth configured. Run: <code className="bg-muted px-1 rounded">openclaw auth login --agent {agent.id}</code>
+                  </span>
+                </div>
               )}
             </div>
           </div>
