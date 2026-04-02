@@ -17,21 +17,21 @@ import { api } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-const CHANNEL_OPTIONS: { value: ChannelType | ''; label: string; tokenKey: string; tokenLabel: string }[] = [
-  { value: '', label: 'No channel (configure later)', tokenKey: '', tokenLabel: '' },
-  { value: 'telegram', label: 'Telegram', tokenKey: 'botToken', tokenLabel: 'Bot Token' },
-  { value: 'discord', label: 'Discord', tokenKey: 'token', tokenLabel: 'Bot Token' },
-  { value: 'whatsapp', label: 'WhatsApp (QR later)', tokenKey: '', tokenLabel: '' },
-  { value: 'signal', label: 'Signal', tokenKey: 'number', tokenLabel: 'Phone Number' },
-  { value: 'feishu', label: 'Feishu / Lark', tokenKey: 'appId', tokenLabel: 'App ID' },
-  { value: 'openzalo', label: 'Zalo', tokenKey: '', tokenLabel: '' },
+const CHANNEL_OPTIONS: { value: ChannelType | ''; labelKey: string; label?: string; tokenKey: string; tokenLabel: string }[] = [
+  { value: '', labelKey: 'create.channelNoChannel', tokenKey: '', tokenLabel: '' },
+  { value: 'telegram', labelKey: '', label: 'Telegram', tokenKey: 'botToken', tokenLabel: 'Bot Token' },
+  { value: 'discord', labelKey: '', label: 'Discord', tokenKey: 'token', tokenLabel: 'Bot Token' },
+  { value: 'whatsapp', labelKey: 'create.channelWhatsappQr', tokenKey: '', tokenLabel: '' },
+  { value: 'signal', labelKey: '', label: 'Signal', tokenKey: 'number', tokenLabel: 'Phone Number' },
+  { value: 'feishu', labelKey: '', label: 'Feishu / Lark', tokenKey: 'appId', tokenLabel: 'App ID' },
+  { value: 'openzalo', labelKey: '', label: 'Zalo', tokenKey: '', tokenLabel: '' },
 ];
 
-const DM_POLICY_OPTIONS = [
-  { value: 'open', label: 'Open — anyone can message' },
-  { value: 'pairing', label: 'Pairing — approve users individually' },
-  { value: 'allowlist', label: 'Allowlist — only specific user IDs' },
-  { value: 'disabled', label: 'Disabled — block all DMs' },
+const DM_POLICY_KEYS = [
+  { value: 'open', key: 'create.dmPolicyOpen' },
+  { value: 'pairing', key: 'create.dmPolicyPairing' },
+  { value: 'allowlist', key: 'create.dmPolicyAllowlist' },
+  { value: 'disabled', key: 'create.dmPolicyDisabled' },
 ];
 
 interface AgentCreateDialogProps {
@@ -130,12 +130,12 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
         ]);
 
         needsRestart = true;
-        toast.success(t('create.successWithChannel', { defaultValue: 'Agent created with channel binding' }));
+        toast.success(t('create.successWithChannel'));
       } else if (channelType && !selectedChannel?.tokenKey) {
         await api.setAgentBindings(agentId, [
           { match: { channel: channelType } },
         ]);
-        toast.success(t('create.successWithBinding', { defaultValue: 'Agent created. Configure channel in Settings.' }));
+        toast.success(t('create.successWithBinding'));
       } else {
         toast.success(t('create.success'));
       }
@@ -143,10 +143,10 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
       // 3. Restart gateway to apply new channel config
       if (needsRestart) {
         try {
-          toast.info(t('create.restarting', { defaultValue: 'Restarting gateway to apply changes...' }));
+          toast.info(t('create.restarting'));
           await api.restartOpenClaw();
         } catch {
-          toast.info(t('create.restartManual', { defaultValue: 'Restart gateway manually in Settings to apply channel config.' }));
+          toast.info(t('create.restartManual'));
         }
       }
 
@@ -236,12 +236,12 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
         {/* Channel section */}
         <div className="border-t pt-4 space-y-3">
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            {t('create.channelSection', { defaultValue: 'Channel (optional)' })}
+            {t('create.channelSection')}
           </h3>
 
           {/* Channel type */}
           <div className="space-y-1.5">
-            <Label>{t('create.channelType', { defaultValue: 'Channel' })}</Label>
+            <Label>{t('create.channelType')}</Label>
             <Select
               value={channelType}
               onChange={(e) => {
@@ -251,7 +251,7 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
               }}
             >
               {CHANNEL_OPTIONS.map((ch) => (
-                <option key={ch.value} value={ch.value}>{ch.label}</option>
+                <option key={ch.value} value={ch.value}>{ch.labelKey ? t(ch.labelKey) : ch.label}</option>
               ))}
             </Select>
           </div>
@@ -265,7 +265,7 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
                   <SecretInput
                     value={channelToken}
                     onChange={(e) => { setChannelToken(e.target.value); setValidationResult(null); }}
-                    placeholder={`Enter ${selectedChannel.tokenLabel.toLowerCase()}...`}
+                    placeholder={t('create.enterToken', { label: selectedChannel.tokenLabel.toLowerCase() })}
                     className="font-mono text-sm"
                     fullWidth
                   />
@@ -302,8 +302,9 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
                       {validationResult.valid ? (
                         <span>
                           <Check className="h-3 w-3 inline mr-1" />
-                          Valid
-                          {validationResult.details?.botUsername && ` — @${validationResult.details.botUsername}`}
+                          {validationResult.details?.botUsername
+                            ? t('create.validWithBot', { username: validationResult.details.botUsername })
+                            : t('create.valid')}
                         </span>
                       ) : (
                         <span>{validationResult.errors.join(', ')}</span>
@@ -318,14 +319,14 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
           {/* DM Policy */}
           {channelType && channelType !== '' && (
             <div className="space-y-1.5">
-              <Label>{t('create.dmPolicy', { defaultValue: 'DM Policy' })}</Label>
+              <Label>{t('create.dmPolicy')}</Label>
               <Select value={dmPolicy} onChange={(e) => setDmPolicy(e.target.value)}>
-                {DM_POLICY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {DM_POLICY_KEYS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{t(opt.key)}</option>
                 ))}
               </Select>
               <p className="text-xs text-muted-foreground">
-                {t('create.dmPolicyHint', { defaultValue: 'Controls who can send direct messages to this bot' })}
+                {t('create.dmPolicyHint')}
               </p>
             </div>
           )}
@@ -333,7 +334,7 @@ export function AgentCreateDialog({ open, onClose, onCreated }: AgentCreateDialo
           {/* QR note */}
           {channelType && !selectedChannel?.tokenKey && channelType !== '' && (
             <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-              {t('create.channelQrNote', { defaultValue: 'This channel uses QR code login. Configure it in Channel Settings after creating.' })}
+              {t('create.channelQrNote')}
             </p>
           )}
         </div>

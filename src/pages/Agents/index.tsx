@@ -184,7 +184,7 @@ export function Agents() {
         />
       ) : search && filteredAgents.length === 0 ? (
         <div className="text-center py-12 text-sm text-muted-foreground">
-          No agents matching "{search}"
+          {t('noMatch', { query: search })}
         </div>
       ) : null}
 

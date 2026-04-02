@@ -249,10 +249,10 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
                 />
               )}
               {model && model !== defaultModel && (
-                <p className="text-xs text-muted-foreground">Override: {model}</p>
+                <p className="text-xs text-muted-foreground">{t('detail.modelOverride', { model })}</p>
               )}
               {!model && defaultModel && (
-                <p className="text-xs text-muted-foreground">Using default: {defaultModel}</p>
+                <p className="text-xs text-muted-foreground">{t('detail.modelDefault', { model: defaultModel })}</p>
               )}
             </div>
           </div>
@@ -261,7 +261,7 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
           {channelInfo && (
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Channel
+                {t('detail.channel')}
               </h3>
               <div className="p-3 bg-muted/50 rounded-md space-y-1.5">
                 <div className="flex items-center gap-2">
@@ -278,14 +278,14 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
           {/* Auth / AI Provider */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              AI Provider
+              {t('detail.aiProvider')}
             </h3>
             <div className="p-3 bg-muted/50 rounded-md space-y-2">
               {hasAuth ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-green-500" />
-                    <span className="text-xs font-medium">Connected</span>
+                    <span className="text-xs font-medium">{t('detail.connected')}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {authProviders.map((p) => (
@@ -296,21 +296,21 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                  <span className="text-xs text-muted-foreground">No provider connected</span>
+                  <span className="text-xs text-muted-foreground">{t('detail.noProvider')}</span>
                 </div>
               )}
 
               {/* Copy from existing agent */}
               {authSources.filter((s) => s.id !== agent.id).length > 0 && (
                 <div className="space-y-1.5 pt-1">
-                  <Label className="text-xs">{hasAuth ? 'Change provider' : 'Copy from'}</Label>
+                  <Label className="text-xs">{hasAuth ? t('detail.changeProvider') : t('detail.copyFrom')}</Label>
                   <div className="flex gap-2">
                     <Select
                       id="auth-source"
                       className="text-xs flex-1"
                       defaultValue=""
                     >
-                      <option value="" disabled>Select agent to copy auth from...</option>
+                      <option value="" disabled>{t('detail.selectSourceAgent')}</option>
                       {authSources.filter((s) => s.id !== agent.id).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name} ({s.providers.join(', ')})
@@ -325,11 +325,11 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
                       onClick={async () => {
                         const select = document.getElementById('auth-source') as HTMLSelectElement;
                         const sourceId = select?.value;
-                        if (!sourceId) { toast.error('Select a source agent'); return; }
+                        if (!sourceId) { toast.error(t('detail.selectSourceError')); return; }
                         setCopyingAuth(true);
                         try {
                           await api.copyAuth(agent.id, sourceId);
-                          toast.success(`Auth copied from ${sourceId}`);
+                          toast.success(t('detail.authCopied', { source: sourceId }));
                           // Reload detail
                           const detail = await api.getAgentDetail(agent.id);
                           if (detail.found) {
@@ -337,13 +337,13 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
                             setAuthProviders(detail.authProviders || []);
                           }
                         } catch (err) {
-                          toast.error('Failed: ' + String(err));
+                          toast.error(t('detail.authCopyFailed', { error: String(err) }));
                         } finally {
                           setCopyingAuth(false);
                         }
                       }}
                     >
-                      {copyingAuth ? 'Copying...' : 'Apply'}
+                      {copyingAuth ? t('detail.copying') : t('detail.apply')}
                     </Button>
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
             <div className="mb-4 space-y-2">
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Puzzle className="h-3 w-3" />
-                Skills ({skills.length})
+                {t('detail.skills')} ({skills.length})
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((s) => (
@@ -415,7 +415,7 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
                     }`}
                   >
                     {f.name}
-                    {f.missing && ' (new)'}
+                    {f.missing && ` ${t('detail.fileNew')}`}
                   </button>
                 ))}
               </div>
