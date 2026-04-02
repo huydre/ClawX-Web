@@ -5,7 +5,7 @@
  * OpenClaw agents.update only accepts: { agentId, name?, workspace?, model?, avatar? }
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Save, FileText, Settings2, Link2, FolderOpen, Puzzle } from 'lucide-react';
+import { Save, FileText, Settings2, FolderOpen, Puzzle } from 'lucide-react';
 import { ModalDialog } from '@/components/common/ModalDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,6 @@ import { useAgentsStore } from '@/stores/agents';
 import { platform } from '@/lib/platform';
 import { api } from '@/lib/api';
 import type { Agent, AgentFile } from '@/types/agent';
-import { AgentBindingsTab } from './AgentBindingsTab';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -197,10 +196,6 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
             <Settings2 className="h-3.5 w-3.5" />
             {t('detail.overview')}
           </TabsTrigger>
-          <TabsTrigger value="bindings" className="flex-1 gap-1.5">
-            <Link2 className="h-3.5 w-3.5" />
-            {t('detail.bindings')}
-          </TabsTrigger>
           <TabsTrigger value="files" className="flex-1 gap-1.5">
             <FileText className="h-3.5 w-3.5" />
             {t('detail.files')}
@@ -362,11 +357,6 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
               {saving ? t('detail.saving') : t('common:actions.save')}
             </Button>
           </div>
-        </TabsContent>
-
-        {/* Bindings Tab */}
-        <TabsContent value="bindings" className="mt-4">
-          <AgentBindingsTab agentId={agent.id} />
         </TabsContent>
 
         {/* Files Tab */}
