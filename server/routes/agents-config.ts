@@ -196,6 +196,84 @@ router.put('/detail/:agentId', (req, res) => {
   }
 });
 
+// ── Copy Auth Profile ───────────────────────────────────────
+
+// POST /api/agents-config/copy-auth/:agentId
+// Copy auth-profiles.json from source agent (default: main) to target agent
+router.post('/copy-auth/:agentId', (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const { sourceAgentId = 'main' } = req.body || {};
+    const { existsSync: exists, readFileSync: readF, writeFileSync: writeF, mkdirSync: mkDir } = require('fs');
+    const { join: joinPath } = require('path');
+    const home = require('os').homedir();
+
+    const config = readConfig();
+    const agents = (config.agents as any)?.list || [];
+
+    // Resolve agent dirs
+    const sourceAgent = agents.find((a: any) => a.id === sourceAgentId);
+    const targetAgent = agents.find((a: any) => a.id === agentId);
+
+    const sourceDir = sourceAgent?.agentDir || joinPath(home, '.openclaw', 'agents', sourceAgentId, 'agent');
+    const targetDir = targetAgent?.agentDir || joinPath(home, '.openclaw', 'agents', agentId, 'agent');
+
+    const sourceFile = joinPath(sourceDir, 'auth-profiles.json');
+    const targetFile = joinPath(targetDir, 'auth-profiles.json');
+
+    if (!exists(sourceFile)) {
+      return res.status(400).json({ error: `Source agent "${sourceAgentId}" has no auth-profiles.json` });
+    }
+
+    // Ensure target dir exists
+    mkDir(targetDir, { recursive: true });
+
+    // Copy
+    const content = readF(sourceFile, 'utf-8');
+    writeF(targetFile, content, 'utf-8');
+
+    logger.info('Copied auth profiles', { from: sourceAgentId, to: agentId });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Copy auth error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// GET /api/agents-config/auth-sources
+// List agents that have auth-profiles configured
+router.get('/auth-sources', (_req, res) => {
+  try {
+    const { existsSync: exists, readFileSync: readF } = require('fs');
+    const { join: joinPath } = require('path');
+    const home = require('os').homedir();
+
+    const config = readConfig();
+    const agents = (config.agents as any)?.list || [];
+    const sources: Array<{ id: string; name: string; providers: string[] }> = [];
+
+    for (const agent of agents) {
+      const agentDir = agent.agentDir || joinPath(home, '.openclaw', 'agents', agent.id, 'agent');
+      const authFile = joinPath(agentDir, 'auth-profiles.json');
+      try {
+        if (exists(authFile)) {
+          const data = JSON.parse(readF(authFile, 'utf-8'));
+          const profiles = data.profiles || {};
+          const providers = [...new Set(Object.keys(profiles).map((k: string) => k.split(':')[0]))];
+          if (providers.length > 0) {
+            sources.push({ id: agent.id, name: agent.name || agent.id, providers });
+          }
+        }
+      } catch { /* skip */ }
+    }
+
+    res.json({ sources });
+  } catch (error) {
+    logger.error('Get auth sources error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 // ── Workspace Skills ────────────────────────────────────────
 
 // GET /api/agents-config/workspace-skills/:agentId

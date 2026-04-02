@@ -498,6 +498,20 @@ class ApiClient {
     });
   }
 
+  // Agent Auth API
+  async getAuthSources() {
+    return this.request<{
+      sources: Array<{ id: string; name: string; providers: string[] }>;
+    }>('/agents-config/auth-sources');
+  }
+
+  async copyAuth(agentId: string, sourceAgentId: string) {
+    return this.request<{ success: boolean }>(`/agents-config/copy-auth/${agentId}`, {
+      method: 'POST',
+      body: JSON.stringify({ sourceAgentId }),
+    });
+  }
+
   // Agent Workspace Skills API
   async getWorkspaceSkills(agentId: string) {
     return this.request<{

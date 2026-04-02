@@ -45,6 +45,8 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
   const [channelInfo, setChannelInfo] = useState<{ type: string; accountId: string; dmPolicy: string } | null>(null);
   const [hasAuth, setHasAuth] = useState(false);
   const [authProviders, setAuthProviders] = useState<string[]>([]);
+  const [authSources, setAuthSources] = useState<Array<{ id: string; name: string; providers: string[] }>>([]);
+  const [copyingAuth, setCopyingAuth] = useState(false);
 
   // Available models from gateway
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
@@ -75,6 +77,14 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
           setAuthProviders(detail.authProviders || []);
           if (detail.workspace) setWorkspace(detail.workspace);
         }
+      } catch { /* ignore */ }
+    })();
+
+    // Load auth sources (agents with auth configured)
+    (async () => {
+      try {
+        const result = await api.getAuthSources();
+        setAuthSources(result.sources || []);
       } catch { /* ignore */ }
     })();
   }, [agent.id]);
@@ -270,17 +280,17 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
             </div>
           )}
 
-          {/* Auth Status */}
+          {/* Auth / AI Provider */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Auth
+              AI Provider
             </h3>
-            <div className="p-3 bg-muted/50 rounded-md">
+            <div className="p-3 bg-muted/50 rounded-md space-y-2">
               {hasAuth ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-green-500" />
-                    <span className="text-xs font-medium">Authenticated</span>
+                    <span className="text-xs font-medium">Connected</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {authProviders.map((p) => (
@@ -291,9 +301,56 @@ export function AgentDetailDialog({ agent, onClose, onUpdated }: AgentDetailDial
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                  <span className="text-xs text-muted-foreground">
-                    No auth configured. Run: <code className="bg-muted px-1 rounded">openclaw auth login --agent {agent.id}</code>
-                  </span>
+                  <span className="text-xs text-muted-foreground">No provider connected</span>
+                </div>
+              )}
+
+              {/* Copy from existing agent */}
+              {authSources.filter((s) => s.id !== agent.id).length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <Label className="text-xs">{hasAuth ? 'Change provider' : 'Copy from'}</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      id="auth-source"
+                      className="text-xs flex-1"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Select agent to copy auth from...</option>
+                      {authSources.filter((s) => s.id !== agent.id).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.providers.join(', ')})
+                        </option>
+                      ))}
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="shrink-0 h-9 text-xs"
+                      disabled={copyingAuth}
+                      onClick={async () => {
+                        const select = document.getElementById('auth-source') as HTMLSelectElement;
+                        const sourceId = select?.value;
+                        if (!sourceId) { toast.error('Select a source agent'); return; }
+                        setCopyingAuth(true);
+                        try {
+                          await api.copyAuth(agent.id, sourceId);
+                          toast.success(`Auth copied from ${sourceId}`);
+                          // Reload detail
+                          const detail = await api.getAgentDetail(agent.id);
+                          if (detail.found) {
+                            setHasAuth(detail.hasAuth || false);
+                            setAuthProviders(detail.authProviders || []);
+                          }
+                        } catch (err) {
+                          toast.error('Failed: ' + String(err));
+                        } finally {
+                          setCopyingAuth(false);
+                        }
+                      }}
+                    >
+                      {copyingAuth ? 'Copying...' : 'Apply'}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
