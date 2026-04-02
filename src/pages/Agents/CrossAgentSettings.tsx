@@ -6,9 +6,9 @@ import { useState, useEffect } from 'react';
 import { Eye, Users, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -75,16 +75,24 @@ export function CrossAgentSettings() {
             </Label>
             <p className="text-xs text-muted-foreground">{t('crossAgent.visibilityDesc')}</p>
           </div>
-          <Select
-            value={visibility}
-            onChange={(e) => handleVisibilityChange(e.target.value)}
-            className="w-[120px] text-xs"
-          >
-            <option value="self">Self</option>
-            <option value="tree">Tree</option>
-            <option value="agent">Agent</option>
-            <option value="all">All</option>
-          </Select>
+          <div className="flex rounded-lg border overflow-hidden shrink-0">
+            {['self', 'tree', 'agent', 'all'].map((v) => (
+              <button
+                key={v}
+                onClick={() => handleVisibilityChange(v)}
+                disabled={saving}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-medium transition-colors',
+                  'hover:bg-accent disabled:opacity-50',
+                  visibility === v
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground',
+                )}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Agent-to-Agent */}
