@@ -103,10 +103,9 @@ router.post('/update', async (_req, res) => {
   try {
     send('started', { sha: saveSha });
 
-    // 1. git fetch + reset (handles force push / divergent branches)
+    // 1. git pull
     send('pulling');
-    await runStream('git', ['fetch', 'origin', 'main'], cwd, send);
-    await runStream('git', ['reset', '--hard', 'origin/main'], cwd, send);
+    await runStream('git', ['pull', '--rebase=false', 'origin', 'main'], cwd, send);
 
     // 2. pnpm install (prod only — devDeps like tsc not needed for pre-built)
     send('installing');
@@ -209,15 +208,9 @@ ENVFILE
 
     send('done');
   } catch (err) {
-    logger.error('Update failed, rolling back', { error: String(err) });
-    send('rollback', { error: String(err) });
-
-    try {
-      execSync(`git reset --hard ${saveSha}`, { cwd, stdio: 'ignore' });
-      send('rollback_done');
-    } catch (rollbackErr) {
-      send('rollback_failed', { error: String(rollbackErr) });
-    }
+    logger.error('Update failed', { error: String(err) });
+    send('error', { error: String(err) });
+    // No rollback — git reset creates divergent branches on next pull
   }
 });
 

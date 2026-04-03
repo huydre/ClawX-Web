@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { SecretInput } from '@/components/common/SecretInput';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import { useTranslation } from 'react-i18next';
@@ -233,17 +234,16 @@ export function SetupChannelContent() {
               {field.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
             {isSelect && field.options ? (
-              <select
+              <Select
                 id={`setup-${field.key}`}
                 value={configValues[field.key] || ''}
                 onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">{field.placeholder ? t(field.placeholder) : '-- Select --'}</option>
                 {field.options.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
+              </Select>
             ) : isPassword ? (
               <SecretInput
                 id={`setup-${field.key}`}

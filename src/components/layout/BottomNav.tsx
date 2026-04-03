@@ -3,9 +3,10 @@
  * Only visible on screens < md (768px), hidden on desktop.
  */
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, Radio, Puzzle, Clock, Home, Settings, Bot } from 'lucide-react';
+import { MessageSquare, Radio, Puzzle, Clock, Home, Settings, Bot, Usb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useUsbStore } from '@/stores/usb';
 
 interface BottomNavItemProps {
   to: string;
@@ -32,6 +33,7 @@ function BottomNavItem({ to, icon, label }: BottomNavItemProps) {
 
 export function BottomNav() {
   const { t } = useTranslation();
+  const usbDeviceCount = useUsbStore((state) => state.devices.length);
 
   const items = [
     { to: '/dashboard', icon: <Home className="h-5 w-5" />, label: t('sidebar.dashboard') },
@@ -40,6 +42,9 @@ export function BottomNav() {
     // { to: '/cron', icon: <Clock className="h-5 w-5" />, label: t('sidebar.cronTasks') },
     { to: '/skills', icon: <Puzzle className="h-5 w-5" />, label: t('sidebar.skills') },
     { to: '/channels', icon: <Radio className="h-5 w-5" />, label: t('sidebar.channels') },
+    ...(usbDeviceCount > 0
+      ? [{ to: '/usb', icon: <Usb className="h-5 w-5" />, label: t('sidebar.usb') }]
+      : []),
     { to: '/settings', icon: <Settings className="h-5 w-5" />, label: t('sidebar.settings') },
   ];
 

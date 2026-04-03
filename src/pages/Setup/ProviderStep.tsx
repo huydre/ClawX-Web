@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { SecretInput } from '@/components/common/SecretInput';
 import { useTranslation } from 'react-i18next';
@@ -370,19 +371,18 @@ export function ProviderContent({
           {selectedProviderData?.models && selectedProviderData.models.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="modelSelect">{t('provider.modelId')}</Label>
-              <select
+              <Select
                 id="modelSelect"
                 value={modelId}
                 onChange={(e) => {
                   setModelId(e.target.value);
                   onConfiguredChange(false);
                 }}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {selectedProviderData.models.map((m) => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
 

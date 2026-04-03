@@ -1,0 +1,36 @@
+{
+    "title": "Thiet bi USB",
+    "noDevices": "Khong phat hien USB",
+    "noDevicesDesc": "Ket noi USB de duyet va sao chep tap tin vao workspace cua agent.",
+    "scanning": "Dang quet...",
+    "files": "tap tin",
+    "folders": "thu muc",
+    "copyToWorkspace": "Sao chep vao Workspace",
+    "eject": "Ngat ket noi",
+    "ejectSuccess": "Thiet bi USB da duoc ngat ket noi an toan.",
+    "copySuccess": "Sao chep tap tin vao workspace thanh cong.",
+    "selectFiles": "Tap tin da chon",
+    "searchPlaceholder": "Tim kiem tap tin...",
+    "noResults": "Khong tim thay tap tin",
+    "emptyFolder": "Thu muc trong",
+    "folder": "Thu muc",
+    "fileName": "Ten",
+    "fileType": "Loai",
+    "fileSize": "Kich thuoc",
+    "fileModified": "Ngay sua doi",
+    "noPreview": "Khong the xem truoc loai tap tin nay.",
+    "selectWorkspaceDesc": "Sao chep cac tap tin da chon vao workspace cua agent.",
+    "targetWorkspace": "Workspace dich",
+    "workspacePlaceholder": "vd: main-agent",
+    "cancel": "Huy",
+    "fileTypes": {
+        "document": "Tai lieu",
+        "code": "Ma nguon",
+        "data": "Du lieu",
+        "media": "Phuong tien",
+        "other": "Khac"
+    },
+    "breadcrumb": {
+        "root": "Goc"
+    }
+}
