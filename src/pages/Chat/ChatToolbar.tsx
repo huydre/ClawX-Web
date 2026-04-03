@@ -6,6 +6,7 @@
 import { RefreshCw, Brain, ChevronDown, Plus } from 'lucide-react';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/stores/chat';
 import { useProviderStore } from '@/stores/providers';
@@ -63,14 +64,10 @@ export function ChatToolbar() {
 
       {/* Session Selector */}
       <div className="relative">
-        <select
+        <Select
           value={currentSessionKey}
           onChange={handleSessionChange}
-          className={cn(
-            'appearance-none rounded-md border border-border bg-background px-2 py-1.5 pr-7 sm:px-3 sm:pr-8',
-            'text-xs sm:text-sm text-foreground cursor-pointer max-w-[120px] sm:max-w-none',
-            'focus:outline-none focus:ring-2 focus:ring-ring',
-          )}
+          className="text-xs sm:text-sm max-w-[120px] sm:max-w-none h-8 py-1"
         >
           {/* Render all sessions; if currentSessionKey is not in the list, add it */}
           {!sessions.some((s) => s.key === currentSessionKey) && (
@@ -83,7 +80,7 @@ export function ChatToolbar() {
               {s.key}
             </option>
           ))}
-        </select>
+        </Select>
         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
       </div>
 
