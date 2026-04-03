@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ModalDialog } from '@/components/common/ModalDialog';
 import { useChannelsStore } from '@/stores/channels';
@@ -742,11 +743,10 @@ function ConfigField({ field, value, onChange }: ConfigFieldProps) {
         {field.required && <span className="text-destructive ml-1">*</span>}
       </Label>
       {isSelect ? (
-        <select
+        <Select
           id={field.key}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="">{field.placeholder ? t(field.placeholder) : 'Select...'}</option>
           {field.options?.map((opt) => (
@@ -754,7 +754,7 @@ function ConfigField({ field, value, onChange }: ConfigFieldProps) {
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
       ) : isPassword ? (
         <SecretInput
           id={field.key}

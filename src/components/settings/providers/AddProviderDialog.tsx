@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { SecretInput } from '@/components/common/SecretInput';
 import { AsyncButton } from '@/components/common/AsyncButton';
@@ -613,7 +614,7 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                       )}
                     </div>
                   ) : hasModelDropdown ? (
-                    <select
+                    <Select
                       value={modelId}
                       onChange={(e) => {
                         if (e.target.value === '__custom__') {
@@ -623,7 +624,7 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                           setModelId(e.target.value);
                         }
                       }}
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                      className="text-sm"
                     >
                       {!effectiveModels?.some((m) => m.id === modelId) && modelId && (
                         <option value={modelId}>{modelId}</option>
@@ -632,7 +633,7 @@ export function AddProviderDialog({ existingTypes, onClose, onAdd, onValidateKey
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
                       <option value="__custom__">Custom model...</option>
-                    </select>
+                    </Select>
                   ) : (
                     <Input
                       value={modelId}

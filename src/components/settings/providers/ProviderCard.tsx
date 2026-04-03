@@ -13,6 +13,7 @@ import {
   Key,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -229,7 +230,7 @@ export function ProviderCard({
                     )}
                   </div>
                 ) : hasModelDropdown ? (
-                  <select
+                  <Select
                     value={modelId}
                     onChange={(e) => {
                       if (e.target.value === '__custom__') {
@@ -239,7 +240,7 @@ export function ProviderCard({
                         setModelId(e.target.value);
                       }
                     }}
-                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                    className="h-9 text-sm"
                   >
                     {!effectiveModels?.some((m) => m.id === modelId) && modelId && (
                       <option value={modelId}>{modelId}</option>
@@ -248,7 +249,7 @@ export function ProviderCard({
                       <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                     <option value="__custom__">Custom model...</option>
-                  </select>
+                  </Select>
                 ) : (
                   <Input
                     value={modelId}
