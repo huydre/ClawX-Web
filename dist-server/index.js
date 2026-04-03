@@ -15,6 +15,12 @@ const PORT = parseInt(process.env.PORT || '2003', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 async function start() {
     try {
+        // Ensure git pull works even after force-push (set merge strategy)
+        try {
+            const { execSync } = await import('child_process');
+            execSync('git config pull.rebase false', { cwd: process.cwd(), stdio: 'ignore' });
+        }
+        catch { /* ignore on non-git environments */ }
         // Initialize storage
         await initStorage();
         logger.info('Storage initialized');
