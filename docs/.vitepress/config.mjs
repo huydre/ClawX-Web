@@ -52,7 +52,6 @@ export default defineConfig({
         items: [
           { text: 'Bảng điều khiển', link: '/usage/dashboard' },
           { text: 'Chat AI', link: '/usage/chat' },
-          { text: 'Quản lý Agent', link: '/usage/agents' },
           { text: 'Quản lý kênh', link: '/usage/channels' },
           { text: 'Kỹ năng (Skills)', link: '/usage/skills' },
           { text: 'Tác vụ định kỳ', link: '/usage/cron' },
