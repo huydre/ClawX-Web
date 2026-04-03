@@ -16,9 +16,11 @@ import { Skills } from './pages/Skills';
 import { Cron } from './pages/Cron';
 import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
+import { USB } from './pages/USB';
 
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
+import { useUsbStore } from './stores/usb';
 import { ws } from './lib/websocket';
 import { LoginPage } from './pages/Login';
 import './lib/platform'; // Initialize platform compatibility layer
@@ -141,6 +143,20 @@ function App() {
     };
   }, []);
 
+  // Fetch USB devices and subscribe to USB WebSocket events
+  useEffect(() => {
+    useUsbStore.getState().fetchDevices();
+    const handler = (data: any) => useUsbStore.getState().handleWsEvent(data);
+    ws.on('usb.connected', handler);
+    ws.on('usb.disconnected', handler);
+    ws.on('usb.scan.complete', handler);
+    return () => {
+      ws.off('usb.connected', handler);
+      ws.off('usb.disconnected', handler);
+      ws.off('usb.scan.complete', handler);
+    };
+  }, []);
+
   // Setup redirect removed — go straight to main app
 
   // Listen for navigation events from main process
@@ -208,6 +224,7 @@ function App() {
             <Route path="/agents" element={<Agents />} />
             <Route path="/skills" element={<Skills />} />
             <Route path="/cron" element={<Cron />} />
+            <Route path="/usb" element={<USB />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>
         </Routes>

@@ -1,0 +1,36 @@
+{
+    "title": "USB デバイス",
+    "noDevices": "USB が検出されません",
+    "noDevicesDesc": "USB ドライブを接続して、エージェントのワークスペースにファイルを参照・コピーします。",
+    "scanning": "スキャン中...",
+    "files": "ファイル",
+    "folders": "フォルダ",
+    "copyToWorkspace": "ワークスペースにコピー",
+    "eject": "取り出し",
+    "ejectSuccess": "USB デバイスを安全に取り出しました。",
+    "copySuccess": "ファイルをワークスペースにコピーしました。",
+    "selectFiles": "選択されたファイル",
+    "searchPlaceholder": "ファイルを検索...",
+    "noResults": "一致するファイルがありません",
+    "emptyFolder": "空のフォルダ",
+    "folder": "フォルダ",
+    "fileName": "名前",
+    "fileType": "種類",
+    "fileSize": "サイズ",
+    "fileModified": "更新日",
+    "noPreview": "このファイル形式のプレビューは利用できません。",
+    "selectWorkspaceDesc": "選択したファイルをエージェントのワークスペースにコピーします。",
+    "targetWorkspace": "コピー先ワークスペース",
+    "workspacePlaceholder": "例: main-agent",
+    "cancel": "キャンセル",
+    "fileTypes": {
+        "document": "ドキュメント",
+        "code": "コード",
+        "data": "データ",
+        "media": "メディア",
+        "other": "その他"
+    },
+    "breadcrumb": {
+        "root": "ルート"
+    }
+}

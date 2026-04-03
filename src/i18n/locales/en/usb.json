@@ -1,0 +1,36 @@
+{
+    "title": "USB Devices",
+    "noDevices": "No USB detected",
+    "noDevicesDesc": "Connect a USB drive to browse and copy files to your agent workspaces.",
+    "scanning": "Scanning...",
+    "files": "files",
+    "folders": "folders",
+    "copyToWorkspace": "Copy to Workspace",
+    "eject": "Eject",
+    "ejectSuccess": "USB device ejected safely.",
+    "copySuccess": "Files copied to workspace successfully.",
+    "selectFiles": "Selected files",
+    "searchPlaceholder": "Search files...",
+    "noResults": "No matching files",
+    "emptyFolder": "Empty folder",
+    "folder": "Folder",
+    "fileName": "Name",
+    "fileType": "Type",
+    "fileSize": "Size",
+    "fileModified": "Modified",
+    "noPreview": "Preview not available for this file type.",
+    "selectWorkspaceDesc": "Copy selected files to an agent workspace.",
+    "targetWorkspace": "Target workspace",
+    "workspacePlaceholder": "e.g. main-agent",
+    "cancel": "Cancel",
+    "fileTypes": {
+        "document": "Document",
+        "code": "Code",
+        "data": "Data",
+        "media": "Media",
+        "other": "Other"
+    },
+    "breadcrumb": {
+        "root": "Root"
+    }
+}

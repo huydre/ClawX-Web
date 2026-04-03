@@ -548,6 +548,38 @@ class ApiClient {
     }>('/system/metrics');
   }
 
+  // USB API
+  async getUsbDevices() {
+    return this.request<{ devices: any[] }>('/usb/devices');
+  }
+
+  async getUsbFiles(deviceId: string, path?: string) {
+    const params = new URLSearchParams({ deviceId });
+    if (path) params.set('path', path);
+    return this.request<{ files: any[] }>(`/usb/files?${params}`);
+  }
+
+  async readUsbFile(deviceId: string, filePath: string) {
+    return this.request<{ content: string; mimeType: string }>('/usb/read', {
+      method: 'POST',
+      body: JSON.stringify({ deviceId, filePath }),
+    });
+  }
+
+  async copyUsbFiles(deviceId: string, files: string[], workspace: string) {
+    return this.request<{ success: boolean }>('/usb/copy', {
+      method: 'POST',
+      body: JSON.stringify({ deviceId, files, workspace }),
+    });
+  }
+
+  async ejectUsb(deviceId: string) {
+    return this.request<{ success: boolean }>(`/usb/eject`, {
+      method: 'POST',
+      body: JSON.stringify({ deviceId }),
+    });
+  }
+
   // System / Update API (web-only)
   async getSystemInfo() {
     return this.request<{
