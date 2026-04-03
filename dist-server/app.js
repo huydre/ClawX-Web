@@ -20,6 +20,7 @@ import channelConfigRouter from './routes/channel-config.js';
 import googleAuthRouter from './routes/google-auth.js';
 import wifiRouter from './routes/wifi.js';
 import analyticsRouter from './routes/analytics.js';
+import agentsConfigRouter from './routes/agents-config.js';
 import { startAutoRefresh } from './routes/google-auth.js';
 import { authMiddleware } from './middleware/auth.js';
 const app = express();
@@ -97,6 +98,7 @@ app.use('/api/pairing', pairingRouter);
 app.use('/api/channel-config', channelConfigRouter);
 app.use('/api/wifi', wifiRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/agents-config', agentsConfigRouter);
 import claw3dRouter from './routes/claw3d.js';
 app.use('/api/claw3d', claw3dRouter);
 // Serve hashed assets with long-term immutable cache

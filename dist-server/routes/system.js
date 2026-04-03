@@ -55,6 +55,22 @@ router.get('/info', async (_req, res) => {
         res.status(500).json({ error: 'Failed to get version info' });
     }
 });
+// POST /api/system/force-sync
+// Emergency sync: fetch + reset --hard + restart. Bypasses git pull issues.
+router.post('/force-sync', async (_req, res) => {
+    res.json({ ok: true, message: 'Force sync started' });
+    try {
+        const cwd = process.cwd();
+        execSync('git fetch origin main', { cwd, stdio: 'ignore' });
+        execSync('git reset --hard origin/main', { cwd, stdio: 'ignore' });
+        execSync('pnpm install --prod --frozen-lockfile --ignore-scripts 2>/dev/null || pnpm install --prod --ignore-scripts', { cwd, stdio: 'ignore', shell: '/bin/bash' });
+        logger.info('Force sync complete, restarting...');
+        setTimeout(() => process.exit(1), 1000);
+    }
+    catch (err) {
+        logger.error('Force sync failed', { error: String(err) });
+    }
+});
 // POST /api/system/check-update
 // Triggers an immediate version check
 router.post('/check-update', async (_req, res) => {
@@ -81,9 +97,10 @@ router.post('/update', async (_req, res) => {
     const saveSha = updateChecker.getLocalSha();
     try {
         send('started', { sha: saveSha });
-        // 1. git pull
+        // 1. git fetch + reset (handles force push / divergent branches)
         send('pulling');
-        await runStream('git', ['pull', 'origin', 'main'], cwd, send);
+        await runStream('git', ['fetch', 'origin', 'main'], cwd, send);
+        await runStream('git', ['reset', '--hard', 'origin/main'], cwd, send);
         // 2. pnpm install (prod only — devDeps like tsc not needed for pre-built)
         send('installing');
         await runStream('pnpm', ['install', '--prod', '--frozen-lockfile'], cwd, send)
@@ -104,21 +121,74 @@ router.post('/update', async (_req, res) => {
         else {
             send('log', { line: 'Pre-built dist found, skipping build' });
         }
-        // 4. Setup/Update Claw3D (clone if missing, update if exists)
+        // 4. Setup/Update Claw3D (all-in-one, no terminal needed)
         send('updating_claw3d');
         try {
-            await runStream('bash', ['-c', `cd "${cwd}" && bash setup.sh --update-claw3d 2>&1 || true`], cwd, send);
+            const { homedir } = await import('os');
+            const { join } = await import('path');
+            const claw3dDir = join(homedir(), '.clawx', 'claw3d');
+            const claw3dScript = `
+        set -e
+        export HOME="${homedir()}"
+        # Source NVM
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+        CLAW3D_DIR="${claw3dDir}"
+        REPO="https://github.com/iamlukethedev/Claw3D.git"
+
+        # Clone or pull
+        if [ -d "$CLAW3D_DIR/.git" ]; then
+          cd "$CLAW3D_DIR" && git pull origin main 2>/dev/null || git pull || true
+        else
+          git clone --depth 1 "$REPO" "$CLAW3D_DIR"
+        fi
+
+        cd "$CLAW3D_DIR"
+
+        # Install all deps with --ignore-scripts to avoid permission errors
+        npm install --ignore-scripts 2>/dev/null || true
+        npm install --save-exact --save-dev typescript @types/node @types/react --ignore-scripts 2>/dev/null || true
+        chmod -R +x node_modules/.bin/ 2>/dev/null || true
+
+        # Write .env
+        GW_PORT=\${OPENCLAW_GATEWAY_PORT:-18789}
+        GW_URL="ws://localhost:\$GW_PORT"
+        if [ -f "${cwd}/.env" ]; then
+          CF_DOMAIN=\$(grep '^CLOUDFLARE_TUNNEL_DOMAIN=' "${cwd}/.env" 2>/dev/null | cut -d= -f2-)
+          CF_SUB=\$(grep '^CLOUDFLARE_TUNNEL_SUBDOMAIN=' "${cwd}/.env" 2>/dev/null | cut -d= -f2-)
+          if [ -n "\$CF_DOMAIN" ] && [ -n "\$CF_SUB" ]; then
+            GW_URL="wss://dashboard-\${CF_SUB}.\${CF_DOMAIN}"
+          fi
+        fi
+        GW_TOKEN=\$(python3 -c "import json; d=json.load(open('${homedir()}/.openclaw/openclaw.json')); print(d.get('gateway',{}).get('auth',{}).get('token',''))" 2>/dev/null || echo "")
+
+        cat > .env << ENVFILE
+NEXT_PUBLIC_GATEWAY_URL=\$GW_URL
+STUDIO_ACCESS_TOKEN=\$GW_TOKEN
+DEBUG=true
+PORT=3333
+HOST=0.0.0.0
+ENVFILE
+
+        # Install PM2 if needed
+        command -v pm2 >/dev/null || npm install -g pm2
+
+        # Start/restart via PM2 (dev mode — no build needed, no NODE_ENV conflict)
+        pm2 delete claw3d 2>/dev/null || true
+        unset NODE_ENV
+        pm2 start node_modules/.bin/next --name claw3d -- dev -p 3333
+        pm2 save 2>/dev/null || true
+
+        echo "Claw3D started on port 3333"
+      `;
+            await runStream('bash', ['-c', claw3dScript], cwd, send)
+                .catch(() => send('log', { line: 'Claw3D setup had errors (may still work)' }));
             send('log', { line: 'Claw3D updated' });
         }
         catch {
             send('log', { line: 'Claw3D update skipped (non-critical)' });
         }
-        // Restart claw3d via PM2 (no root needed)
-        try {
-            execSync('pm2 restart claw3d 2>/dev/null || true', { stdio: 'ignore' });
-            send('log', { line: 'Claw3D service restarted' });
-        }
-        catch { /* ignore */ }
         send('restarting');
         // 5. Restart: exit with non-zero so systemd Restart=on-failure restarts us
         setTimeout(() => {
