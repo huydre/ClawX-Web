@@ -10,6 +10,7 @@ import enChannels from './locales/en/channels.json';
 import enSkills from './locales/en/skills.json';
 import enCron from './locales/en/cron.json';
 import enSetup from './locales/en/setup.json';
+import enAgents from './locales/en/agents.json';
 
 // VI
 import viCommon from './locales/vi/common.json';
@@ -20,6 +21,7 @@ import viChannels from './locales/vi/channels.json';
 import viSkills from './locales/vi/skills.json';
 import viCron from './locales/vi/cron.json';
 import viSetup from './locales/vi/setup.json';
+import viAgents from './locales/vi/agents.json';
 
 // JA
 import jaCommon from './locales/ja/common.json';
@@ -30,6 +32,7 @@ import jaChannels from './locales/ja/channels.json';
 import jaSkills from './locales/ja/skills.json';
 import jaCron from './locales/ja/cron.json';
 import jaSetup from './locales/ja/setup.json';
+import jaAgents from './locales/ja/agents.json';
 
 export const SUPPORTED_LANGUAGES = [
     { code: 'en', label: 'English' },
@@ -49,6 +52,7 @@ const resources = {
         skills: enSkills,
         cron: enCron,
         setup: enSetup,
+        agents: enAgents,
     },
     vi: {
         common: viCommon,
@@ -59,6 +63,7 @@ const resources = {
         skills: viSkills,
         cron: viCron,
         setup: viSetup,
+        agents: viAgents,
     },
     ja: {
         common: jaCommon,
@@ -69,6 +74,7 @@ const resources = {
         skills: jaSkills,
         cron: jaCron,
         setup: jaSetup,
+        agents: jaAgents,
     },
 };
 
@@ -79,7 +85,7 @@ i18n
         lng: 'en', // will be overridden by settings store
         fallbackLng: 'en',
         defaultNS: 'common',
-        ns: ['common', 'settings', 'dashboard', 'chat', 'channels', 'skills', 'cron', 'setup'],
+        ns: ['common', 'settings', 'dashboard', 'chat', 'channels', 'skills', 'cron', 'setup', 'agents'],
         interpolation: {
             escapeValue: false, // React already escapes
         },

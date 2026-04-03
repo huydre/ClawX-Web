@@ -142,9 +142,12 @@ router.post('/validate', async (req, res) => {
 });
 
 // POST /api/channels/save
+// Supports accountId for multi-account: { type, config, accountId? }
 router.post('/save', (req, res) => {
     try {
-        const { type, config } = req.body as { type: string; config: Record<string, unknown> };
+        const { type, config, accountId } = req.body as { type: string; config: Record<string, unknown>; accountId?: string };
+
+        logger.info('Channel save request', { type, accountId: accountId || '(default)', configKeys: Object.keys(config || {}) });
 
         if (!type) {
             return res.status(400).json({ success: false, error: 'Missing channel type' });
@@ -203,8 +206,8 @@ router.post('/save', (req, res) => {
                 }
             }
 
-            // OpenClaw requires allowFrom to include "*" when dmPolicy is "open"
-            const dmPolicy = transformedConfig.dmPolicy || currentConfig.channels?.[type]?.dmPolicy || 'open';
+            // Only add allowFrom: ["*"] when dmPolicy is explicitly "open"
+            const dmPolicy = transformedConfig.dmPolicy as string | undefined;
             if (dmPolicy === 'open') {
                 let af = transformedConfig.allowFrom as string[] | undefined;
                 if (!af || !Array.isArray(af)) af = ['*'];
@@ -212,10 +215,7 @@ router.post('/save', (req, res) => {
                 transformedConfig.allowFrom = af;
             }
 
-            // Default dmPolicy to "open" if not set
-            if (!transformedConfig.dmPolicy) {
-                transformedConfig.dmPolicy = 'open';
-            }
+            // Do NOT default dmPolicy — OpenClaw defaults to "pairing"
         }
 
         // Discord: build guilds structure
@@ -249,14 +249,55 @@ router.post('/save', (req, res) => {
             transformedConfig.allowFrom = allowFrom;
         }
 
-        currentConfig.channels[type] = {
-            ...currentConfig.channels[type],
-            ...transformedConfig,
-            enabled: (transformedConfig.enabled as boolean) ?? true,
-        };
+        // Multi-account support: if accountId provided, save under accounts.{accountId}
+        const acctId = (accountId || '').trim();
+        if (acctId) {
+            const channelCfg = currentConfig.channels[type] || {};
+            if (!channelCfg.accounts) channelCfg.accounts = {};
+            const accounts = channelCfg.accounts as Record<string, Record<string, unknown>>;
+
+            // ALWAYS move root-level token to accounts.main when adding any account
+            // This prevents root config from overriding per-account settings
+            const rootTokenKey = type === 'discord' ? 'token' : 'botToken';
+            if (channelCfg[rootTokenKey]) {
+                const mainId = 'main';
+                if (!accounts[mainId]) {
+                    accounts[mainId] = {};
+                }
+                // Move root fields to main account (don't overwrite if already set)
+                if (!accounts[mainId][rootTokenKey]) {
+                    accounts[mainId][rootTokenKey] = channelCfg[rootTokenKey];
+                }
+                if (!accounts[mainId].dmPolicy && channelCfg.dmPolicy) {
+                    accounts[mainId].dmPolicy = channelCfg.dmPolicy;
+                }
+                // Remove from root level
+                delete channelCfg[rootTokenKey];
+                delete channelCfg.dmPolicy;
+                delete channelCfg.allowFrom;
+                delete channelCfg.groupPolicy;
+                logger.info('Moved root token to accounts.main', { type });
+            }
+
+            // Save the new account config
+            accounts[acctId] = {
+                ...accounts[acctId],
+                ...transformedConfig,
+            };
+
+            channelCfg.accounts = accounts;
+            channelCfg.enabled = true;
+            currentConfig.channels[type] = channelCfg;
+        } else {
+            currentConfig.channels[type] = {
+                ...currentConfig.channels[type],
+                ...transformedConfig,
+                enabled: (transformedConfig.enabled as boolean) ?? true,
+            };
+        }
 
         writeConfig(currentConfig);
-        logger.info('Channel config saved', { type });
+        logger.info('Channel config saved', { type, accountId: acctId || 'default' });
         res.json({ success: true });
     } catch (error) {
         logger.error('Channel save error:', error);

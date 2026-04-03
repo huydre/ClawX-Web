@@ -42,6 +42,7 @@ import {
   GpuInfo,
   ContainerList,
   SystemInfoBadges,
+  PowerEstimate,
 } from '@/components/charts/SystemCharts';
 
 export function Dashboard() {
@@ -335,9 +336,17 @@ export function Dashboard() {
               </CardContent>
             </Card>
 
+            {/* Power / Energy */}
+            <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '290ms', animationFillMode: 'both' }}>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.power', 'Power')}</p>
+                <PowerEstimate cpuUsage={systemMetrics.cpu.usage} uptimeSeconds={systemMetrics.os.uptime} />
+              </CardContent>
+            </Card>
+
             {/* Disk */}
             {systemMetrics.disk.length > 0 && (
-              <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+              <Card className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '310ms', animationFillMode: 'both' }}>
                 <CardContent className="p-4">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{t('systemMonitor.storage', 'Storage')}</p>
                   <DiskBars disks={systemMetrics.disk} />

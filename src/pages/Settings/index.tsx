@@ -419,6 +419,23 @@ function DoctorFixCard() {
   );
 }
 
+function WifiCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Wifi className="h-5 w-5" />
+          WiFi
+        </CardTitle>
+        <CardDescription>Trạng thái kết nối WiFi</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <WifiSettings />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function Settings() {
   const { t } = useTranslation('settings');
   const {
@@ -796,19 +813,7 @@ export function Settings() {
 
       {/* WiFi Settings */}
       {platform.isWeb && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wifi className="h-5 w-5" />
-              WiFi
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Thử nghiệm</Badge>
-            </CardTitle>
-            <CardDescription>Quản lý kết nối WiFi — quét, kết nối, ngắt mạng (tính năng thử nghiệm)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <WifiSettings />
-          </CardContent>
-        </Card>
+        <WifiCard />
       )}
 
       {/* Google Workspace */}

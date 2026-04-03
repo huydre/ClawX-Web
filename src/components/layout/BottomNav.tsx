@@ -3,7 +3,7 @@
  * Only visible on screens < md (768px), hidden on desktop.
  */
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, Radio, Puzzle, Clock, Home, Settings } from 'lucide-react';
+import { MessageSquare, Radio, Puzzle, Clock, Home, Settings, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 
@@ -36,6 +36,7 @@ export function BottomNav() {
   const items = [
     { to: '/dashboard', icon: <Home className="h-5 w-5" />, label: t('sidebar.dashboard') },
     { to: '/', icon: <MessageSquare className="h-5 w-5" />, label: t('sidebar.chat') },
+    { to: '/agents', icon: <Bot className="h-5 w-5" />, label: t('sidebar.agents') },
     // { to: '/cron', icon: <Clock className="h-5 w-5" />, label: t('sidebar.cronTasks') },
     { to: '/skills', icon: <Puzzle className="h-5 w-5" />, label: t('sidebar.skills') },
     { to: '/channels', icon: <Radio className="h-5 w-5" />, label: t('sidebar.channels') },

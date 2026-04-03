@@ -16,6 +16,7 @@ import {
   ExternalLink,
   BookOpen,
   Box,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -88,6 +89,7 @@ export function Sidebar() {
   const navItems = [
     { to: '/dashboard', icon: <Home className="h-5 w-5" />, label: t('sidebar.dashboard') },
     { to: '/', icon: <MessageSquare className="h-5 w-5" />, label: t('sidebar.chat') },
+    { to: '/agents', icon: <Bot className="h-5 w-5" />, label: t('sidebar.agents') },
     // { to: '/cron', icon: <Clock className="h-5 w-5" />, label: t('sidebar.cronTasks') },
     { to: '/skills', icon: <Puzzle className="h-5 w-5" />, label: t('sidebar.skills') },
     { to: '/channels', icon: <Radio className="h-5 w-5" />, label: t('sidebar.channels') },

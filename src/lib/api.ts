@@ -428,10 +428,10 @@ class ApiClient {
     });
   }
 
-  async saveChannelConfig(type: string, config: Record<string, unknown>) {
+  async saveChannelConfig(type: string, config: Record<string, unknown>, accountId?: string) {
     return this.request<{ success: boolean }>('/channels/save', {
       method: 'POST',
-      body: JSON.stringify({ type, config }),
+      body: JSON.stringify({ type, config, ...(accountId ? { accountId } : {}) }),
     });
   }
 
@@ -456,6 +456,82 @@ class ApiClient {
 
   async getAnalyticsHourly() {
     return this.request<{ data: Record<string, number> }>('/analytics/hourly');
+  }
+
+  // Agents Config API
+  async getCrossAgentConfig() {
+    return this.request<{
+      sessionsVisibility: string;
+      agentToAgentEnabled: boolean;
+      agentToAgentAllow: string[];
+    }>('/agents-config/cross-agent');
+  }
+
+  async setCrossAgentConfig(config: {
+    sessionsVisibility?: string;
+    agentToAgentEnabled?: boolean;
+    agentToAgentAllow?: string[];
+  }) {
+    return this.request<{ success: boolean }>('/agents-config/cross-agent', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  // Agent Detail Config API (reads from openclaw.json directly)
+  async getAgentDetail(agentId: string) {
+    return this.request<{
+      found: boolean;
+      model?: string;
+      defaultModel?: string;
+      workspace?: string;
+      channelInfo?: { type: string; accountId: string; dmPolicy: string } | null;
+      hasAuth?: boolean;
+      authProviders?: string[];
+    }>(`/agents-config/detail/${agentId}`);
+  }
+
+  async updateAgentDetail(agentId: string, updates: { model?: string }) {
+    return this.request<{ success: boolean }>(`/agents-config/detail/${agentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  // Agent Auth API
+  async getAuthSources() {
+    return this.request<{
+      sources: Array<{ id: string; name: string; providers: string[] }>;
+    }>('/agents-config/auth-sources');
+  }
+
+  async copyAuth(agentId: string, sourceAgentId: string) {
+    return this.request<{ success: boolean }>(`/agents-config/copy-auth/${agentId}`, {
+      method: 'POST',
+      body: JSON.stringify({ sourceAgentId }),
+    });
+  }
+
+  // Agent Workspace Skills API
+  async getWorkspaceSkills(agentId: string) {
+    return this.request<{
+      skills: Array<{ name: string; hasSkillMd: boolean; description: string }>;
+      workspace: string;
+    }>(`/agents-config/workspace-skills/${agentId}`);
+  }
+
+  // Agent Bindings API
+  async getAgentBindings(agentId: string) {
+    return this.request<{
+      bindings: Array<{ agentId: string; match: { channel?: string; accountId?: string; peer?: { kind: string; id: string } } }>;
+    }>(`/agents-config/bindings/${agentId}`);
+  }
+
+  async setAgentBindings(agentId: string, bindings: Array<{ match: { channel?: string; accountId?: string; peer?: { kind: string; id: string } } }>) {
+    return this.request<{ success: boolean }>(`/agents-config/bindings/${agentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ bindings }),
+    });
   }
 
   // System Metrics API

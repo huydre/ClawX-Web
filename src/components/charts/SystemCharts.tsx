@@ -340,3 +340,88 @@ function InfoBadge({ label }: { label: string }) {
     </span>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/*  8. Power / Energy Estimate                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Estimates power consumption based on CPU usage and known TDP.
+ * LIVA Q3 Plus (R1505G): TDP 15W, system idle ~8W, max ~25W
+ * Formula: power = basePower + (tdp × cpuUsage/100 × loadFactor)
+ */
+const SYSTEM_BASE_POWER = 6;      // W — board + RAM + eMMC idle
+const CPU_TDP = 15;               // W — R1505G TDP
+const CPU_LOAD_FACTOR = 0.7;      // efficiency factor
+const PRICE_PER_KWH = 3000;       // VNĐ/kWh — default 3k
+
+function estimatePower(cpuUsage: number): number {
+  return SYSTEM_BASE_POWER + CPU_TDP * (0.3 + CPU_LOAD_FACTOR * cpuUsage / 100);
+}
+
+export function PowerEstimate({ cpuUsage, uptimeSeconds }: {
+  cpuUsage: number;
+  uptimeSeconds: number;
+}) {
+  const { t } = useTranslation('dashboard');
+
+  const currentPower = useMemo(() => estimatePower(cpuUsage), [cpuUsage]);
+
+  // Estimate average power (assume avg CPU ~35% over uptime — conservative)
+  const avgCpuEstimate = Math.max(cpuUsage * 0.8, 25); // rough average
+  const avgPower = estimatePower(avgCpuEstimate);
+
+  const uptimeHours = uptimeSeconds / 3600;
+  const energyKwh = (avgPower * uptimeHours) / 1000;
+  const costVnd = energyKwh * PRICE_PER_KWH;
+
+  // Monthly projection
+  const monthlyKwh = (avgPower * 720) / 1000; // 30 days
+  const monthlyCost = monthlyKwh * PRICE_PER_KWH;
+
+  const uptimeDays = Math.floor(uptimeSeconds / 86400);
+  const uptimeHoursRem = Math.floor((uptimeSeconds % 86400) / 3600);
+
+  return (
+    <div className="space-y-3">
+      {/* Current power */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">{t('systemMonitor.currentPower', 'Current')}</span>
+        <span className="text-sm font-bold tabular-nums">{currentPower.toFixed(1)}W</span>
+      </div>
+
+      {/* Energy consumed */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            {t('systemMonitor.energyUsed', 'Energy used')} ({uptimeDays}d {uptimeHoursRem}h)
+          </span>
+          <span className="font-medium tabular-nums">{energyKwh.toFixed(2)} kWh</span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">{t('systemMonitor.estimatedCost', 'Est. cost')}</span>
+          <span className="font-medium tabular-nums">{Math.round(costVnd).toLocaleString()}đ</span>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-border/50" />
+
+      {/* Monthly projection */}
+      <div className="space-y-1.5">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('systemMonitor.monthlyProjection', 'Monthly est.')}</p>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">{t('systemMonitor.energy', 'Energy')}</span>
+          <span className="font-medium tabular-nums">{monthlyKwh.toFixed(1)} kWh</span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">{t('systemMonitor.cost', 'Cost')}</span>
+          <span className="font-bold tabular-nums text-primary">{Math.round(monthlyCost).toLocaleString()}đ</span>
+        </div>
+        <p className="text-[10px] text-muted-foreground/50">
+          @{(PRICE_PER_KWH).toLocaleString()}đ/kWh · ~{avgPower.toFixed(0)}W avg
+        </p>
+      </div>
+    </div>
+  );
+}

@@ -373,7 +373,7 @@ export function AddChannelDialog({ selectedType, onSelectType, onClose, onChanne
         setValidationResult({ valid: true, errors: [], warnings });
       }
 
-      // Step 2: Save channel configuration
+      // Step 2: Save channel configuration (with optional accountId for multi-account)
       const config: Record<string, unknown> = { ...configValues };
 
       if (platform.isElectron) {

@@ -56,6 +56,22 @@ router.get('/info', async (_req, res) => {
   }
 });
 
+// POST /api/system/force-sync
+// Emergency sync: fetch + reset --hard + restart. Bypasses git pull issues.
+router.post('/force-sync', async (_req, res) => {
+  res.json({ ok: true, message: 'Force sync started' });
+  try {
+    const cwd = process.cwd();
+    execSync('git fetch origin main', { cwd, stdio: 'ignore' });
+    execSync('git reset --hard origin/main', { cwd, stdio: 'ignore' });
+    execSync('pnpm install --prod --frozen-lockfile --ignore-scripts 2>/dev/null || pnpm install --prod --ignore-scripts', { cwd, stdio: 'ignore', shell: '/bin/bash' });
+    logger.info('Force sync complete, restarting...');
+    setTimeout(() => process.exit(1), 1000);
+  } catch (err) {
+    logger.error('Force sync failed', { error: String(err) });
+  }
+});
+
 // POST /api/system/check-update
 // Triggers an immediate version check
 router.post('/check-update', async (_req, res) => {
@@ -87,9 +103,10 @@ router.post('/update', async (_req, res) => {
   try {
     send('started', { sha: saveSha });
 
-    // 1. git pull
+    // 1. git fetch + reset (handles force push / divergent branches)
     send('pulling');
-    await runStream('git', ['pull', 'origin', 'main'], cwd, send);
+    await runStream('git', ['fetch', 'origin', 'main'], cwd, send);
+    await runStream('git', ['reset', '--hard', 'origin/main'], cwd, send);
 
     // 2. pnpm install (prod only — devDeps like tsc not needed for pre-built)
     send('installing');

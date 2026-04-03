@@ -8,9 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ModalDialog } from '@/components/common/ModalDialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useAgentsStore } from '@/stores/agents';
 import {
   CHANNEL_NAMES,
   type Channel,
@@ -26,12 +28,21 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
   const { t } = useTranslation('channels');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [groupPolicy, setGroupPolicy] = useState('allowlist');
-  const [pairingPolicy, setPairingPolicy] = useState('code');
+  const [dmPolicy, setDmPolicy] = useState('open');
+  const [groupPolicy, setGroupPolicy] = useState('open');
   const [allowFrom, setAllowFrom] = useState<string[]>([]);
   const [groupAllowFrom, setGroupAllowFrom] = useState<string[]>([]);
   const [newAllowFrom, setNewAllowFrom] = useState('');
   const [newGroupAllowFrom, setNewGroupAllowFrom] = useState('');
+  const [boundAgentId, setBoundAgentId] = useState('');
+
+  // Load agents for the dropdown
+  const agents = useAgentsStore((s) => s.agents);
+  const fetchAgents = useAgentsStore((s) => s.fetchAgents);
+
+  useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
 
   useEffect(() => {
     const load = async () => {
@@ -39,10 +50,11 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
         const res = await fetch(`/api/channel-config/${channel.type}`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        setGroupPolicy(data.groupPolicy || 'allowlist');
-        setPairingPolicy(data.pairingPolicy || 'code');
+        setDmPolicy(data.dmPolicy || 'open');
+        setGroupPolicy(data.groupPolicy || 'open');
         setAllowFrom(data.allowFrom || []);
         setGroupAllowFrom(data.groupAllowFrom || []);
+        setBoundAgentId(data.boundAgentId || '');
       } catch {
         toast.error('Failed to load channel config');
       } finally {
@@ -58,7 +70,7 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
       const res = await fetch(`/api/channel-config/${channel.type}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupPolicy, pairingPolicy, allowFrom, groupAllowFrom }),
+        body: JSON.stringify({ dmPolicy, groupPolicy, allowFrom, groupAllowFrom, boundAgentId }),
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
@@ -114,41 +126,54 @@ export function ChannelSettingsPanel({ channel, onClose }: ChannelSettingsPanelP
       }
     >
         <div className="space-y-5">
+          {/* Agent Binding */}
+          <div className="space-y-2">
+            <Label className="font-medium">{t('settings.boundAgent')}</Label>
+            <p className="text-xs text-muted-foreground">{t('settings.boundAgentDesc')}</p>
+            <Select
+              value={boundAgentId}
+              onChange={(e) => setBoundAgentId(e.target.value)}
+            >
+              <option value="">{t('settings.defaultAgent')}</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.identity?.emoji || '🤖'} {a.identity?.name || a.name || a.id}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {/* DM Policy */}
+          <div className="space-y-2">
+            <Label className="font-medium">{t('settings.dmPolicy')}</Label>
+            <p className="text-xs text-muted-foreground">{t('settings.dmPolicyDesc')}</p>
+            <div className="flex flex-wrap gap-2">
+              {(['open', 'pairing', 'allowlist', 'disabled'] as const).map((p) => (
+                <Button
+                  key={p}
+                  variant={dmPolicy === p ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDmPolicy(p)}
+                >
+                  {t(`settings.dmPolicy_${p}`)}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Group Policy */}
           <div className="space-y-2">
             <Label className="font-medium">{t('settings.groupPolicy')}</Label>
             <p className="text-xs text-muted-foreground">{t('settings.groupPolicyDesc')}</p>
             <div className="flex gap-2">
-              <Button
-                variant={groupPolicy === 'open' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setGroupPolicy('open')}
-              >
-                {t('settings.open')}
-              </Button>
-              <Button
-                variant={groupPolicy === 'allowlist' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setGroupPolicy('allowlist')}
-              >
-                {t('settings.allowlist')}
-              </Button>
-            </div>
-          </div>
-
-          {/* Pairing Policy */}
-          <div className="space-y-2">
-            <Label className="font-medium">{t('settings.pairingPolicy')}</Label>
-            <p className="text-xs text-muted-foreground">{t('settings.pairingPolicyDesc')}</p>
-            <div className="flex gap-2">
-              {(['open', 'code', 'disabled'] as const).map((p) => (
+              {(['open', 'allowlist', 'disabled'] as const).map((p) => (
                 <Button
                   key={p}
-                  variant={pairingPolicy === p ? 'default' : 'outline'}
+                  variant={groupPolicy === p ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setPairingPolicy(p)}
+                  onClick={() => setGroupPolicy(p)}
                 >
-                  {t(`settings.${p}`)}
+                  {t(`settings.groupPolicy_${p}`)}
                 </Button>
               ))}
             </div>
