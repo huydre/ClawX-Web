@@ -8,6 +8,9 @@ import { gatewayManager } from './services/gateway-manager.js';
 import { tunnelManager } from './services/tunnel-manager.js';
 import { startAutoPairing } from './services/auto-pairing.js';
 import { updateChecker } from './services/update-checker.js';
+import { usbMonitor } from './services/usb-monitor.js';
+import { wss } from './websocket/server.js';
+import { WebSocket } from 'ws';
 
 const PORT = parseInt(process.env.PORT || '2003', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -96,6 +99,23 @@ async function start() {
 
     // Start update checker (polls GitHub every 6h)
     updateChecker.start();
+
+    // Start USB device monitor and forward events to WebSocket clients
+    usbMonitor.start();
+
+    const broadcastUsb = (data: Record<string, unknown>) => {
+      if (!wss) return;
+      const message = JSON.stringify(data);
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+    };
+
+    usbMonitor.on('connected', (device) => broadcastUsb({ type: 'usb.connected', device }));
+    usbMonitor.on('disconnected', (deviceId) => broadcastUsb({ type: 'usb.disconnected', deviceId }));
+    usbMonitor.on('scan-complete', (deviceId, summary) => broadcastUsb({ type: 'usb.scan.complete', deviceId, summary }));
 
     // Auto-start tunnel if enabled
     try {
@@ -296,6 +316,7 @@ async function start() {
     const shutdown = async () => {
       logger.info('Shutting down gracefully');
 
+      usbMonitor.stop();
       await gatewayManager.stop();
       await tunnelManager.stop();
 

@@ -17,9 +17,11 @@ import {
   BookOpen,
   Box,
   Bot,
+  Usb,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
+import { useUsbStore } from '@/stores/usb';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
@@ -85,6 +87,7 @@ export function Sidebar() {
   };
 
   const { t } = useTranslation();
+  const usbDeviceCount = useUsbStore((state) => state.devices.length);
 
   const navItems = [
     { to: '/dashboard', icon: <Home className="h-5 w-5" />, label: t('sidebar.dashboard') },
@@ -93,6 +96,9 @@ export function Sidebar() {
     // { to: '/cron', icon: <Clock className="h-5 w-5" />, label: t('sidebar.cronTasks') },
     { to: '/skills', icon: <Puzzle className="h-5 w-5" />, label: t('sidebar.skills') },
     { to: '/channels', icon: <Radio className="h-5 w-5" />, label: t('sidebar.channels') },
+    ...(usbDeviceCount > 0
+      ? [{ to: '/usb', icon: <Usb className="h-5 w-5" />, label: t('sidebar.usb') }]
+      : []),
     { to: '/settings', icon: <Settings className="h-5 w-5" />, label: t('sidebar.settings') },
   ];
 

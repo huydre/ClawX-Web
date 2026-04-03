@@ -9,7 +9,8 @@
         "agents": "Agents",
         "devConsole": "Developer Console",
         "docs": "Documentation",
-        "company3d": "Company 3D"
+        "company3d": "Company 3D",
+        "usb": "USB"
     },
     "actions": {
         "save": "Save",
