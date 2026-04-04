@@ -67,7 +67,7 @@ export function CronTaskDialog({ job, onClose, onSave }: Props) {
     try {
       await onSave({
         name: name.trim(), message: message.trim(), schedule: finalSchedule,
-        target: { channelType: selectedChannel?.type || 'telegram', channelId: isDiscord ? discordChannelId.trim() : '', channelName: selectedChannel?.name || 'Telegram' },
+        target: { channelType: selectedChannel?.type || 'telegram', channelId: isDiscord ? discordChannelId.trim() : (selectedChannel?.accountId || ''), channelName: selectedChannel?.name || 'Telegram' },
         agentId: agentId || undefined, sessionTarget: resolvedSession, enabled,
       });
       onClose();
