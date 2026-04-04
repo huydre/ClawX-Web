@@ -581,16 +581,13 @@ class ApiClient {
   }
 
   async getUsbFiles(deviceId: string, path?: string) {
-    const params = new URLSearchParams({ deviceId });
-    if (path) params.set('path', path);
-    return this.request<{ files: any[] }>(`/usb/files?${params}`);
+    const params = path ? `?path=${encodeURIComponent(path)}` : '';
+    return this.request<{ files: any[] }>(`/usb/files/${deviceId}${params}`);
   }
 
   async readUsbFile(deviceId: string, filePath: string) {
-    return this.request<{ content: string; mimeType: string }>('/usb/read', {
-      method: 'POST',
-      body: JSON.stringify({ deviceId, filePath }),
-    });
+    const params = new URLSearchParams({ path: filePath });
+    return this.request<{ content: string; truncated: boolean }>(`/usb/file/${deviceId}?${params}`);
   }
 
   async copyUsbFiles(deviceId: string, files: string[], workspace: string) {

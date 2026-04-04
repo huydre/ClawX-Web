@@ -10,9 +10,8 @@ export interface UsbFile {
   path: string;
   isDirectory: boolean;
   size: number;
-  modifiedAt: number;
-  type: 'document' | 'code' | 'data' | 'media' | 'other';
-  extension: string;
+  modified: string;
+  category: 'documents' | 'code' | 'data' | 'media' | 'other';
 }
 
 export interface UsbDevice {
