@@ -131,14 +131,13 @@ router.post('/update', async (_req, res) => {
       send('log', { line: 'Pre-built dist found, skipping build' });
     }
 
-    // 4. Setup/Update Claw3D (all-in-one, no terminal needed)
-    send('updating_claw3d');
+    // 4. Setup/Update Claw3D (optional, non-blocking)
     try {
+      send('updating_claw3d');
       const { homedir } = await import('os');
       const { join } = await import('path');
       const claw3dDir = join(homedir(), '.clawx', 'claw3d');
       const claw3dScript = `
-        set -e
         export HOME="${homedir()}"
         # Source NVM
         export NVM_DIR="$HOME/.nvm"
@@ -201,10 +200,10 @@ ENVFILE
 
     send('restarting');
 
-    // 5. Restart: exit with non-zero so systemd Restart=on-failure restarts us
+    // 5. Restart via systemd (Restart=on-failure requires non-zero exit)
     setTimeout(() => {
       process.exit(1);
-    }, 1500);
+    }, 2000);
 
     send('done');
   } catch (err) {
