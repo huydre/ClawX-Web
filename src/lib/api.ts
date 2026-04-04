@@ -293,6 +293,18 @@ class ApiClient {
         : input.schedule;
     }
 
+    if (input.target) {
+      const recipientId = input.target.channelId || '';
+      const deliveryTo = input.target.channelType === 'discord' && recipientId
+        ? `channel:${recipientId}`
+        : recipientId;
+      patch.delivery = {
+        mode: 'announce',
+        channel: input.target.channelType || 'telegram',
+        to: deliveryTo,
+      };
+    }
+
     const result = await this.gatewayRpc('cron.update', { id, patch });
     return result.result;
   }
