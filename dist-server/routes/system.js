@@ -97,14 +97,9 @@ router.post('/update', async (_req, res) => {
     const saveSha = updateChecker.getLocalSha();
     try {
         send('started', { sha: saveSha });
-        // 1. git fetch + reset (handles force push / divergent branches)
+        // 1. git pull
         send('pulling');
-<<<<<<< HEAD
         await runStream('git', ['pull', '--rebase=false', 'origin', 'main'], cwd, send);
-=======
-        await runStream('git', ['fetch', 'origin', 'main'], cwd, send);
-        await runStream('git', ['reset', '--hard', 'origin/main'], cwd, send);
->>>>>>> origin/develop
         // 2. pnpm install (prod only — devDeps like tsc not needed for pre-built)
         send('installing');
         await runStream('pnpm', ['install', '--prod', '--frozen-lockfile'], cwd, send)
@@ -125,23 +120,14 @@ router.post('/update', async (_req, res) => {
         else {
             send('log', { line: 'Pre-built dist found, skipping build' });
         }
-<<<<<<< HEAD
-        // 4. Setup/Update Claw3D (optional, non-blocking)
-        try {
-            send('updating_claw3d');
-=======
         // 4. Setup/Update Claw3D (all-in-one, no terminal needed)
         send('updating_claw3d');
         try {
->>>>>>> origin/develop
             const { homedir } = await import('os');
             const { join } = await import('path');
             const claw3dDir = join(homedir(), '.clawx', 'claw3d');
             const claw3dScript = `
-<<<<<<< HEAD
-=======
         set -e
->>>>>>> origin/develop
         export HOME="${homedir()}"
         # Source NVM
         export NVM_DIR="$HOME/.nvm"
@@ -203,10 +189,10 @@ ENVFILE
             send('log', { line: 'Claw3D update skipped (non-critical)' });
         }
         send('restarting');
-        // 5. Restart via systemd (Restart=on-failure requires non-zero exit)
+        // 5. Restart: exit with non-zero so systemd Restart=on-failure restarts us
         setTimeout(() => {
             process.exit(1);
-        }, 2000);
+        }, 1500);
         send('done');
     }
     catch (err) {

@@ -36,14 +36,15 @@ router.get('/files/:deviceId', (req, res) => {
     }
 });
 /**
- * GET /api/usb/file/:deviceId?path=... — read file content (text preview, max 100KB)
+ * GET /api/usb/file/:deviceId/* — read file content (text preview, max 100KB)
  */
-router.get('/file/:deviceId', (req, res) => {
+router.get('/file/:deviceId/*', (req, res) => {
     try {
         const { deviceId } = req.params;
-        const filePath = req.query.path || '';
+        // Express puts the wildcard match in params[0]
+        const filePath = req.params[0] || '';
         if (!filePath) {
-            return res.status(400).json({ error: 'File path required (use ?path=)' });
+            return res.status(400).json({ error: 'File path required' });
         }
         const result = usbMonitor.readFile(deviceId, filePath);
         if (!result) {

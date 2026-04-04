@@ -233,29 +233,27 @@ class ApiClient {
 
   async createCronJob(input: any) {
     // Transform frontend input to Gateway cron.add format
+    // New jobs use sessionTarget='isolated' + payload.kind='agentTurn'
     const recipientId = input.target?.channelId || '';
     const deliveryTo = input.target?.channelType === 'discord' && recipientId
       ? `channel:${recipientId}`
       : recipientId;
 
-    const session = input.sessionTarget || 'isolated';
-    const gatewayInput: Record<string, any> = {
+    const gatewayInput = {
       name: input.name,
       schedule: typeof input.schedule === 'string'
-        ? { kind: 'cron', expr: input.schedule, tz: 'Asia/Ho_Chi_Minh' }
+        ? { kind: 'cron', expr: input.schedule }
         : input.schedule,
-      payload: this._cronPayload(session, input.message || ''),
+      payload: { kind: 'agentTurn', message: input.message || '' },
       enabled: input.enabled ?? true,
       wakeMode: 'next-heartbeat',
-      sessionTarget: session,
+      sessionTarget: 'isolated',
       delivery: {
         mode: 'announce',
         channel: input.target?.channelType || 'telegram',
         to: deliveryTo,
       },
     };
-    if (input.agentId) gatewayInput.agentId = input.agentId;
-
     const result = await this.gatewayRpc('cron.add', gatewayInput);
     return result.result;
   }
@@ -276,33 +274,19 @@ class ApiClient {
 
   async updateCronJob(id: string, input: any) {
     // Gateway cron.update format: { id, patch: { ... } }
+    // payload.kind depends on sessionTarget (isolated=agentTurn, main=systemEvent)
     const session = input.sessionTarget || 'isolated';
-    const patch: Record<string, any> = {};
+    const patch: Record<string, any> = {
+      payload: this._cronPayload(session, input.message),
+    };
 
-    // Only include payload if message is explicitly provided
-    if (input.message !== undefined) {
-      patch.payload = this._cronPayload(session, input.message);
-    }
     if (input.name !== undefined) patch.name = input.name;
     if (input.enabled !== undefined) patch.enabled = input.enabled;
-    if (input.agentId !== undefined) patch.agentId = input.agentId;
 
     if (input.schedule !== undefined) {
       patch.schedule = typeof input.schedule === 'string'
-        ? { kind: 'cron', expr: input.schedule, tz: 'Asia/Ho_Chi_Minh' }
+        ? { kind: 'cron', expr: input.schedule }
         : input.schedule;
-    }
-
-    if (input.target) {
-      const recipientId = input.target.channelId || '';
-      const deliveryTo = input.target.channelType === 'discord' && recipientId
-        ? `channel:${recipientId}`
-        : recipientId;
-      patch.delivery = {
-        mode: 'announce',
-        channel: input.target.channelType || 'telegram',
-        to: deliveryTo,
-      };
     }
 
     const result = await this.gatewayRpc('cron.update', { id, patch });
@@ -314,10 +298,13 @@ class ApiClient {
     return result.result;
   }
 
-  async toggleCronJob(id: string, enabled: boolean) {
+  async toggleCronJob(id: string, enabled: boolean, sessionTarget = 'isolated') {
     const result = await this.gatewayRpc('cron.update', {
       id,
-      patch: { enabled },
+      patch: {
+        enabled,
+        payload: this._cronPayload(sessionTarget),
+      },
     });
     return result.result;
   }
@@ -325,20 +312,6 @@ class ApiClient {
   async triggerCronJob(id: string) {
     const result = await this.gatewayRpc('cron.run', { id, mode: 'force' });
     return result.result;
-  }
-
-  async getCronRuns(jobId: string) {
-    try {
-      const result = await this.gatewayRpc('cron.runs', { id: jobId });
-      // Try different response shapes the Gateway might return
-      const runs = result.result?.runs || result.result?.history || [];
-      if (Array.isArray(runs) && runs.length > 0) return runs;
-      // Retry with jobId param name (some Gateway versions use this)
-      const result2 = await this.gatewayRpc('cron.runs', { jobId });
-      return result2.result?.runs || result2.result?.history || [];
-    } catch {
-      return [];
-    }
   }
 
   // ClawHub API
