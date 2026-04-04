@@ -40,7 +40,7 @@ router.post('/jobs', async (req, res) => {
     }
 
     const normalizedSchedule = typeof schedule === 'string'
-      ? { kind: 'cron', expr: schedule }
+      ? { kind: 'cron', expr: schedule, tz: 'Asia/Ho_Chi_Minh' }
       : schedule;
 
     const payload = sessionTarget === 'main'

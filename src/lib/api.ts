@@ -242,7 +242,7 @@ class ApiClient {
     const gatewayInput: Record<string, any> = {
       name: input.name,
       schedule: typeof input.schedule === 'string'
-        ? { kind: 'cron', expr: input.schedule }
+        ? { kind: 'cron', expr: input.schedule, tz: 'Asia/Ho_Chi_Minh' }
         : input.schedule,
       payload: this._cronPayload(session, input.message || ''),
       enabled: input.enabled ?? true,
@@ -289,7 +289,7 @@ class ApiClient {
 
     if (input.schedule !== undefined) {
       patch.schedule = typeof input.schedule === 'string'
-        ? { kind: 'cron', expr: input.schedule }
+        ? { kind: 'cron', expr: input.schedule, tz: 'Asia/Ho_Chi_Minh' }
         : input.schedule;
     }
 
