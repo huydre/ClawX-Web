@@ -18,6 +18,7 @@ import {
   Box,
   Bot,
   Usb,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
