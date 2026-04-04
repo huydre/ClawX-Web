@@ -5,18 +5,12 @@
 
 import { ChannelType } from './channel';
 
-/**
- * Cron job target (where to send the result)
- */
 export interface CronJobTarget {
   channelType: ChannelType;
   channelId: string;
   channelName: string;
 }
 
-/**
- * Cron job last run info
- */
 export interface CronJobLastRun {
   time: string;
   success: boolean;
@@ -24,18 +18,30 @@ export interface CronJobLastRun {
   duration?: number;
 }
 
-/**
- * Gateway CronSchedule object format
- */
+/** Gateway CronSchedule object format */
 export type CronSchedule =
   | { kind: 'at'; at: string }
   | { kind: 'every'; everyMs: number; anchorMs?: number }
   | { kind: 'cron'; expr: string; tz?: string };
 
-/**
- * Cron job data structure
- * schedule can be a plain cron string or a Gateway CronSchedule object
- */
+/** Session target: isolated (default), main, or custom named session */
+export type SessionTarget = 'isolated' | 'main' | (string & {});
+
+/** Schedule mode toggle for UI */
+export type ScheduleMode = 'recurring' | 'one-time';
+
+/** Cron job run history entry */
+export interface CronJobRun {
+  id: string;
+  jobId: string;
+  startedAt: string;
+  completedAt?: string;
+  status: 'success' | 'failed' | 'running' | 'retrying';
+  error?: string;
+  duration?: number;
+  retryCount?: number;
+}
+
 export interface CronJob {
   id: string;
   name: string;
@@ -43,37 +49,33 @@ export interface CronJob {
   schedule: string | CronSchedule;
   target: CronJobTarget;
   enabled: boolean;
-  sessionTarget?: string;
+  agentId?: string;
+  sessionTarget?: SessionTarget;
   createdAt: string;
   updatedAt: string;
   lastRun?: CronJobLastRun;
   nextRun?: string;
 }
 
-/**
- * Input for creating a cron job
- */
 export interface CronJobCreateInput {
   name: string;
   message: string;
-  schedule: string;
+  schedule: string | CronSchedule;
   target: CronJobTarget;
+  agentId?: string;
+  sessionTarget?: SessionTarget;
   enabled?: boolean;
 }
 
-/**
- * Input for updating a cron job
- */
 export interface CronJobUpdateInput {
   name?: string;
   message?: string;
-  schedule?: string;
+  schedule?: string | CronSchedule;
   target?: CronJobTarget;
+  agentId?: string;
+  sessionTarget?: SessionTarget;
   enabled?: boolean;
-  sessionTarget?: string;
 }
 
-/**
- * Schedule type for UI picker
- */
+/** Schedule type for UI picker */
 export type ScheduleType = 'daily' | 'weekly' | 'monthly' | 'interval' | 'custom';

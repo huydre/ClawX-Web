@@ -233,27 +233,29 @@ class ApiClient {
 
   async createCronJob(input: any) {
     // Transform frontend input to Gateway cron.add format
-    // New jobs use sessionTarget='isolated' + payload.kind='agentTurn'
     const recipientId = input.target?.channelId || '';
     const deliveryTo = input.target?.channelType === 'discord' && recipientId
       ? `channel:${recipientId}`
       : recipientId;
 
-    const gatewayInput = {
+    const session = input.sessionTarget || 'isolated';
+    const gatewayInput: Record<string, any> = {
       name: input.name,
       schedule: typeof input.schedule === 'string'
         ? { kind: 'cron', expr: input.schedule }
         : input.schedule,
-      payload: { kind: 'agentTurn', message: input.message || '' },
+      payload: this._cronPayload(session, input.message || ''),
       enabled: input.enabled ?? true,
       wakeMode: 'next-heartbeat',
-      sessionTarget: 'isolated',
+      sessionTarget: session,
       delivery: {
         mode: 'announce',
         channel: input.target?.channelType || 'telegram',
         to: deliveryTo,
       },
     };
+    if (input.agentId) gatewayInput.agentId = input.agentId;
+
     const result = await this.gatewayRpc('cron.add', gatewayInput);
     return result.result;
   }
@@ -274,14 +276,16 @@ class ApiClient {
 
   async updateCronJob(id: string, input: any) {
     // Gateway cron.update format: { id, patch: { ... } }
-    // payload.kind depends on sessionTarget (isolated=agentTurn, main=systemEvent)
     const session = input.sessionTarget || 'isolated';
-    const patch: Record<string, any> = {
-      payload: this._cronPayload(session, input.message),
-    };
+    const patch: Record<string, any> = {};
 
+    // Only include payload if message is explicitly provided
+    if (input.message !== undefined) {
+      patch.payload = this._cronPayload(session, input.message);
+    }
     if (input.name !== undefined) patch.name = input.name;
     if (input.enabled !== undefined) patch.enabled = input.enabled;
+    if (input.agentId !== undefined) patch.agentId = input.agentId;
 
     if (input.schedule !== undefined) {
       patch.schedule = typeof input.schedule === 'string'
@@ -298,13 +302,10 @@ class ApiClient {
     return result.result;
   }
 
-  async toggleCronJob(id: string, enabled: boolean, sessionTarget = 'isolated') {
+  async toggleCronJob(id: string, enabled: boolean) {
     const result = await this.gatewayRpc('cron.update', {
       id,
-      patch: {
-        enabled,
-        payload: this._cronPayload(sessionTarget),
-      },
+      patch: { enabled },
     });
     return result.result;
   }
@@ -312,6 +313,15 @@ class ApiClient {
   async triggerCronJob(id: string) {
     const result = await this.gatewayRpc('cron.run', { id, mode: 'force' });
     return result.result;
+  }
+
+  async getCronRuns(jobId: string) {
+    try {
+      const result = await this.gatewayRpc('cron.runs', { id: jobId });
+      return result.result?.runs || [];
+    } catch {
+      return [];
+    }
   }
 
   // ClawHub API

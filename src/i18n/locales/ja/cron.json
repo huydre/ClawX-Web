@@ -19,7 +19,12 @@
         "runNow": "今すぐ実行",
         "deleteConfirm": "このタスクを削除してもよろしいですか？",
         "last": "前回",
-        "next": "次回"
+        "next": "次回",
+        "history": "履歴",
+        "retryPolicy": "リトライ",
+        "retryPolicyDesc": "失敗時のリトライ: 30秒 → 1分 → 5分 → 15分 → 60分",
+        "agent": "エージェント",
+        "session": "セッション"
     },
     "dialog": {
         "createTitle": "タスク作成",
@@ -40,7 +45,24 @@
         "discordChannelIdDesc": "Discordチャンネルを右クリック → チャンネルIDをコピー",
         "enableImmediately": "すぐに有効化",
         "enableImmediatelyDesc": "作成後すぐにこのタスクを実行開始",
-        "saveChanges": "変更を保存"
+        "saveChanges": "変更を保存",
+        "agent": "エージェント",
+        "agentDefault": "（デフォルト）",
+        "agentPlaceholder": "エージェントを選択...",
+        "scheduleMode": "スケジュールモード",
+        "recurring": "定期実行",
+        "oneTime": "一回限り",
+        "dateTime": "日時",
+        "dateTimeDesc": "この時刻に一度だけ実行されます",
+        "sessionType": "セッションタイプ",
+        "sessionIsolated": "分離",
+        "sessionIsolatedDesc": "毎回新しいセッションで実行",
+        "sessionMain": "メイン",
+        "sessionMainDesc": "ハートビート内で実行、コンテキスト共有",
+        "sessionCustom": "カスタム",
+        "sessionCustomDesc": "永続的な名前付きセッション",
+        "sessionName": "セッション名",
+        "sessionNamePlaceholder": "my-session"
     },
     "presets": {
         "everyMinute": "毎分",
@@ -51,6 +73,20 @@
         "daily6pm": "毎日 午後6時",
         "weeklyMon": "毎週 (月曜 午前9時)",
         "monthly1st": "毎月 (1日 午前9時)"
+    },
+    "runs": {
+        "title": "実行履歴",
+        "empty": "まだ実行履歴がありません",
+        "status": {
+            "success": "成功",
+            "failed": "失敗",
+            "running": "実行中",
+            "retrying": "リトライ中"
+        },
+        "duration": "実行時間",
+        "error": "エラー",
+        "retries": "リトライ回数",
+        "startedAt": "開始時刻"
     },
     "toast": {
         "created": "タスクを作成しました",
@@ -65,6 +101,7 @@
         "messageRequired": "メッセージを入力してください",
         "channelRequired": "チャンネルを選択してください",
         "discordIdRequired": "DiscordチャンネルIDを入力してください",
-        "scheduleRequired": "スケジュールを選択または入力してください"
+        "scheduleRequired": "スケジュールを選択または入力してください",
+        "runsLoadFailed": "実行履歴の読み込みに失敗しました"
     }
 }
