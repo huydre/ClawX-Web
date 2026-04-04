@@ -103,9 +103,14 @@ router.post('/update', async (_req, res) => {
   try {
     send('started', { sha: saveSha });
 
-    // 1. git pull
+    // 1. git fetch + reset (handles force push / divergent branches)
     send('pulling');
+<<<<<<< HEAD
     await runStream('git', ['pull', '--rebase=false', 'origin', 'main'], cwd, send);
+=======
+    await runStream('git', ['fetch', 'origin', 'main'], cwd, send);
+    await runStream('git', ['reset', '--hard', 'origin/main'], cwd, send);
+>>>>>>> origin/develop
 
     // 2. pnpm install (prod only — devDeps like tsc not needed for pre-built)
     send('installing');
