@@ -36,13 +36,13 @@ router.get('/files/:deviceId', (req, res) => {
     }
 });
 /**
- * GET /api/usb/file/:deviceId/* — read file content (text preview, max 100KB)
+ * GET /api/usb/file/:deviceId/:filePath — read file content (text preview, max 100KB)
+ * filePath is passed as query param ?path=... to avoid Express 5 wildcard issues
  */
-router.get('/file/:deviceId/*', (req, res) => {
+router.get('/file/:deviceId', (req, res) => {
     try {
         const { deviceId } = req.params;
-        // Express puts the wildcard match in params[0]
-        const filePath = req.params[0] || '';
+        const filePath = req.query.path || '';
         if (!filePath) {
             return res.status(400).json({ error: 'File path required' });
         }
