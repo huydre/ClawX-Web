@@ -41,6 +41,7 @@ function parseSize(sizeStr) {
 }
 export class UsbMonitor extends EventEmitter {
     devices = new Map();
+    failedMounts = new Set();
     pollTimer = null;
     isLinux;
     constructor() {
@@ -147,7 +148,7 @@ export class UsbMonitor extends EventEmitter {
                 await execFileAsync('udisksctl', ['unmount', '-b', `/dev/${deviceId}`], { timeout: 15000 });
             }
             catch {
-                execSync(`umount /dev/${deviceId} 2>/dev/null || umount ${device.mountPath} 2>/dev/null || true`, { timeout: 10000 });
+                execSync(`sudo umount /dev/${deviceId} 2>/dev/null || sudo umount ${device.mountPath} 2>/dev/null || true`, { timeout: 10000 });
             }
             // Clean up manual mount dir if we created it
             if (device.mountPath?.startsWith('/mnt/usb-')) {
@@ -247,13 +248,15 @@ export class UsbMonitor extends EventEmitter {
             for (const [id] of this.devices) {
                 if (!currentIds.has(id)) {
                     this.devices.delete(id);
+                    this.failedMounts.delete(id);
                     this.emit('disconnected', id);
                     logger.info('USB device disconnected', { deviceId: id });
                 }
             }
             // Detect new connections
             for (const part of usbPartitions) {
-                if (!this.devices.has(part.name)) {
+                if (!this.devices.has(part.name) && !this.failedMounts.has(part.name)) {
+                    logger.info('USB monitor: new partition detected', { name: part.name, label: part.label, mountpoint: part.mountpoint });
                     await this.handleNewDevice(part);
                 }
             }
@@ -333,13 +336,14 @@ export class UsbMonitor extends EventEmitter {
             if (!mounted) {
                 try {
                     const mountDir = `/mnt/usb-${deviceId}`;
-                    execSync(`mkdir -p ${mountDir} && mount /dev/${deviceId} ${mountDir}`, { timeout: 10000 });
+                    execSync(`sudo mkdir -p ${mountDir} && sudo mount /dev/${deviceId} ${mountDir}`, { timeout: 10000 });
                     device.mountPath = mountDir;
                     mounted = true;
                 }
                 catch (err) {
                     logger.warn('USB monitor: all mount methods failed', { deviceId, error: err });
                     this.devices.delete(deviceId);
+                    this.failedMounts.add(deviceId);
                     return;
                 }
             }
