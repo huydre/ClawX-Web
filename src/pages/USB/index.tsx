@@ -42,8 +42,8 @@ function formatSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
-/** Format timestamp to locale date string */
-function formatDate(ts: number): string {
+/** Format timestamp or ISO string to locale date string */
+function formatDate(ts: string | number): string {
   if (!ts) return '--';
   return new Date(ts).toLocaleDateString(undefined, {
     year: 'numeric',
@@ -87,7 +87,6 @@ export function USB() {
     scanning,
     error,
     fetchDevices,
-    fetchFiles,
     selectDevice,
     navigateTo,
     copyToWorkspace,
