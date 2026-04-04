@@ -13,8 +13,11 @@ import { useAgentsStore } from '@/stores/agents';
 import { ChannelIcon } from '@/components/ui/ChannelIcon';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { api } from '@/lib/api';
 import { schedulePresets, extractCronExpr } from './cron-schedule-helpers';
 import type { CronJob, CronJobCreateInput, ScheduleMode, SessionTarget } from '@/types/cron';
+
+interface KnownRecipient { id: string; label: string; }
 
 interface Props { job?: CronJob; onClose: () => void; onSave: (input: CronJobCreateInput) => Promise<void>; }
 
@@ -46,8 +49,36 @@ export function CronTaskDialog({ job, onClose, onSave }: Props) {
   const isTelegram = selectedChannel?.type === 'telegram';
   const needsRecipientId = isDiscord || isTelegram;
 
+  const [knownRecipients, setKnownRecipients] = useState<KnownRecipient[]>([]);
+  const [useManualId, setUseManualId] = useState(false);
+
   useEffect(() => { if (agents.length === 0) fetchAgents(); }, [agents.length, fetchAgents]);
   useEffect(() => { if (!agentId && defaultId) setAgentId(defaultId); }, [defaultId, agentId]);
+
+  // Fetch known recipients from sessions.list when channel changes
+  useEffect(() => {
+    if (!selectedChannel) return;
+    const chType = selectedChannel.type;
+    if (chType !== 'telegram' && chType !== 'discord') { setKnownRecipients([]); return; }
+    (async () => {
+      try {
+        const result = await api.gatewayRpc('sessions.list', { limit: 100 });
+        if (!result.success || !result.result) return;
+        const sessions = Array.isArray(result.result.sessions) ? result.result.sessions : [];
+        const recipients: KnownRecipient[] = [];
+        const seen = new Set<string>();
+        for (const s of sessions) {
+          const key = String(s.key || '');
+          if (!key.startsWith(`${chType}:`)) continue;
+          const id = key.split(':')[1];
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          recipients.push({ id, label: s.displayName || s.label || id });
+        }
+        setKnownRecipients(recipients);
+      } catch { setKnownRecipients([]); }
+    })();
+  }, [selectedChannel]);
 
   const handleSubmit = async () => {
     if (!name.trim()) { toast.error(t('toast.nameRequired')); return; }
@@ -179,8 +210,29 @@ export function CronTaskDialog({ job, onClose, onSave }: Props) {
           {needsRecipientId && (
             <div className="space-y-2">
               <Label>{isTelegram ? t('dialog.telegramChatId') : t('dialog.discordChannelId')}</Label>
-              <Input value={recipientId} onChange={(e) => setRecipientId(e.target.value)}
-                placeholder={isTelegram ? t('dialog.telegramChatIdPlaceholder') : t('dialog.discordChannelIdPlaceholder')} />
+              {knownRecipients.length > 0 && !useManualId ? (
+                <>
+                  <Select value={recipientId} onChange={(e) => setRecipientId(e.target.value)}>
+                    <option value="">{t('dialog.selectRecipient')}</option>
+                    {knownRecipients.map((r) => (
+                      <option key={r.id} value={r.id}>{r.label} ({r.id})</option>
+                    ))}
+                  </Select>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setUseManualId(true)} className="text-xs">
+                    {t('dialog.enterManually')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Input value={recipientId} onChange={(e) => setRecipientId(e.target.value)}
+                    placeholder={isTelegram ? t('dialog.telegramChatIdPlaceholder') : t('dialog.discordChannelIdPlaceholder')} />
+                  {knownRecipients.length > 0 && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setUseManualId(false)} className="text-xs">
+                      {t('dialog.selectFromList')}
+                    </Button>
+                  )}
+                </>
+              )}
               <p className="text-xs text-muted-foreground">
                 {isTelegram ? t('dialog.telegramChatIdDesc') : t('dialog.discordChannelIdDesc')}
               </p>
