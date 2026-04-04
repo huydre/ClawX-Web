@@ -28,7 +28,7 @@ export function transformGatewayJob(job: any): CronJob {
     updatedAt: job.updatedAtMs ? new Date(job.updatedAtMs).toISOString() : new Date().toISOString(),
     lastRun: state.lastRunAtMs ? {
       time: new Date(state.lastRunAtMs).toISOString(),
-      success: state.lastRunStatus === 'success',
+      success: state.lastRunStatus === 'success' || state.lastRunStatus === 'ok' || state.lastRunStatus === 'completed' || state.lastRunStatus === true,
       error: typeof state.lastError === 'string' ? state.lastError : undefined,
       duration: state.lastDurationMs,
     } : undefined,
