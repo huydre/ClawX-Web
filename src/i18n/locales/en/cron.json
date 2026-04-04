@@ -92,7 +92,8 @@
         "duration": "Duration",
         "error": "Error",
         "retries": "Retries",
-        "startedAt": "Started"
+        "startedAt": "Started",
+        "lastRunFallback": "Showing last known run. Full history not available."
     },
     "toast": {
         "created": "Task created",

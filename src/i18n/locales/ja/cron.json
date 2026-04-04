@@ -92,7 +92,8 @@
         "duration": "実行時間",
         "error": "エラー",
         "retries": "リトライ回数",
-        "startedAt": "開始時刻"
+        "startedAt": "開始時刻",
+        "lastRunFallback": "最後の実行情報を表示中。完全な履歴は利用できません。"
     },
     "toast": {
         "created": "タスクを作成しました",

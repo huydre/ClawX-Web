@@ -318,7 +318,12 @@ class ApiClient {
   async getCronRuns(jobId: string) {
     try {
       const result = await this.gatewayRpc('cron.runs', { id: jobId });
-      return result.result?.runs || [];
+      // Try different response shapes the Gateway might return
+      const runs = result.result?.runs || result.result?.history || [];
+      if (Array.isArray(runs) && runs.length > 0) return runs;
+      // Retry with jobId param name (some Gateway versions use this)
+      const result2 = await this.gatewayRpc('cron.runs', { jobId });
+      return result2.result?.runs || result2.result?.history || [];
     } catch {
       return [];
     }

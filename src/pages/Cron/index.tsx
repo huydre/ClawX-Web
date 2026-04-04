@@ -178,6 +178,7 @@ export function Cron() {
       <CronRunsDrawer
         jobId={selectedJobId}
         jobName={selectedJob?.name}
+        lastRun={selectedJob?.lastRun}
         onClose={clearSelection}
       />
     </div>
