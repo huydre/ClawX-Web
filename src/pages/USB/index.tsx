@@ -54,11 +54,11 @@ function formatDate(ts: number): string {
   });
 }
 
-/** Icon for file type */
-function FileTypeIcon({ type }: { type: UsbFile['type'] }) {
+/** Icon for file category */
+function FileTypeIcon({ type }: { type: UsbFile['category'] }) {
   const cls = 'h-5 w-5 shrink-0';
   switch (type) {
-    case 'document':
+    case 'documents':
       return <FileText className={cn(cls, 'text-blue-500')} />;
     case 'code':
       return <FileCode className={cn(cls, 'text-green-500')} />;
@@ -71,8 +71,8 @@ function FileTypeIcon({ type }: { type: UsbFile['type'] }) {
   }
 }
 
-/** Badge variant for file type */
-function typeBadgeVariant(type: UsbFile['type']): 'default' | 'secondary' | 'outline' | 'destructive' {
+/** Badge variant for file category */
+function typeBadgeVariant(type: UsbFile['category']): 'default' | 'secondary' | 'outline' | 'destructive' {
   return type === 'other' ? 'outline' : 'secondary';
 }
 
@@ -177,7 +177,7 @@ export function USB() {
         if (
           selectedDevice &&
           file.size < 100_000 &&
-          ['document', 'code', 'data'].includes(file.type)
+          ['documents', 'code', 'data'].includes(file.category)
         ) {
           setPreviewLoading(true);
           import('@/lib/api').then(({ api }) =>
@@ -426,7 +426,7 @@ export function USB() {
                       {file.isDirectory ? (
                         <Folder className="h-5 w-5 text-amber-500" />
                       ) : (
-                        <FileTypeIcon type={file.type} />
+                        <FileTypeIcon type={file.category} />
                       )}
                     </td>
                     <td
@@ -437,8 +437,8 @@ export function USB() {
                     </td>
                     <td className="p-3" onClick={() => handleFileClick(file)}>
                       {!file.isDirectory && (
-                        <Badge variant={typeBadgeVariant(file.type)} className="text-[10px] font-normal">
-                          {t(`fileTypes.${file.type}`)}
+                        <Badge variant={typeBadgeVariant(file.category)} className="text-[10px] font-normal">
+                          {t(`fileTypes.${file.category}`)}
                         </Badge>
                       )}
                       {file.isDirectory && (
@@ -455,7 +455,7 @@ export function USB() {
                       className="p-3 text-muted-foreground"
                       onClick={() => handleFileClick(file)}
                     >
-                      {formatDate(file.modifiedAt)}
+                      {formatDate(file.modified)}
                     </td>
                   </tr>
                 );
@@ -520,9 +520,9 @@ export function USB() {
         {previewFile && (
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Badge variant="secondary">{previewFile.extension || previewFile.type}</Badge>
+              <Badge variant="secondary">{previewFile.category}</Badge>
               <span>{formatSize(previewFile.size)}</span>
-              <span>{formatDate(previewFile.modifiedAt)}</span>
+              <span>{formatDate(previewFile.modified)}</span>
             </div>
             {previewLoading ? (
               <div className="space-y-2">
