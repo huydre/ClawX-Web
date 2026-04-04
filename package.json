@@ -21,11 +21,11 @@
         "dev": "vite",
         "dev:server": "nodemon",
         "build": "vite build",
-        "build:server": "tsc --project tsconfig.server.json",
+        "build:server": "npx tsc --project tsconfig.server.json",
         "start": "node dist-server/index.js",
         "preview": "vite preview",
         "lint": "eslint . --fix",
-        "typecheck": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit",
+        "typecheck": "npx tsc --noEmit && npx tsc --project tsconfig.server.json --noEmit",
         "test": "vitest run",
         "test:e2e": "playwright test"
     },
