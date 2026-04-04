@@ -103,6 +103,8 @@ app.use('/api/agents-config', agentsConfigRouter);
 app.use('/api/usb', usbRouter);
 import claw3dRouter from './routes/claw3d.js';
 app.use('/api/claw3d', claw3dRouter);
+import cronRouter from './routes/cron.js';
+app.use('/api/cron', cronRouter);
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
     maxAge: '1y',

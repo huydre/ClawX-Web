@@ -41,6 +41,7 @@ function parseSize(sizeStr) {
 }
 export class UsbMonitor extends EventEmitter {
     devices = new Map();
+    failedMounts = new Set();
     pollTimer = null;
     isLinux;
     constructor() {
@@ -142,16 +143,23 @@ export class UsbMonitor extends EventEmitter {
         try {
             device.status = 'ejecting';
             this.emit('status-change', deviceId, 'ejecting');
-            await execFileAsync('udisksctl', ['unmount', '-b', `/dev/${deviceId}`], { timeout: 15000 });
-            // Also power off if possible
+            // Try udisksctl unmount first, fallback to umount
             try {
-                // Get parent device (e.g. sda from sda1)
+                await execFileAsync('udisksctl', ['unmount', '-b', `/dev/${deviceId}`], { timeout: 15000 });
+            }
+            catch {
+                execSync(`sudo umount /dev/${deviceId} 2>/dev/null || sudo umount ${device.mountPath} 2>/dev/null || true`, { timeout: 10000 });
+            }
+            // Clean up manual mount dir if we created it
+            if (device.mountPath?.startsWith('/mnt/usb-')) {
+                execSync(`rmdir ${device.mountPath} 2>/dev/null || true`);
+            }
+            // Power off if possible (optional)
+            try {
                 const parentDev = deviceId.replace(/\d+$/, '');
                 await execFileAsync('udisksctl', ['power-off', '-b', `/dev/${parentDev}`], { timeout: 10000 });
             }
-            catch {
-                // power-off is optional
-            }
+            catch { /* optional */ }
             this.devices.delete(deviceId);
             this.emit('disconnected', deviceId);
             logger.info('USB device ejected', { deviceId });
@@ -240,13 +248,15 @@ export class UsbMonitor extends EventEmitter {
             for (const [id] of this.devices) {
                 if (!currentIds.has(id)) {
                     this.devices.delete(id);
+                    this.failedMounts.delete(id);
                     this.emit('disconnected', id);
                     logger.info('USB device disconnected', { deviceId: id });
                 }
             }
             // Detect new connections
             for (const part of usbPartitions) {
-                if (!this.devices.has(part.name)) {
+                if (!this.devices.has(part.name) && !this.failedMounts.has(part.name)) {
+                    logger.info('USB monitor: new partition detected', { name: part.name, label: part.label, mountpoint: part.mountpoint });
                     await this.handleNewDevice(part);
                 }
             }
@@ -308,19 +318,34 @@ export class UsbMonitor extends EventEmitter {
         logger.info('USB device connected', { deviceId, label });
         // Auto-mount if not mounted
         if (!device.mountPath) {
+            device.status = 'mounting';
+            let mounted = false;
+            // Try udisksctl first (no root needed)
             try {
-                device.status = 'mounting';
                 const { stdout } = await execFileAsync('udisksctl', ['mount', '-b', `/dev/${deviceId}`], { timeout: 15000 });
-                // Parse mountpoint from output like "Mounted /dev/sda1 at /media/user/LABEL"
                 const match = stdout.match(/at (.+?)\.?\s*$/);
                 if (match) {
                     device.mountPath = match[1].trim();
+                    mounted = true;
                 }
             }
-            catch (err) {
-                logger.warn('USB monitor: auto-mount failed', { deviceId, error: err });
-                this.devices.delete(deviceId);
-                return;
+            catch {
+                logger.debug('USB monitor: udisksctl mount failed, trying fallback');
+            }
+            // Fallback: mount manually (needs sudo or mount permissions)
+            if (!mounted) {
+                try {
+                    const mountDir = `/mnt/usb-${deviceId}`;
+                    execSync(`sudo mkdir -p ${mountDir} && sudo mount /dev/${deviceId} ${mountDir}`, { timeout: 10000 });
+                    device.mountPath = mountDir;
+                    mounted = true;
+                }
+                catch (err) {
+                    logger.warn('USB monitor: all mount methods failed', { deviceId, error: err });
+                    this.devices.delete(deviceId);
+                    this.failedMounts.add(deviceId);
+                    return;
+                }
             }
         }
         if (!device.mountPath || !existsSync(device.mountPath)) {
