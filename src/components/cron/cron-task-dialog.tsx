@@ -39,10 +39,12 @@ export function CronTaskDialog({ job, onClose, onSave }: Props) {
   );
   const initChId = job?.target?.channelId || (job?.target?.channelType ? channels.find(c => c.type === job.target.channelType)?.id : '') || '';
   const [channelId, setChannelId] = useState(initChId);
-  const [discordChannelId, setDiscordChannelId] = useState('');
+  const [recipientId, setRecipientId] = useState(job?.target?.channelId || '');
   const [enabled, setEnabled] = useState(job?.enabled ?? true);
   const selectedChannel = channels.find((c) => c.id === channelId);
   const isDiscord = selectedChannel?.type === 'discord';
+  const isTelegram = selectedChannel?.type === 'telegram';
+  const needsRecipientId = isDiscord || isTelegram;
 
   useEffect(() => { if (agents.length === 0) fetchAgents(); }, [agents.length, fetchAgents]);
   useEffect(() => { if (!agentId && defaultId) setAgentId(defaultId); }, [defaultId, agentId]);
@@ -51,7 +53,7 @@ export function CronTaskDialog({ job, onClose, onSave }: Props) {
     if (!name.trim()) { toast.error(t('toast.nameRequired')); return; }
     if (!message.trim()) { toast.error(t('toast.messageRequired')); return; }
     if (!channelId) { toast.error(t('toast.channelRequired')); return; }
-    if (isDiscord && !discordChannelId.trim()) { toast.error(t('toast.discordIdRequired')); return; }
+    if (needsRecipientId && !recipientId.trim()) { toast.error(isTelegram ? t('toast.recipientIdRequired') : t('toast.discordIdRequired')); return; }
     let finalSchedule: string | { kind: 'at'; at: string };
     if (scheduleMode === 'one-time') {
       if (!oneTimeDate) { toast.error(t('toast.scheduleRequired')); return; }
@@ -67,7 +69,7 @@ export function CronTaskDialog({ job, onClose, onSave }: Props) {
     try {
       await onSave({
         name: name.trim(), message: message.trim(), schedule: finalSchedule,
-        target: { channelType: selectedChannel?.type || 'telegram', channelId: isDiscord ? discordChannelId.trim() : (selectedChannel?.accountId || ''), channelName: selectedChannel?.name || 'Telegram' },
+        target: { channelType: selectedChannel?.type || 'telegram', channelId: needsRecipientId ? recipientId.trim() : '', channelName: selectedChannel?.name || 'Telegram' },
         agentId: agentId || undefined, sessionTarget: resolvedSession, enabled,
       });
       onClose();
@@ -174,11 +176,14 @@ export function CronTaskDialog({ job, onClose, onSave }: Props) {
               </div>
             )}
           </div>
-          {isDiscord && (
+          {needsRecipientId && (
             <div className="space-y-2">
-              <Label>{t('dialog.discordChannelId')}</Label>
-              <Input value={discordChannelId} onChange={(e) => setDiscordChannelId(e.target.value)} placeholder={t('dialog.discordChannelIdPlaceholder')} />
-              <p className="text-xs text-muted-foreground">{t('dialog.discordChannelIdDesc')}</p>
+              <Label>{isTelegram ? t('dialog.telegramChatId') : t('dialog.discordChannelId')}</Label>
+              <Input value={recipientId} onChange={(e) => setRecipientId(e.target.value)}
+                placeholder={isTelegram ? t('dialog.telegramChatIdPlaceholder') : t('dialog.discordChannelIdPlaceholder')} />
+              <p className="text-xs text-muted-foreground">
+                {isTelegram ? t('dialog.telegramChatIdDesc') : t('dialog.discordChannelIdDesc')}
+              </p>
             </div>
           )}
           <div className="flex items-center justify-between">

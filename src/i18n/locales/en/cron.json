@@ -43,6 +43,9 @@
         "discordChannelId": "Discord Channel ID",
         "discordChannelIdPlaceholder": "e.g., 1438452657525100686",
         "discordChannelIdDesc": "Right-click the Discord channel → Copy Channel ID",
+        "telegramChatId": "Telegram Chat ID",
+        "telegramChatIdPlaceholder": "e.g., 123456789",
+        "telegramChatIdDesc": "Numeric chat ID. Use @userinfobot on Telegram to find yours.",
         "enableImmediately": "Enable immediately",
         "enableImmediatelyDesc": "Start running this task after creation",
         "saveChanges": "Save Changes",
@@ -101,6 +104,7 @@
         "messageRequired": "Please enter a message",
         "channelRequired": "Please select a channel",
         "discordIdRequired": "Please enter a Discord Channel ID",
+        "recipientIdRequired": "Please enter the recipient ID (Chat ID or Channel ID)",
         "scheduleRequired": "Please select or enter a schedule",
         "runsLoadFailed": "Failed to load run history"
     }
