@@ -272,16 +272,14 @@ export function Files() {
               </tr>
             </thead>
             <tbody>
-              {filteredFiles.map((file, idx) => (
+              {filteredFiles.map((file) => (
                 <tr
                   key={file.path}
                   onClick={() => handleFileClick(file)}
                   className={cn(
                     'border-b last:border-0 transition-colors cursor-pointer',
-                    'hover:bg-accent/50',
-                    'animate-in fade-in-0 slide-in-from-left-1'
+                    'hover:bg-accent/50'
                   )}
-                  style={{ animationDelay: `${Math.min(idx * 20, 200)}ms` }}
                 >
                   <td className="p-3">
                     {file.isDirectory ? (
