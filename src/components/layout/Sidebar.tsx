@@ -19,6 +19,7 @@ import {
   Bot,
   Usb,
   Clock,
+  FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -100,6 +101,7 @@ export function Sidebar() {
     ...(usbDeviceCount > 0
       ? [{ to: '/usb', icon: <Usb className="h-5 w-5" />, label: t('sidebar.usb') }]
       : []),
+    { to: '/files', icon: <FolderOpen className="h-5 w-5" />, label: t('sidebar.files', 'Files') },
     { to: '/settings', icon: <Settings className="h-5 w-5" />, label: t('sidebar.settings') },
   ];
 

@@ -1,0 +1,30 @@
+{
+  "title": "ファイル",
+  "searchPlaceholder": "ファイル検索...",
+  "emptyFolder": "空のフォルダ",
+  "noResults": "一致するファイルがありません",
+  "noRoots": "アクセス可能なフォルダがありません",
+  "noRootsDesc": "サーバーにファイルルートが設定されていません。",
+  "fileName": "名前",
+  "fileType": "種類",
+  "fileSize": "サイズ",
+  "fileModified": "更新日",
+  "folder": "フォルダ",
+  "breadcrumb": {
+    "root": "ルート"
+  },
+  "categories": {
+    "image": "画像",
+    "video": "動画",
+    "audio": "音声",
+    "documents": "文書",
+    "code": "コード",
+    "data": "データ",
+    "other": "その他"
+  },
+  "preview": {
+    "notAvailable": "このファイルはプレビューできません。",
+    "prev": "前",
+    "next": "次"
+  }
+}

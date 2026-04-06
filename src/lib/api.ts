@@ -577,6 +577,26 @@ class ApiClient {
     });
   }
 
+  // File Manager API
+  async getFmRoots() {
+    return this.request<{ roots: any[] }>('/fm/roots');
+  }
+
+  async getFmFiles(rootId: string, path?: string) {
+    const params = path && path !== '/' ? `?path=${encodeURIComponent(path)}` : '';
+    return this.request<{ files: any[] }>(`/fm/list/${rootId}${params}`);
+  }
+
+  /** Build URL for streaming a file (used as <img>/<video>/<audio> src) */
+  getFmServeUrl(rootId: string, filePath: string): string {
+    return `/api/fm/serve/${rootId}?path=${encodeURIComponent(filePath)}`;
+  }
+
+  /** Build URL for image thumbnail */
+  getFmThumbUrl(rootId: string, filePath: string, w = 200, h = 200): string {
+    return `/api/fm/thumb/${rootId}?path=${encodeURIComponent(filePath)}&w=${w}&h=${h}`;
+  }
+
   // System / Update API (web-only)
   async getSystemInfo() {
     return this.request<{

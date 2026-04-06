@@ -12,6 +12,7 @@ import enCron from './locales/en/cron.json';
 import enSetup from './locales/en/setup.json';
 import enAgents from './locales/en/agents.json';
 import enUsb from './locales/en/usb.json';
+import enFiles from './locales/en/files.json';
 
 // VI
 import viCommon from './locales/vi/common.json';
@@ -24,6 +25,7 @@ import viCron from './locales/vi/cron.json';
 import viSetup from './locales/vi/setup.json';
 import viAgents from './locales/vi/agents.json';
 import viUsb from './locales/vi/usb.json';
+import viFiles from './locales/vi/files.json';
 
 // JA
 import jaCommon from './locales/ja/common.json';
@@ -36,6 +38,7 @@ import jaCron from './locales/ja/cron.json';
 import jaSetup from './locales/ja/setup.json';
 import jaAgents from './locales/ja/agents.json';
 import jaUsb from './locales/ja/usb.json';
+import jaFiles from './locales/ja/files.json';
 
 export const SUPPORTED_LANGUAGES = [
     { code: 'en', label: 'English' },
@@ -57,6 +60,7 @@ const resources = {
         setup: enSetup,
         agents: enAgents,
         usb: enUsb,
+        files: enFiles,
     },
     vi: {
         common: viCommon,
@@ -69,6 +73,7 @@ const resources = {
         setup: viSetup,
         agents: viAgents,
         usb: viUsb,
+        files: viFiles,
     },
     ja: {
         common: jaCommon,
@@ -81,6 +86,7 @@ const resources = {
         setup: jaSetup,
         agents: jaAgents,
         usb: jaUsb,
+        files: jaFiles,
     },
 };
 
@@ -91,7 +97,7 @@ i18n
         lng: 'en', // will be overridden by settings store
         fallbackLng: 'en',
         defaultNS: 'common',
-        ns: ['common', 'settings', 'dashboard', 'chat', 'channels', 'skills', 'cron', 'setup', 'agents', 'usb'],
+        ns: ['common', 'settings', 'dashboard', 'chat', 'channels', 'skills', 'cron', 'setup', 'agents', 'usb', 'files'],
         interpolation: {
             escapeValue: false, // React already escapes
         },
