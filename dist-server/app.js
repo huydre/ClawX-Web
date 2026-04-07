@@ -109,26 +109,22 @@ import claw3dRouter from './routes/claw3d.js';
 app.use('/api/claw3d', claw3dRouter);
 import cronRouter from './routes/cron.js';
 app.use('/api/cron', cronRouter);
-// noVNC reverse proxy — serves noVNC client + WebSocket through port 2003
-// so it works via Cloudflare tunnel without exposing port 6080
-// noVNC proxy — manual rewrite to strip /vnc prefix before proxying
-const novncProxy = createProxyMiddleware({
+// noVNC reverse proxy — proxy /vnc/* → localhost:6080/*
+import httpProxy from 'http-proxy';
+const novncProxy = httpProxy.createProxyServer({
     target: 'http://127.0.0.1:6080',
-    changeOrigin: true,
     ws: true,
-    on: {
-        proxyReq: (proxyReq, req) => {
-            // Strip /vnc prefix from path
-            const stripped = req.url?.replace(/^\/vnc/, '') || '/';
-            proxyReq.path = stripped;
-        },
-        error: (_err, _req, res) => {
-            if (res.writeHead)
-                res.status(502).send('noVNC is unavailable');
-        },
-    },
 });
-app.use('/vnc', novncProxy);
+novncProxy.on('error', (_err, _req, res) => {
+    if (res.writeHead) {
+        res.writeHead(502);
+        res.end('noVNC unavailable');
+    }
+});
+// HTTP: Express strips /vnc mount, so req.url = /vnc.html → proxy to :6080/vnc.html
+app.use('/vnc', (req, res) => {
+    novncProxy.web(req, res);
+});
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
     maxAge: '1y',

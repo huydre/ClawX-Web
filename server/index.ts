@@ -60,7 +60,7 @@ async function start() {
       } else if (url.startsWith('/vnc')) {
         // noVNC WebSocket proxy — strip /vnc prefix before forwarding
         req.url = url.replace(/^\/vnc/, '') || '/';
-        (novncProxy as any).upgrade(req, socket, head);
+        novncProxy.ws(req, socket, head);
       }
     });
 

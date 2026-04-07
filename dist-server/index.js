@@ -54,7 +54,7 @@ async function start() {
             else if (url.startsWith('/vnc')) {
                 // noVNC WebSocket proxy — strip /vnc prefix before forwarding
                 req.url = url.replace(/^\/vnc/, '') || '/';
-                novncProxy.upgrade(req, socket, head);
+                novncProxy.ws(req, socket, head);
             }
         });
         // Set gateway token from environment BEFORE starting gateway
