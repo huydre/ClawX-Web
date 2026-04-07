@@ -1,6 +1,6 @@
-# Phase 6: Testing & LIVA Deployment Validation
+# Phase 6: Testing & LIVA Deployment Validation (v2)
 
-**Priority:** HIGH | **Status:** Pending
+**Priority:** HIGH | **Status:** Pending | **Depends on:** Phase 5
 
 ## Overview
 
@@ -39,13 +39,40 @@ curl -X POST http://localhost:2003/api/browser/stop
 # Expect: state.status = 'stopped'
 ```
 
-### TC-04: Navigate + Screenshot
+### TC-04: Navigate + Snapshot + Screenshot
 ```bash
 curl -X POST http://localhost:2003/api/browser/start
 curl -X POST http://localhost:2003/api/browser/navigate \
   -H 'Content-Type: application/json' -d '{"url":"https://google.com"}'
-curl -s http://localhost:2003/api/browser/screenshot | jq -r .image | base64 -d > /tmp/shot.png
-# Expect: valid PNG of Google homepage
+
+# Test snapshot (agent-browser CLI)
+curl -s http://localhost:2003/api/browser/snapshot | jq '.snapshot' | head -30
+# Expect: JSON accessibility tree with @ref elements (@e1, @e2, ...)
+
+# Test click by ref
+curl -X POST http://localhost:2003/api/browser/click \
+  -H 'Content-Type: application/json' -d '{"selector":"@e2"}'
+
+# Test fill by ref
+curl -X POST http://localhost:2003/api/browser/fill \
+  -H 'Content-Type: application/json' -d '{"selector":"@e3","value":"test search"}'
+
+# Test press key
+curl -X POST http://localhost:2003/api/browser/press \
+  -H 'Content-Type: application/json' -d '{"key":"Enter"}'
+
+# Test screenshot
+curl -s http://localhost:2003/api/browser/screenshot | jq -r .image > /tmp/shot.txt
+# Expect: base64 PNG or file path
+```
+
+### TC-04b: agent-browser CLI direct
+```bash
+# Verify CLI works directly with Chrome CDP
+agent-browser --cdp 9222 get url
+agent-browser --cdp 9222 get title
+agent-browser --cdp 9222 snapshot -i | head -20
+# Expect: @ref annotations in snapshot output
 ```
 
 ### TC-05: noVNC Access (AC-02)

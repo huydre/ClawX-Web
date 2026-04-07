@@ -1,6 +1,6 @@
-# Phase 5: Turn-Based Control & Activity Indicator
+# Phase 5: Turn-Based Control & Activity Indicator (v2)
 
-**Priority:** MEDIUM | **Status:** Pending
+**Priority:** MEDIUM | **Status:** Pending | **Depends on:** Phase 4
 
 ## Overview
 
