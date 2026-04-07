@@ -56,10 +56,14 @@ export function Browser() {
     };
   }, [state.status, markHumanInput]);
 
-  // Build iframe URLs — noVNC proxied through /vnc/ on same origin (works via tunnel)
-  // path param tells noVNC where to find the WebSocket endpoint
-  const vncUrl = `/vnc/vnc.html?autoconnect=1&resize=scale&path=vnc/websockify`;
+  // Build iframe URLs
   const serverHost = window.location.hostname;
+  const isLan = serverHost.match(/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.|localhost|127\.0\.0\.1)/);
+  // LAN: connect directly to noVNC on port 6080
+  // Tunnel: proxy through /vnc/ on same origin
+  const vncUrl = isLan
+    ? `http://${serverHost}:6080/vnc.html?autoconnect=1&resize=scale`
+    : `/vnc/vnc.html?autoconnect=1&resize=scale&path=vnc/websockify`;
   const dashUrl = `http://${serverHost}:4848`;
 
   const handleGo = async () => {
