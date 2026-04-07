@@ -123,6 +123,20 @@ app.use('/api/claw3d', claw3dRouter);
 import cronRouter from './routes/cron.js';
 app.use('/api/cron', cronRouter);
 
+// noVNC reverse proxy — serves noVNC client + WebSocket through port 2003
+// so it works via Cloudflare tunnel without exposing port 6080
+const novncProxy = createProxyMiddleware({
+  target: 'http://127.0.0.1:6080',
+  changeOrigin: true,
+  ws: true,
+  on: {
+    error: (_err, _req, res: any) => {
+      if (res.writeHead) res.status(502).send('noVNC is unavailable');
+    },
+  },
+});
+app.use('/vnc', novncProxy);
+
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
   maxAge: '1y',
@@ -160,4 +174,4 @@ app.use(errorHandler);
 // Start Google token auto-refresh if already connected
 startAutoRefresh();
 
-export { app, dashboardProxy };
+export { app, dashboardProxy, novncProxy };

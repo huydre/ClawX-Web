@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { app, dashboardProxy } from './app.js';
+import { app, dashboardProxy, novncProxy } from './app.js';
 import { logger } from './utils/logger.js';
 import { createWebSocketServer } from './websocket/server.js';
 import { initStorage, getCloudflareSettings } from './services/storage.js';
@@ -49,11 +49,17 @@ async function start() {
     // Create WebSocket server
     createWebSocketServer(server);
 
-    // Proxy WebSocket upgrade requests for dashboard-* hosts to the OpenClaw gateway
+    // Proxy WebSocket upgrade requests
     server.on('upgrade', (req: any, socket: any, head: any) => {
       const host = (req.headers.host || '').toLowerCase();
+      const url = req.url || '';
+
       if (host.startsWith('dashboard-')) {
+        // Dashboard proxy (OpenClaw gateway)
         (dashboardProxy as any).upgrade(req, socket, head);
+      } else if (url.startsWith('/vnc')) {
+        // noVNC WebSocket proxy (browser virtual display)
+        (novncProxy as any).upgrade(req, socket, head);
       }
     });
 

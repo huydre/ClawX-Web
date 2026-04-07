@@ -56,9 +56,9 @@ export function Browser() {
     };
   }, [state.status, markHumanInput]);
 
-  // Build iframe URLs
+  // Build iframe URLs — noVNC proxied through /vnc/ on same origin (works via tunnel)
+  const vncUrl = `/vnc/vnc.html?autoconnect=1&resize=scale`;
   const serverHost = window.location.hostname;
-  const vncUrl = `http://${serverHost}:6080/vnc.html?autoconnect=1&resize=scale`;
   const dashUrl = `http://${serverHost}:4848`;
 
   const handleGo = async () => {
