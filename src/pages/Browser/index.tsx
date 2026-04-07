@@ -57,7 +57,8 @@ export function Browser() {
   }, [state.status, markHumanInput]);
 
   // Build iframe URLs — noVNC proxied through /vnc/ on same origin (works via tunnel)
-  const vncUrl = `/vnc/vnc.html?autoconnect=1&resize=scale`;
+  // path param tells noVNC where to find the WebSocket endpoint
+  const vncUrl = `/vnc/vnc.html?autoconnect=1&resize=scale&path=vnc/websockify`;
   const serverHost = window.location.hostname;
   const dashUrl = `http://${serverHost}:4848`;
 

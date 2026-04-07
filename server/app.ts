@@ -129,6 +129,7 @@ const novncProxy = createProxyMiddleware({
   target: 'http://127.0.0.1:6080',
   changeOrigin: true,
   ws: true,
+  pathRewrite: { '^/vnc': '' },
   on: {
     error: (_err, _req, res: any) => {
       if (res.writeHead) res.status(502).send('noVNC is unavailable');
