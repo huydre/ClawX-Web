@@ -1,13 +1,17 @@
 /**
  * Browser Manager Service
- * Wraps supervisorctl (start/stop browser stack) and agent-browser CLI
- * for AI agent browser control. Manages turn-based lock between agent and human.
+ * Launches Chrome directly on Xvfb with CDP port 9222 (shared with OpenClaw).
+ * Uses agent-browser CLI via --cdp 9222 for browser commands.
+ * Manages turn-based lock between agent and human.
  */
-import { execFile } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
-import { platform } from 'os';
+import { platform, homedir } from 'os';
+import { existsSync, readdirSync } from 'fs';
+import { join } from 'path';
 import { logger } from '../utils/logger.js';
+import type { ChildProcess } from 'child_process';
 
 const execFileAsync = promisify(execFile);
 
@@ -26,8 +30,26 @@ export interface BrowserState {
 
 const HUMAN_IDLE_MS = 3000;
 const SUPERVISORCTL = '/usr/bin/supervisorctl';
+const CDP_PORT = '9222';
 const CMD_TIMEOUT = 15000;
 const DISPLAY = ':99';
+
+/** Find Chrome binary installed by agent-browser */
+function findChromeBinary(): string | null {
+  const browsersDir = join(homedir(), '.agent-browser', 'browsers');
+  if (!existsSync(browsersDir)) return null;
+
+  try {
+    const dirs = readdirSync(browsersDir).filter(d => d.startsWith('chrome-'));
+    // Sort descending to get latest version
+    dirs.sort().reverse();
+    for (const dir of dirs) {
+      const chromePath = join(browsersDir, dir, 'chrome');
+      if (existsSync(chromePath)) return chromePath;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
 
 export class BrowserManager extends EventEmitter {
   private state: BrowserState = {
@@ -40,6 +62,7 @@ export class BrowserManager extends EventEmitter {
     error: null,
   };
 
+  private chromeProcess: ChildProcess | null = null;
   private isLinux = platform() === 'linux';
 
   getState(): BrowserState {
@@ -62,28 +85,56 @@ export class BrowserManager extends EventEmitter {
     this.emit('state-change', this.getState());
 
     try {
-      // 1. Start display stack (Xvfb + x11vnc + noVNC)
+      // 1. Find Chrome binary
+      const chromePath = findChromeBinary();
+      if (!chromePath) throw new Error('Chrome not found. Run: agent-browser install');
+
+      // 2. Start display stack (Xvfb + x11vnc + noVNC)
       await execFileAsync('sudo', [SUPERVISORCTL, 'start', 'browser-stack:*'], { timeout: 20000 });
+      // Wait for Xvfb to be ready
+      await new Promise(r => setTimeout(r, 1500));
 
-      // 2. Close any existing agent-browser sessions
+      // 3. Kill any existing Chrome on CDP port
       try {
-        await execFileAsync('agent-browser', ['close', '--all'], { timeout: 5000 });
-      } catch { /* no sessions to close */ }
+        await execFileAsync('fuser', ['-k', `${CDP_PORT}/tcp`], { timeout: 3000 });
+      } catch { /* no process on port */ }
 
-      // 3. Launch Chrome headed on Xvfb display via agent-browser
-      // Run in background — agent-browser daemon stays running
-      await execFileAsync('agent-browser', ['--headed', 'open', 'about:blank'], {
-        timeout: 20000,
+      // 4. Launch Chrome directly on Xvfb with fixed CDP port 9222
+      this.chromeProcess = spawn(chromePath, [
+        '--no-sandbox',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-software-rasterizer',
+        '--disable-extensions',
+        '--disable-background-networking',
+        `--remote-debugging-port=${CDP_PORT}`,
+        '--remote-debugging-address=127.0.0.1',
+        '--window-size=1280,720',
+        '--no-first-run',
+        `--user-data-dir=${join(homedir(), '.chromium-agent')}`,
+      ], {
         env: { ...process.env, DISPLAY },
+        stdio: 'ignore',
+        detached: true,
       });
 
-      // 4. Wait for agent-browser to be ready
-      const ready = await this.waitForCDP(10000);
-      if (!ready) throw new Error('agent-browser did not become ready within 10s');
+      this.chromeProcess.unref();
+      this.chromeProcess.on('exit', (code) => {
+        logger.warn('BrowserManager: Chrome exited', { code });
+        if (this.state.status === 'running') {
+          this.state.status = 'error';
+          this.state.error = `Chrome exited (code ${code})`;
+          this.emit('state-change', this.getState());
+        }
+      });
+
+      // 5. Wait for CDP to become ready
+      const ready = await this.waitForCDP(15000);
+      if (!ready) throw new Error('Chrome CDP did not become ready within 15s');
 
       this.state.status = 'running';
       await this.updatePageInfo();
-      logger.info('BrowserManager: started');
+      logger.info('BrowserManager: started', { chromePath, cdpPort: CDP_PORT });
     } catch (err: any) {
       this.state.status = 'error';
       this.state.error = err.message;
@@ -100,9 +151,14 @@ export class BrowserManager extends EventEmitter {
     this.emit('state-change', this.getState());
 
     try {
-      // 1. Close agent-browser (kills Chrome)
+      // 1. Kill Chrome process
+      if (this.chromeProcess && !this.chromeProcess.killed) {
+        this.chromeProcess.kill('SIGTERM');
+        this.chromeProcess = null;
+      }
+      // Also kill by port in case detached
       try {
-        await execFileAsync('agent-browser', ['close', '--all'], { timeout: 5000 });
+        await execFileAsync('fuser', ['-k', `${CDP_PORT}/tcp`], { timeout: 3000 });
       } catch { /* ignore */ }
 
       // 2. Stop display stack
@@ -121,14 +177,14 @@ export class BrowserManager extends EventEmitter {
     this.emit('state-change', this.getState());
   }
 
-  // ── agent-browser CLI wrapper ──────────────────────────────────────
+  // ── agent-browser CLI wrapper (connects to Chrome via --cdp 9222) ──
 
-  /** Execute an agent-browser command against the managed Chrome session */
+  /** Execute an agent-browser command connected to CDP port 9222 */
   private async ab(args: string[]): Promise<string> {
     const { stdout } = await execFileAsync(
       'agent-browser',
-      args,
-      { timeout: CMD_TIMEOUT, env: { ...process.env, DISPLAY } }
+      ['--cdp', CDP_PORT, ...args],
+      { timeout: CMD_TIMEOUT }
     );
     return stdout.trim();
   }
@@ -218,7 +274,6 @@ export class BrowserManager extends EventEmitter {
     if (this.state.lockOwner === 'human' && sinceHuman < HUMAN_IDLE_MS) {
       throw new Error(`Human controlling; wait ${HUMAN_IDLE_MS - sinceHuman}ms`);
     }
-    // Auto-release to agent after idle timeout
     if (this.state.lockOwner === 'human' && sinceHuman >= HUMAN_IDLE_MS) {
       this.state.lockOwner = 'agent';
       this.emit('state-change', this.getState());
@@ -227,14 +282,15 @@ export class BrowserManager extends EventEmitter {
 
   // ── Internal ───────────────────────────────────────────────────────
 
+  /** Wait for Chrome CDP to respond on port 9222 */
   private async waitForCDP(timeoutMs: number): Promise<boolean> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       try {
-        await this.ab(['get', 'url']);
-        return true;
-      } catch { /* CDP not ready yet, retry */ }
-      await new Promise(r => setTimeout(r, 1000));
+        const res = await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`);
+        if (res.ok) return true;
+      } catch { /* not ready yet */ }
+      await new Promise(r => setTimeout(r, 500));
     }
     return false;
   }
