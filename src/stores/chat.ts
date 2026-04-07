@@ -1026,15 +1026,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
             nextSessionKey = canonicalMatch;
           }
         }
-        if (!dedupedSessions.find((s) => s.key === nextSessionKey) && dedupedSessions.length > 0) {
-          // Current session not found at all — switch to the first available session
-          nextSessionKey = dedupedSessions[0].key;
+        const sessionExists = dedupedSessions.find((s) => s.key === nextSessionKey);
+        if (!sessionExists && dedupedSessions.length > 0) {
+          // If current key is an explicit agent session (set by switchSession),
+          // keep it and add to list — it will persist on first message send.
+          // Only fallback to first session if it's NOT an agent session.
+          if (!nextSessionKey.startsWith('agent:') || nextSessionKey === DEFAULT_SESSION_KEY) {
+            nextSessionKey = dedupedSessions[0].key;
+          }
         }
 
         const sessionsWithCurrent = !dedupedSessions.find((s) => s.key === nextSessionKey) && nextSessionKey
           ? [
             ...dedupedSessions,
-            { key: nextSessionKey, displayName: nextSessionKey },
+            { key: nextSessionKey, displayName: nextSessionKey.replace('agent:', '').replace(':main', '') },
           ]
           : dedupedSessions;
 
