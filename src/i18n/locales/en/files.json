@@ -1,0 +1,30 @@
+{
+  "title": "Files",
+  "searchPlaceholder": "Search files...",
+  "emptyFolder": "Empty folder",
+  "noResults": "No matching files",
+  "noRoots": "No accessible folders",
+  "noRootsDesc": "No file roots are configured on this server.",
+  "fileName": "Name",
+  "fileType": "Type",
+  "fileSize": "Size",
+  "fileModified": "Modified",
+  "folder": "Folder",
+  "breadcrumb": {
+    "root": "Root"
+  },
+  "categories": {
+    "image": "Image",
+    "video": "Video",
+    "audio": "Audio",
+    "documents": "Document",
+    "code": "Code",
+    "data": "Data",
+    "other": "Other"
+  },
+  "preview": {
+    "notAvailable": "Preview not available for this file type.",
+    "prev": "Prev",
+    "next": "Next"
+  }
+}

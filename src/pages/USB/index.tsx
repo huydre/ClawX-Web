@@ -387,7 +387,7 @@ export function USB() {
               </tr>
             </thead>
             <tbody>
-              {filteredFiles.map((file, idx) => {
+              {filteredFiles.map((file) => {
                 const isSelected = selectedFiles.has(file.path);
                 return (
                   <tr
@@ -395,10 +395,8 @@ export function USB() {
                     className={cn(
                       'border-b last:border-0 transition-colors cursor-pointer',
                       'hover:bg-accent/50',
-                      'animate-in fade-in-0 slide-in-from-left-1',
                       isSelected && 'bg-primary/5'
                     )}
-                    style={{ animationDelay: `${Math.min(idx * 20, 200)}ms` }}
                   >
                     <td className="p-3">
                       {!file.isDirectory && (

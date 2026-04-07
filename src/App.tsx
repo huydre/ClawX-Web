@@ -17,6 +17,7 @@ import { Cron } from './pages/Cron';
 import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
 import { USB } from './pages/USB';
+import { Files } from './pages/Files';
 
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
@@ -225,6 +226,7 @@ function App() {
             <Route path="/skills" element={<Skills />} />
             <Route path="/cron" element={<Cron />} />
             <Route path="/usb" element={<USB />} />
+            <Route path="/files" element={<Files />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>
         </Routes>

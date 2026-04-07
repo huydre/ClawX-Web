@@ -1,0 +1,30 @@
+{
+  "title": "Quản lý File",
+  "searchPlaceholder": "Tìm file...",
+  "emptyFolder": "Thư mục trống",
+  "noResults": "Không tìm thấy file",
+  "noRoots": "Không có thư mục",
+  "noRootsDesc": "Chưa cấu hình thư mục nào trên server.",
+  "fileName": "Tên",
+  "fileType": "Loại",
+  "fileSize": "Kích thước",
+  "fileModified": "Ngày sửa",
+  "folder": "Thư mục",
+  "breadcrumb": {
+    "root": "Gốc"
+  },
+  "categories": {
+    "image": "Hình ảnh",
+    "video": "Video",
+    "audio": "Âm thanh",
+    "documents": "Tài liệu",
+    "code": "Code",
+    "data": "Dữ liệu",
+    "other": "Khác"
+  },
+  "preview": {
+    "notAvailable": "Không thể xem trước file này.",
+    "prev": "Trước",
+    "next": "Sau"
+  }
+}
