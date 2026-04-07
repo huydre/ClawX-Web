@@ -111,20 +111,24 @@ import cronRouter from './routes/cron.js';
 app.use('/api/cron', cronRouter);
 // noVNC reverse proxy — serves noVNC client + WebSocket through port 2003
 // so it works via Cloudflare tunnel without exposing port 6080
+// noVNC proxy — manual rewrite to strip /vnc prefix before proxying
 const novncProxy = createProxyMiddleware({
     target: 'http://127.0.0.1:6080',
     changeOrigin: true,
     ws: true,
-    pathFilter: '/vnc',
-    pathRewrite: { '^/vnc': '' },
     on: {
+        proxyReq: (proxyReq, req) => {
+            // Strip /vnc prefix from path
+            const stripped = req.url?.replace(/^\/vnc/, '') || '/';
+            proxyReq.path = stripped;
+        },
         error: (_err, _req, res) => {
             if (res.writeHead)
                 res.status(502).send('noVNC is unavailable');
         },
     },
 });
-app.use(novncProxy);
+app.use('/vnc', novncProxy);
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
     maxAge: '1y',
