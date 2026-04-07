@@ -58,7 +58,8 @@ async function start() {
         // Dashboard proxy (OpenClaw gateway)
         (dashboardProxy as any).upgrade(req, socket, head);
       } else if (url.startsWith('/vnc')) {
-        // noVNC WebSocket proxy (browser virtual display)
+        // noVNC WebSocket proxy — strip /vnc prefix before forwarding
+        req.url = url.replace(/^\/vnc/, '') || '/';
         (novncProxy as any).upgrade(req, socket, head);
       }
     });
