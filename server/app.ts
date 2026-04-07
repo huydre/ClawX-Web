@@ -129,6 +129,7 @@ const novncProxy = createProxyMiddleware({
   target: 'http://127.0.0.1:6080',
   changeOrigin: true,
   ws: true,
+  pathFilter: '/vnc',
   pathRewrite: { '^/vnc': '' },
   on: {
     error: (_err, _req, res: any) => {
@@ -136,7 +137,7 @@ const novncProxy = createProxyMiddleware({
     },
   },
 });
-app.use('/vnc', novncProxy);
+app.use(novncProxy);
 
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
