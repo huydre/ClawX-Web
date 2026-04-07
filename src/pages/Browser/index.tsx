@@ -62,8 +62,8 @@ export function Browser() {
   // LAN: connect directly to noVNC on port 6080
   // Tunnel: proxy through /vnc/ on same origin
   const vncUrl = isLan
-    ? `http://${serverHost}:6080/vnc.html?autoconnect=1&resize=scale`
-    : `/vnc/vnc.html?autoconnect=1&resize=scale&path=vnc/websockify`;
+    ? `http://${serverHost}:6080/vnc_lite.html?autoconnect=1&scale=true`
+    : `/vnc/vnc_lite.html?autoconnect=1&scale=true&path=vnc/websockify`;
   const dashUrl = `http://${serverHost}:4848`;
 
   const handleGo = async () => {
@@ -153,7 +153,7 @@ export function Browser() {
       <div className="flex gap-3 flex-1 min-h-0">
         {/* Iframe area */}
         <div className={cn(
-          'flex-1 border rounded-lg overflow-hidden bg-black relative',
+          'flex-1 border rounded-lg overflow-hidden bg-black relative min-h-[400px]',
           state.lockOwner === 'agent' && 'ring-2 ring-blue-500/50'
         )}>
           {state.status === 'running' ? (
