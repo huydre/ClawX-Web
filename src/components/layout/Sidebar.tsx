@@ -20,6 +20,7 @@ import {
   Usb,
   Clock,
   FolderOpen,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -102,6 +103,7 @@ export function Sidebar() {
       ? [{ to: '/usb', icon: <Usb className="h-5 w-5" />, label: t('sidebar.usb') }]
       : []),
     { to: '/files', icon: <FolderOpen className="h-5 w-5" />, label: t('sidebar.files', 'Files') },
+    { to: '/browser', icon: <Globe className="h-5 w-5" />, label: t('sidebar.browser', 'Browser') },
     { to: '/settings', icon: <Settings className="h-5 w-5" />, label: t('sidebar.settings') },
   ];
 

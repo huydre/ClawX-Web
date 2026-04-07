@@ -577,6 +577,37 @@ class ApiClient {
     });
   }
 
+  // Browser API
+  async getBrowserStatus() {
+    return this.request<{ state: any }>('/browser/status');
+  }
+
+  async startBrowser() {
+    return this.request<{ state: any }>('/browser/start', { method: 'POST' });
+  }
+
+  async stopBrowser() {
+    return this.request<{ state: any }>('/browser/stop', { method: 'POST' });
+  }
+
+  async navigateBrowser(url: string) {
+    return this.request<{ state: any }>('/browser/navigate', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+  }
+
+  async setBrowserControl(owner: string | null) {
+    return this.request<{ state: any }>('/browser/control', {
+      method: 'POST',
+      body: JSON.stringify({ owner }),
+    });
+  }
+
+  async markBrowserHumanInput() {
+    return this.request<{ ok: boolean }>('/browser/human-input', { method: 'POST' });
+  }
+
   // File Manager API
   async getFmRoots() {
     return this.request<{ roots: any[] }>('/fm/roots');

@@ -18,6 +18,7 @@ import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
 import { USB } from './pages/USB';
 import { Files } from './pages/Files';
+import { Browser } from './pages/Browser';
 
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
@@ -227,6 +228,7 @@ function App() {
             <Route path="/cron" element={<Cron />} />
             <Route path="/usb" element={<USB />} />
             <Route path="/files" element={<Files />} />
+            <Route path="/browser" element={<Browser />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>
         </Routes>

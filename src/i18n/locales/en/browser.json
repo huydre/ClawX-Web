@@ -1,0 +1,25 @@
+{
+  "title": "Virtual Browser",
+  "start": "Start",
+  "stop": "Stop",
+  "go": "Go",
+  "url_placeholder": "Enter URL...",
+  "not_running": "Browser not running. Click Start.",
+  "starting": "Starting browser...",
+  "tab": {
+    "browser": "Browser View",
+    "activity": "Activity Feed"
+  },
+  "lock": {
+    "current": "Control",
+    "agent": "Agent",
+    "human": "You",
+    "none": "Idle"
+  },
+  "take_control": "Take Control",
+  "release": "Release to Agent",
+  "info": {
+    "url": "URL",
+    "title": "Title"
+  }
+}

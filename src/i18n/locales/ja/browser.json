@@ -1,0 +1,25 @@
+{
+  "title": "仮想ブラウザ",
+  "start": "開始",
+  "stop": "停止",
+  "go": "移動",
+  "url_placeholder": "URLを入力...",
+  "not_running": "ブラウザが実行されていません。開始をクリックしてください。",
+  "starting": "ブラウザを起動中...",
+  "tab": {
+    "browser": "ブラウザ",
+    "activity": "アクティビティ"
+  },
+  "lock": {
+    "current": "操作",
+    "agent": "エージェント",
+    "human": "あなた",
+    "none": "アイドル"
+  },
+  "take_control": "操作を取得",
+  "release": "エージェントに戻す",
+  "info": {
+    "url": "URL",
+    "title": "タイトル"
+  }
+}

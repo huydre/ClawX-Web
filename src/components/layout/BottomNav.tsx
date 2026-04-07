@@ -3,7 +3,7 @@
  * Only visible on screens < md (768px), hidden on desktop.
  */
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, Radio, Puzzle, Clock, Home, Settings, Bot, Usb, FolderOpen } from 'lucide-react';
+import { MessageSquare, Radio, Puzzle, Clock, Home, Settings, Bot, Usb, FolderOpen, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useUsbStore } from '@/stores/usb';
@@ -46,6 +46,7 @@ export function BottomNav() {
       ? [{ to: '/usb', icon: <Usb className="h-5 w-5" />, label: t('sidebar.usb') }]
       : []),
     { to: '/files', icon: <FolderOpen className="h-5 w-5" />, label: t('sidebar.files', 'Files') },
+    { to: '/browser', icon: <Globe className="h-5 w-5" />, label: t('sidebar.browser', 'Browser') },
     { to: '/settings', icon: <Settings className="h-5 w-5" />, label: t('sidebar.settings') },
   ];
 

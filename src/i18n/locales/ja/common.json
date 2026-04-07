@@ -11,7 +11,8 @@
         "docs": "ガイド",
         "company3d": "Company 3D",
         "usb": "USB",
-        "files": "ファイル"
+        "files": "ファイル",
+        "browser": "ブラウザ"
     },
     "actions": {
         "save": "保存",

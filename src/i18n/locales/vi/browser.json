@@ -1,0 +1,25 @@
+{
+  "title": "Trinh duyet ao",
+  "start": "Bat dau",
+  "stop": "Dung",
+  "go": "Di",
+  "url_placeholder": "Nhap URL...",
+  "not_running": "Trinh duyet chua chay. Nhan Start.",
+  "starting": "Dang khoi dong...",
+  "tab": {
+    "browser": "Trinh duyet",
+    "activity": "Nhat ky"
+  },
+  "lock": {
+    "current": "Dieu khien",
+    "agent": "Agent",
+    "human": "Ban",
+    "none": "Ranh"
+  },
+  "take_control": "Lay quyen dieu khien",
+  "release": "Tra lai cho Agent",
+  "info": {
+    "url": "URL",
+    "title": "Tieu de"
+  }
+}
