@@ -26,8 +26,8 @@ export interface BrowserState {
 
 const HUMAN_IDLE_MS = 3000;
 const SUPERVISORCTL = '/usr/bin/supervisorctl';
-const CDP_PORT = '9222';
 const CMD_TIMEOUT = 15000;
+const DISPLAY = ':99';
 
 export class BrowserManager extends EventEmitter {
   private state: BrowserState = {
@@ -62,11 +62,24 @@ export class BrowserManager extends EventEmitter {
     this.emit('state-change', this.getState());
 
     try {
+      // 1. Start display stack (Xvfb + x11vnc + noVNC)
       await execFileAsync('sudo', [SUPERVISORCTL, 'start', 'browser-stack:*'], { timeout: 20000 });
 
-      // Wait for CDP to become ready
-      const ready = await this.waitForCDP(15000);
-      if (!ready) throw new Error('Chrome CDP did not become ready within 15s');
+      // 2. Close any existing agent-browser sessions
+      try {
+        await execFileAsync('agent-browser', ['close', '--all'], { timeout: 5000 });
+      } catch { /* no sessions to close */ }
+
+      // 3. Launch Chrome headed on Xvfb display via agent-browser
+      // Run in background — agent-browser daemon stays running
+      await execFileAsync('agent-browser', ['--headed', 'open', 'about:blank'], {
+        timeout: 20000,
+        env: { ...process.env, DISPLAY },
+      });
+
+      // 4. Wait for agent-browser to be ready
+      const ready = await this.waitForCDP(10000);
+      if (!ready) throw new Error('agent-browser did not become ready within 10s');
 
       this.state.status = 'running';
       await this.updatePageInfo();
@@ -87,7 +100,14 @@ export class BrowserManager extends EventEmitter {
     this.emit('state-change', this.getState());
 
     try {
+      // 1. Close agent-browser (kills Chrome)
+      try {
+        await execFileAsync('agent-browser', ['close', '--all'], { timeout: 5000 });
+      } catch { /* ignore */ }
+
+      // 2. Stop display stack
       await execFileAsync('sudo', [SUPERVISORCTL, 'stop', 'browser-stack:*'], { timeout: 15000 });
+
       this.state = {
         status: 'stopped', currentUrl: '', title: '',
         lockOwner: null, lastHumanInputAt: 0, lastAgentActionAt: 0, error: null,
@@ -103,12 +123,12 @@ export class BrowserManager extends EventEmitter {
 
   // ── agent-browser CLI wrapper ──────────────────────────────────────
 
-  /** Execute an agent-browser command connected to the managed Chrome */
+  /** Execute an agent-browser command against the managed Chrome session */
   private async ab(args: string[]): Promise<string> {
     const { stdout } = await execFileAsync(
       'agent-browser',
-      ['--cdp', CDP_PORT, ...args],
-      { timeout: CMD_TIMEOUT }
+      args,
+      { timeout: CMD_TIMEOUT, env: { ...process.env, DISPLAY } }
     );
     return stdout.trim();
   }
