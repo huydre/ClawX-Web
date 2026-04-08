@@ -294,13 +294,13 @@ do_build() {
     step "Installing production dependencies (pre-built mode)"
     info "Pre-built dist/ and dist-server/ found, skipping build"
 
-    # Only install production deps (much faster, less RAM)
+    # Install all deps (--prod missed newly added packages causing startup failures)
     if [[ $EUID -eq 0 ]] && id "$CLAWX_USER" &>/dev/null; then
-      su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$CLAWX_DIR' && CI=true pnpm install --prod --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --prod --ignore-scripts" "$CLAWX_USER"
+      su -s /bin/bash -c "$NVM_SOURCE_CMD && cd '$CLAWX_DIR' && CI=true pnpm install --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --ignore-scripts" "$CLAWX_USER"
     else
-      CI=true pnpm install --prod --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --prod --ignore-scripts
+      CI=true pnpm install --frozen-lockfile --ignore-scripts 2>/dev/null || CI=true pnpm install --ignore-scripts
     fi
-    log "Production dependencies installed"
+    log "Dependencies installed"
   else
     # No pre-built dist, do full build
     step "Installing dependencies"
