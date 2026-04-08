@@ -340,9 +340,11 @@ router.post('/rpc', async (req, res) => {
     try {
         const { method, params, timeoutMs } = rpcSchema.parse(req.body);
         // chat.send is fire-and-forget: response comes via streaming events
-        // Use generous timeout and no retries to avoid duplicate sends
+        // channels.status with probe can be slow — give 30s
         const isChatSend = method === 'chat.send';
-        const effectiveTimeout = timeoutMs || (isChatSend ? 120000 : 10000);
+        const isChannelStatus = method === 'channels.status';
+        const defaultTimeout = isChatSend ? 120000 : isChannelStatus ? 30000 : 10000;
+        const effectiveTimeout = timeoutMs || defaultTimeout;
         const maxRetries = isChatSend ? 0 : 2;
         let lastError = null;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {

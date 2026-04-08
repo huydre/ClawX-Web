@@ -148,8 +148,8 @@ class GatewayManager extends EventEmitter {
       });
 
       this.ws.on('open', () => {
-        logger.info('Gateway connected');
-        this.setState('connected');
+        logger.info('Gateway WebSocket open, waiting for handshake...');
+        // Do NOT set 'connected' here — wait for handshake (connect.challenge → connect response)
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
@@ -158,10 +158,9 @@ class GatewayManager extends EventEmitter {
         // Start ping interval to keep connection alive
         this.pingInterval = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
-            // Send WebSocket ping to keep connection alive
             this.ws.ping();
           }
-        }, 8000); // Ping every 8 seconds (before 10s timeout)
+        }, 8000);
       });
 
       this.ws.on('message', (data: WebSocket.Data) => {
@@ -235,10 +234,11 @@ class GatewayManager extends EventEmitter {
             return;
           }
 
-          // Handle connect response
+          // Handle connect response — only now is gateway truly ready for RPC
           if (message.type === 'res' && message.id === 'connect-1') {
             if (message.ok) {
-              logger.info('Gateway handshake completed successfully');
+              logger.info('Gateway handshake completed — now ready for RPC');
+              this.setState('connected');
             } else {
               logger.error('Gateway handshake failed', { error: message.error });
               this.setState('error');
