@@ -100,18 +100,15 @@ router.post('/update', async (_req, res) => {
         // 1. git pull
         send('pulling');
         await runStream('git', ['pull', '--rebase=false', 'origin', 'main'], cwd, send);
-        // 2. pnpm install (prod only — devDeps like tsc not needed for pre-built)
+        // 2. pnpm install (full — ensures all deps including newly added ones)
         send('installing');
-        await runStream('pnpm', ['install', '--prod', '--frozen-lockfile'], cwd, send)
-            .catch(() => runStream('pnpm', ['install', '--prod'], cwd, send));
+        await runStream('pnpm', ['install', '--frozen-lockfile'], cwd, send)
+            .catch(() => runStream('pnpm', ['install'], cwd, send));
         // 3. Check if pre-built dist exists (committed to repo)
         const fs = await import('fs');
         const hasPrebuilt = fs.existsSync(`${cwd}/dist/index.html`) && fs.existsSync(`${cwd}/dist-server/index.js`);
         if (!hasPrebuilt) {
             // No pre-built dist — need full build
-            send('installing_dev');
-            await runStream('pnpm', ['install', '--frozen-lockfile'], cwd, send)
-                .catch(() => runStream('pnpm', ['install'], cwd, send));
             send('building_server');
             await runStream('pnpm', ['build:server'], cwd, send);
             send('building_frontend');
