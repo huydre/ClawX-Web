@@ -6,7 +6,7 @@
 <h1 align="center">ClawX</h1>
 
 <p align="center">
-  <strong>The Desktop Interface for OpenClaw AI Agents</strong>
+  <strong>The Real Desktop Interface for OpenClaw AI Agents</strong>
 </p>
 
 <p align="center">
