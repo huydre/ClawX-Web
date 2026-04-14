@@ -107,17 +107,10 @@ router.post('/update', async (_req, res) => {
     send('pulling');
     await runStream('git', ['pull', '--rebase=false', 'origin', 'main'], cwd, send);
 
-    // 2. pnpm install (ignore optional native deps that may fail to build)
+    // 2. pnpm install (full install to ensure all deps present)
     send('installing');
-    await runStream('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts'], cwd, send)
-      .catch(() => runStream('pnpm', ['install', '--ignore-scripts'], cwd, send));
-
-    // 3. Try to rebuild native modules (non-fatal if fails)
-    try {
-      await runStream('pnpm', ['rebuild'], cwd, send);
-    } catch {
-      send('log', { line: 'Native module rebuild skipped (non-critical)' });
-    }
+    await runStream('pnpm', ['install', '--frozen-lockfile'], cwd, send)
+      .catch(() => runStream('pnpm', ['install'], cwd, send));
 
     // 3. Check if pre-built dist exists (committed to repo)
     const fs = await import('fs');
