@@ -107,10 +107,17 @@ router.post('/update', async (_req, res) => {
     send('pulling');
     await runStream('git', ['pull', '--rebase=false', 'origin', 'main'], cwd, send);
 
-    // 2. pnpm install (full — ensures all deps including newly added ones)
+    // 2. pnpm install (ignore optional native deps that may fail to build)
     send('installing');
-    await runStream('pnpm', ['install', '--frozen-lockfile'], cwd, send)
-      .catch(() => runStream('pnpm', ['install'], cwd, send));
+    await runStream('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts'], cwd, send)
+      .catch(() => runStream('pnpm', ['install', '--ignore-scripts'], cwd, send));
+
+    // 3. Try to rebuild native modules (non-fatal if fails)
+    try {
+      await runStream('pnpm', ['rebuild'], cwd, send);
+    } catch {
+      send('log', { line: 'Native module rebuild skipped (non-critical)' });
+    }
 
     // 3. Check if pre-built dist exists (committed to repo)
     const fs = await import('fs');
@@ -195,9 +202,16 @@ ENVFILE
       send('log', { line: 'Claw3D update skipped (non-critical)' });
     }
 
+    // 5. Verify dist-server exists before restarting (prevent boot loop)
+    const fs2 = await import('fs');
+    if (!fs2.existsSync(`${cwd}/dist-server/index.js`)) {
+      send('error', { error: 'dist-server/index.js missing after update — aborting restart' });
+      return;
+    }
+
     send('restarting');
 
-    // 5. Restart: exit with non-zero so systemd Restart=on-failure restarts us
+    // 6. Restart: exit with non-zero so systemd Restart=on-failure restarts us
     setTimeout(() => {
       process.exit(1);
     }, 1500);
