@@ -131,21 +131,25 @@ function App() {
     }
   }, [language]);
 
-  // Initialize Gateway connection on mount
+  // Initialize Gateway connection after authentication
   useEffect(() => {
-    initGateway();
-  }, [initGateway]);
+    if (authenticated) {
+      initGateway();
+    }
+  }, [authenticated, initGateway]);
 
-  // Initialize WebSocket connection on mount
+  // Initialize WebSocket connection after authentication
   useEffect(() => {
+    if (!authenticated) return;
     ws.connect();
     return () => {
       ws.disconnect();
     };
-  }, []);
+  }, [authenticated]);
 
   // Fetch USB devices and subscribe to USB WebSocket events
   useEffect(() => {
+    if (!authenticated) return;
     useUsbStore.getState().fetchDevices();
     const handler = (data: any) => useUsbStore.getState().handleWsEvent(data);
     ws.on('usb.connected', handler);
