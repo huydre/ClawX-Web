@@ -4,9 +4,16 @@
  */
 import { Router } from 'express';
 import { statSync, createReadStream } from 'fs';
-import sharp from 'sharp';
 import { fileManager } from '../services/file-manager.js';
 import { logger } from '../utils/logger.js';
+
+/** Try to load sharp (optional native dep). Falls back to serving original image. */
+let sharp: any = null;
+try {
+  sharp = (await import('sharp')).default;
+} catch {
+  logger.info('sharp not available — thumbnail generation disabled, serving originals');
+}
 
 const router = Router();
 
@@ -107,6 +114,13 @@ router.get('/thumb/:rootId', async (req, res) => {
     return res.send(thumbCache.get(cacheKey)!);
   }
 
+  // If sharp not available, serve original image
+  if (!sharp) {
+    res.set('Content-Type', result.mimeType);
+    res.set('Cache-Control', 'public, max-age=3600');
+    return createReadStream(result.absPath).pipe(res);
+  }
+
   try {
     const w = Math.min(parseInt(req.query.w as string) || 200, 400);
     const h = Math.min(parseInt(req.query.h as string) || 200, 400);
@@ -124,8 +138,9 @@ router.get('/thumb/:rootId', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(thumb);
   } catch (err) {
-    logger.warn('Thumbnail generation failed', { rootId, filePath, error: err });
-    res.status(500).json({ error: 'Thumbnail generation failed' });
+    logger.warn('Thumbnail generation failed, serving original', { rootId, filePath, error: err });
+    res.set('Content-Type', result.mimeType);
+    createReadStream(result.absPath).pipe(res);
   }
 });
 
