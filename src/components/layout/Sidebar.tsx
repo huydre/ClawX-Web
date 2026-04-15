@@ -127,7 +127,12 @@ export function Sidebar() {
       <div className="p-2 space-y-1">
         {/* 9Router link */}
         <a
-          href={`http://${window.location.hostname}:20128`}
+          href={(() => {
+            const host = window.location.hostname;
+            const isLan = host.match(/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.|localhost|127\.0\.0\.1)/);
+            if (isLan) return `http://${host}:20128`;
+            return `https://router-${host}`;
+          })()}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(

@@ -235,11 +235,28 @@ async function start() {
           const terminalUrl = `https://${terminalFullDomain}`;
           logger.info('Terminal tunnel ingress configured', { terminalUrl });
 
+          // Set up 9Router subdomain
+          const routerPort = process.env.ROUTER_PORT || '20128';
+          const routerSubdomain = `router-${subdomain}`;
+          const routerFullDomain = `${routerSubdomain}.${envDomain}`;
+
+          let routerDnsSubdomain: string;
+          if (envDomain === zoneName) {
+            routerDnsSubdomain = routerSubdomain;
+          } else {
+            const subdomainPrefix = envDomain.replace(`.${zoneName}`, '');
+            routerDnsSubdomain = `${routerSubdomain}.${subdomainPrefix}`;
+          }
+
+          await ensureDnsRecord(routerFullDomain, routerDnsSubdomain);
+          logger.info('9Router tunnel ingress configured', { routerFullDomain });
+
           // Set tunnel ingress rules via API so all hostnames route to the right service
           await cfApi.updateTunnelConfig(accountId, tunnel.id, [
             { hostname: fullDomain, service: `http://localhost:${PORT}` },
             { hostname: dashboardFullDomain, service: `http://localhost:${dashboardPort}` },
             { hostname: terminalFullDomain, service: `http://localhost:${ttydPort}` },
+            { hostname: routerFullDomain, service: `http://localhost:${routerPort}` },
             { service: 'http_status:404' },
           ]);
 
