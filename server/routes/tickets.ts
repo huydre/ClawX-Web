@@ -9,7 +9,7 @@ import { logger } from '../utils/logger.js';
 
 const router = Router();
 
-const ADMIN_API = process.env.ADMIN_API_URL || 'https://admin.openclaw-box.com';
+const ADMIN_API = 'https://admin.openclaw-box.com';
 
 const upload = multer({
   dest: '/tmp/ticket-uploads',
