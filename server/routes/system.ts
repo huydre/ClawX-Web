@@ -127,7 +127,44 @@ router.post('/update', async (_req, res) => {
       send('log', { line: 'Pre-built dist found, skipping build' });
     }
 
-    // 4. Verify dist-server exists before restarting (prevent boot loop)
+    // 4. Setup/ensure 9Router is running
+    send('checking_9router');
+    try {
+      const { homedir } = await import('os');
+      const routerScript = `
+        export HOME="${homedir()}"
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+        # Install 9router if not available
+        if ! command -v 9router &>/dev/null; then
+          echo "Installing 9router globally..."
+          npm i -g 9router
+        fi
+
+        # Install PM2 if not available
+        command -v pm2 &>/dev/null || npm i -g pm2
+
+        # Check if 9router is running in PM2
+        if pm2 describe 9router &>/dev/null; then
+          echo "9Router already running in PM2, restarting..."
+          pm2 restart 9router
+        else
+          echo "Starting 9Router via PM2..."
+          pm2 start 9router --name 9router -- start
+          pm2 save 2>/dev/null || true
+        fi
+
+        echo "9Router setup complete"
+      `;
+      await runStream('bash', ['-c', routerScript], cwd, send)
+        .catch(() => send('log', { line: '9Router setup skipped (non-critical)' }));
+      send('log', { line: '9Router checked/started' });
+    } catch {
+      send('log', { line: '9Router setup skipped (non-critical)' });
+    }
+
+    // 5. Verify dist-server exists before restarting (prevent boot loop)
     const fs2 = await import('fs');
     if (!fs2.existsSync(`${cwd}/dist-server/index.js`)) {
       send('error', { error: 'dist-server/index.js missing after update — aborting restart' });
