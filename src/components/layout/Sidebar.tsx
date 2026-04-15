@@ -19,6 +19,7 @@ import {
   Usb,
   Clock,
   FolderOpen,
+  Route,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -124,6 +125,26 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-2 space-y-1">
+        {/* 9Router link */}
+        <a
+          href="/router"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+            sidebarCollapsed && 'justify-center px-2'
+          )}
+        >
+          <Route className="h-5 w-5" />
+          {!sidebarCollapsed && (
+            <>
+              <span className="flex-1">9Router</span>
+              <ExternalLink className="h-3 w-3 text-muted-foreground/50" />
+            </>
+          )}
+        </a>
+
         {/* Docs link */}
         <a
           href="https://docs.openclaw-box.com"
