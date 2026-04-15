@@ -26,5 +26,17 @@
     "notAvailable": "Preview not available for this file type.",
     "prev": "Prev",
     "next": "Next"
-  }
+  },
+  "actions": {
+    "download": "Download",
+    "copyPath": "Copy Path",
+    "copy": "Copy",
+    "rename": "Rename",
+    "newName": "New name",
+    "copyFrom": "From",
+    "copyTo": "Destination path",
+    "renamed": "Renamed successfully",
+    "copied": "Copied successfully"
+  },
+  "cancel": "Cancel"
 }

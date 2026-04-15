@@ -17,6 +17,11 @@ import {
   Home,
   Usb,
   Bot,
+  MoreVertical,
+  Download,
+  Copy,
+  Pencil,
+  MapPin,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
@@ -25,8 +30,11 @@ import { SearchInput } from '@/components/common/SearchInput';
 import { Skeleton } from '@/components/common/Skeleton';
 import { useFileManagerStore } from '@/stores/file-manager';
 import type { FileEntry, FileRoot } from '@/stores/file-manager';
+import { ModalDialog } from '@/components/common/ModalDialog';
+import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { FilePreviewModal } from './FilePreviewModal';
 
@@ -120,6 +128,86 @@ export function Files() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [previewFile, setPreviewFile] = useState<FileEntry | null>(null);
+  const [actionMenu, setActionMenu] = useState<{ file: FileEntry; x: number; y: number } | null>(null);
+  const [renameDialog, setRenameDialog] = useState<FileEntry | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [copyDialog, setCopyDialog] = useState<FileEntry | null>(null);
+  const [copyDest, setCopyDest] = useState('');
+
+  // Close action menu on click outside
+  useEffect(() => {
+    if (!actionMenu) return;
+    const close = () => setActionMenu(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [actionMenu]);
+
+  // File actions
+  const handleDownload = (file: FileEntry) => {
+    if (!selectedRoot || file.isDirectory) return;
+    const url = api.getFmDownloadUrl(selectedRoot, file.path);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    setActionMenu(null);
+  };
+
+  const handleGetPath = async (file: FileEntry) => {
+    if (!selectedRoot) return;
+    try {
+      const res = await api.getFmPath(selectedRoot, file.path);
+      await navigator.clipboard.writeText(res.absolutePath);
+      toast.success(`Path copied: ${res.absolutePath}`);
+    } catch {
+      toast.error('Failed to get path');
+    }
+    setActionMenu(null);
+  };
+
+  const handleRenameOpen = (file: FileEntry) => {
+    setRenameValue(file.name);
+    setRenameDialog(file);
+    setActionMenu(null);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!selectedRoot || !renameDialog || !renameValue.trim()) return;
+    try {
+      const res = await api.fmRename(selectedRoot, renameDialog.path, renameValue.trim());
+      if (res.success) {
+        toast.success(t('actions.renamed', 'Renamed successfully'));
+        navigateTo(currentPath); // refresh
+      } else {
+        toast.error(res.error || 'Rename failed');
+      }
+    } catch (err) {
+      toast.error(String(err));
+    }
+    setRenameDialog(null);
+  };
+
+  const handleCopyOpen = (file: FileEntry) => {
+    setCopyDest(file.path);
+    setCopyDialog(file);
+    setActionMenu(null);
+  };
+
+  const handleCopySubmit = async () => {
+    if (!selectedRoot || !copyDialog || !copyDest.trim()) return;
+    try {
+      const res = await api.fmCopy(selectedRoot, copyDialog.path, selectedRoot, copyDest.trim());
+      if (res.success) {
+        toast.success(t('actions.copied', 'Copied successfully'));
+        navigateTo(currentPath); // refresh
+      } else {
+        toast.error(res.error || 'Copy failed');
+      }
+    } catch (err) {
+      toast.error(String(err));
+    }
+    setCopyDialog(null);
+  };
 
   // Fetch roots on mount
   useEffect(() => {
@@ -269,6 +357,7 @@ export function Files() {
                 <th className="p-3 font-medium w-20">{t('fileType')}</th>
                 <th className="p-3 font-medium w-24 text-right">{t('fileSize')}</th>
                 <th className="p-3 font-medium w-40 hidden md:table-cell">{t('fileModified')}</th>
+                <th className="p-3 w-10" />
               </tr>
             </thead>
             <tbody>
@@ -308,6 +397,17 @@ export function Files() {
                   <td className="p-3 text-muted-foreground hidden md:table-cell">
                     {formatDate(file.modified)}
                   </td>
+                  <td className="p-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActionMenu({ file, x: e.clientX, y: e.clientY });
+                      }}
+                      className="p-1 rounded hover:bg-accent transition-colors"
+                    >
+                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -325,6 +425,114 @@ export function Files() {
           onNavigate={setPreviewFile}
         />
       )}
+
+      {/* Action Context Menu */}
+      {actionMenu && (
+        <div
+          className="fixed z-50 min-w-[160px] rounded-md border bg-popover p-1 shadow-md"
+          style={{ top: actionMenu.y, left: Math.min(actionMenu.x, window.innerWidth - 200) }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!actionMenu.file.isDirectory && (
+            <button
+              onClick={() => handleDownload(actionMenu.file)}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors text-left"
+            >
+              <Download className="h-3.5 w-3.5" /> {t('actions.download', 'Download')}
+            </button>
+          )}
+          <button
+            onClick={() => handleGetPath(actionMenu.file)}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors text-left"
+          >
+            <MapPin className="h-3.5 w-3.5" /> {t('actions.copyPath', 'Copy Path')}
+          </button>
+          <button
+            onClick={() => handleCopyOpen(actionMenu.file)}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors text-left"
+          >
+            <Copy className="h-3.5 w-3.5" /> {t('actions.copy', 'Copy')}
+          </button>
+          <button
+            onClick={() => handleRenameOpen(actionMenu.file)}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors text-left"
+          >
+            <Pencil className="h-3.5 w-3.5" /> {t('actions.rename', 'Rename')}
+          </button>
+        </div>
+      )}
+
+      {/* Rename Dialog */}
+      <ModalDialog
+        open={!!renameDialog}
+        onClose={() => setRenameDialog(null)}
+        title={t('actions.rename', 'Rename')}
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setRenameDialog(null)}>
+              {t('cancel', 'Cancel')}
+            </Button>
+            <Button onClick={handleRenameSubmit} disabled={!renameValue.trim()}>
+              {t('actions.rename', 'Rename')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{t('actions.newName', 'New name')}</label>
+          <input
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleRenameSubmit()}
+            autoFocus
+            className={cn(
+              'flex h-10 w-full rounded-md border border-input bg-background',
+              'px-3 py-2 text-sm',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            )}
+          />
+        </div>
+      </ModalDialog>
+
+      {/* Copy Dialog */}
+      <ModalDialog
+        open={!!copyDialog}
+        onClose={() => setCopyDialog(null)}
+        title={t('actions.copy', 'Copy')}
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCopyDialog(null)}>
+              {t('cancel', 'Cancel')}
+            </Button>
+            <Button onClick={handleCopySubmit} disabled={!copyDest.trim()}>
+              {t('actions.copy', 'Copy')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            {t('actions.copyFrom', 'From')}: <span className="font-mono text-xs">{copyDialog?.path}</span>
+          </p>
+          <label className="text-sm font-medium">{t('actions.copyTo', 'Destination path')}</label>
+          <input
+            type="text"
+            value={copyDest}
+            onChange={(e) => setCopyDest(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCopySubmit()}
+            autoFocus
+            placeholder="e.g. Documents/backup/file.txt"
+            className={cn(
+              'flex h-10 w-full rounded-md border border-input bg-background',
+              'px-3 py-2 text-sm',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            )}
+          />
+        </div>
+      </ModalDialog>
     </div>
   );
 }

@@ -124,6 +124,67 @@ export class FileManager {
     }
   }
 
+  /** Get absolute path for a file (for display/copy purposes) */
+  getAbsolutePath(rootId: string, filePath: string): string | null {
+    return this.resolvePath(rootId, filePath);
+  }
+
+  /** Copy a file/directory within or across roots */
+  copyFile(srcRootId: string, srcPath: string, destRootId: string, destPath: string): { success: boolean; error?: string } {
+    const srcAbs = this.resolvePath(srcRootId, srcPath);
+    const destAbs = this.resolvePath(destRootId, destPath);
+
+    if (!srcAbs || !destAbs) return { success: false, error: 'Invalid source or destination path' };
+    if (!existsSync(srcAbs)) return { success: false, error: 'Source not found' };
+
+    try {
+      const { cpSync, mkdirSync } = require('fs');
+      const { dirname } = require('path');
+      mkdirSync(dirname(destAbs), { recursive: true });
+      const stat = statSync(srcAbs);
+      cpSync(srcAbs, destAbs, { recursive: stat.isDirectory() });
+      return { success: true };
+    } catch (err: any) {
+      logger.warn('FileManager: copy failed', { srcAbs, destAbs, error: err });
+      return { success: false, error: err.message };
+    }
+  }
+
+  /** Rename/move a file within the same root */
+  renameFile(rootId: string, oldPath: string, newName: string): { success: boolean; error?: string } {
+    const oldAbs = this.resolvePath(rootId, oldPath);
+    if (!oldAbs || !existsSync(oldAbs)) return { success: false, error: 'File not found' };
+
+    const { renameSync } = require('fs');
+    const { dirname, join: pathJoin } = require('path');
+    const newAbs = pathJoin(dirname(oldAbs), newName);
+
+    // Security: new path must stay within root
+    const root = this.roots.find(r => r.id === rootId);
+    if (!root || !newAbs.startsWith(root.path)) {
+      return { success: false, error: 'Rename would escape root directory' };
+    }
+
+    // Prevent renaming system files
+    if (this.isSystemPath(oldAbs)) {
+      return { success: false, error: 'Cannot rename system files' };
+    }
+
+    try {
+      renameSync(oldAbs, newAbs);
+      return { success: true };
+    } catch (err: any) {
+      logger.warn('FileManager: rename failed', { oldAbs, newAbs, error: err });
+      return { success: false, error: err.message };
+    }
+  }
+
+  /** Check if a path is a protected system path */
+  private isSystemPath(absPath: string): boolean {
+    const systemPaths = ['/etc', '/usr', '/bin', '/sbin', '/lib', '/boot', '/proc', '/sys', '/dev', '/var/lib', '/var/log'];
+    return systemPaths.some(sp => absPath.startsWith(sp));
+  }
+
   /** Returns absolute path + MIME type for file streaming, or null */
   getServePath(rootId: string, filePath: string): { absPath: string; mimeType: string } | null {
     const absPath = this.resolvePath(rootId, filePath);

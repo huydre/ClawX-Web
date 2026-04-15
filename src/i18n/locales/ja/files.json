@@ -26,5 +26,17 @@
     "notAvailable": "このファイルはプレビューできません。",
     "prev": "前",
     "next": "次"
-  }
+  },
+  "actions": {
+    "download": "ダウンロード",
+    "copyPath": "パスをコピー",
+    "copy": "コピー",
+    "rename": "名前変更",
+    "newName": "新しい名前",
+    "copyFrom": "元",
+    "copyTo": "コピー先",
+    "renamed": "名前を変更しました",
+    "copied": "コピーしました"
+  },
+  "cancel": "キャンセル"
 }

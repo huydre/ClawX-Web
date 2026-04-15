@@ -597,6 +597,32 @@ class ApiClient {
     return `/api/fm/thumb/${rootId}?path=${encodeURIComponent(filePath)}&w=${w}&h=${h}`;
   }
 
+  /** Build URL for file download */
+  getFmDownloadUrl(rootId: string, filePath: string): string {
+    return `/api/fm/download/${rootId}?path=${encodeURIComponent(filePath)}`;
+  }
+
+  /** Get absolute path of a file */
+  async getFmPath(rootId: string, filePath: string) {
+    return this.request<{ absolutePath: string }>(`/fm/path/${rootId}?path=${encodeURIComponent(filePath)}`);
+  }
+
+  /** Copy file/directory */
+  async fmCopy(srcRootId: string, srcPath: string, destRootId: string, destPath: string) {
+    return this.request<{ success: boolean; error?: string }>('/fm/copy', {
+      method: 'POST',
+      body: JSON.stringify({ srcRootId, srcPath, destRootId, destPath }),
+    });
+  }
+
+  /** Rename file/directory */
+  async fmRename(rootId: string, path: string, newName: string) {
+    return this.request<{ success: boolean; error?: string }>('/fm/rename', {
+      method: 'POST',
+      body: JSON.stringify({ rootId, path, newName }),
+    });
+  }
+
   // System / Update API (web-only)
   async getSystemInfo() {
     return this.request<{

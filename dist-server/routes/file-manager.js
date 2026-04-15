@@ -128,4 +128,75 @@ router.get('/thumb/:rootId', async (req, res) => {
         createReadStream(result.absPath).pipe(res);
     }
 });
+/**
+ * GET /api/fm/path/:rootId — get absolute path of a file
+ * Query: ?path=relative/file/path
+ */
+router.get('/path/:rootId', (req, res) => {
+    const { rootId } = req.params;
+    const filePath = req.query.path;
+    if (!filePath) {
+        return res.status(400).json({ error: 'path query parameter required' });
+    }
+    const absPath = fileManager.getAbsolutePath(rootId, filePath);
+    if (!absPath)
+        return res.status(404).json({ error: 'Path not found' });
+    res.json({ absolutePath: absPath });
+});
+/**
+ * GET /api/fm/download/:rootId — download a file (Content-Disposition: attachment)
+ * Query: ?path=relative/file/path
+ */
+router.get('/download/:rootId', (req, res) => {
+    const { rootId } = req.params;
+    const filePath = req.query.path;
+    if (!filePath) {
+        return res.status(400).json({ error: 'path query parameter required' });
+    }
+    const result = fileManager.getServePath(rootId, filePath);
+    if (!result)
+        return res.status(404).json({ error: 'File not found' });
+    const fileName = filePath.split('/').pop() || 'download';
+    res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.set('Content-Type', result.mimeType);
+    createReadStream(result.absPath).pipe(res);
+});
+/**
+ * POST /api/fm/copy — copy file/directory
+ * Body: { srcRootId, srcPath, destRootId, destPath }
+ */
+router.post('/copy', (req, res) => {
+    const { srcRootId, srcPath, destRootId, destPath } = req.body;
+    if (!srcRootId || !srcPath || !destRootId || !destPath) {
+        return res.status(400).json({ error: 'srcRootId, srcPath, destRootId, destPath required' });
+    }
+    const result = fileManager.copyFile(srcRootId, srcPath, destRootId, destPath);
+    if (result.success) {
+        res.json({ success: true });
+    }
+    else {
+        res.status(400).json(result);
+    }
+});
+/**
+ * POST /api/fm/rename — rename a file/directory
+ * Body: { rootId, path, newName }
+ */
+router.post('/rename', (req, res) => {
+    const { rootId, path: filePath, newName } = req.body;
+    if (!rootId || !filePath || !newName) {
+        return res.status(400).json({ error: 'rootId, path, newName required' });
+    }
+    // Validate newName (no path separators)
+    if (newName.includes('/') || newName.includes('\\') || newName.includes('..')) {
+        return res.status(400).json({ error: 'Invalid file name' });
+    }
+    const result = fileManager.renameFile(rootId, filePath, newName);
+    if (result.success) {
+        res.json({ success: true });
+    }
+    else {
+        res.status(400).json(result);
+    }
+});
 export default router;

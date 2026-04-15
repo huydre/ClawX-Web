@@ -26,5 +26,17 @@
     "notAvailable": "Không thể xem trước file này.",
     "prev": "Trước",
     "next": "Sau"
-  }
+  },
+  "actions": {
+    "download": "Tải xuống",
+    "copyPath": "Sao chép đường dẫn",
+    "copy": "Sao chép",
+    "rename": "Đổi tên",
+    "newName": "Tên mới",
+    "copyFrom": "Từ",
+    "copyTo": "Đường dẫn đích",
+    "renamed": "Đổi tên thành công",
+    "copied": "Sao chép thành công"
+  },
+  "cancel": "Hủy"
 }
