@@ -127,7 +127,7 @@ export function Sidebar() {
       <div className="p-2 space-y-1">
         {/* 9Router link */}
         <a
-          href="/router"
+          href={`http://${window.location.hostname}:20128`}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(

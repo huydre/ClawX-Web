@@ -119,21 +119,6 @@ app.use('/api/fm', fileManagerRouter);
 import cronRouter from './routes/cron.js';
 app.use('/api/cron', cronRouter);
 
-// 9Router proxy — proxy /router/* → localhost:20128/*
-const ROUTER_PORT = process.env.ROUTER_PORT || '20128';
-const routerProxy = createProxyMiddleware({
-  target: `http://127.0.0.1:${ROUTER_PORT}`,
-  changeOrigin: true,
-  ws: true,
-  pathRewrite: { '^/router': '' },
-  on: {
-    error: (_err, _req, res: any) => {
-      if (res.writeHead) res.status(502).send('9Router is unavailable. Start it on port ' + ROUTER_PORT);
-    },
-  },
-});
-app.use('/router', routerProxy);
-
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
   maxAge: '1y',
