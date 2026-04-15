@@ -118,6 +118,8 @@ app.use('/api/usb', usbRouter);
 app.use('/api/fm', fileManagerRouter);
 import cronRouter from './routes/cron.js';
 app.use('/api/cron', cronRouter);
+import ticketsRouter from './routes/tickets.js';
+app.use('/api/tickets', ticketsRouter);
 
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {
