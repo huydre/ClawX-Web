@@ -116,8 +116,6 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/agents-config', agentsConfigRouter);
 app.use('/api/usb', usbRouter);
 app.use('/api/fm', fileManagerRouter);
-import claw3dRouter from './routes/claw3d.js';
-app.use('/api/claw3d', claw3dRouter);
 import cronRouter from './routes/cron.js';
 app.use('/api/cron', cronRouter);
 

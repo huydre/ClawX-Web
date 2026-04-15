@@ -117,75 +117,7 @@ router.post('/update', async (_req, res) => {
         else {
             send('log', { line: 'Pre-built dist found, skipping build' });
         }
-        // 4. Setup/Update Claw3D (all-in-one, no terminal needed)
-        send('updating_claw3d');
-        try {
-            const { homedir } = await import('os');
-            const { join } = await import('path');
-            const claw3dDir = join(homedir(), '.clawx', 'claw3d');
-            const claw3dScript = `
-        set -e
-        export HOME="${homedir()}"
-        # Source NVM
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-        CLAW3D_DIR="${claw3dDir}"
-        REPO="https://github.com/iamlukethedev/Claw3D.git"
-
-        # Clone or pull
-        if [ -d "$CLAW3D_DIR/.git" ]; then
-          cd "$CLAW3D_DIR" && git pull origin main 2>/dev/null || git pull || true
-        else
-          git clone --depth 1 "$REPO" "$CLAW3D_DIR"
-        fi
-
-        cd "$CLAW3D_DIR"
-
-        # Install all deps with --ignore-scripts to avoid permission errors
-        npm install --ignore-scripts 2>/dev/null || true
-        npm install --save-exact --save-dev typescript @types/node @types/react --ignore-scripts 2>/dev/null || true
-        chmod -R +x node_modules/.bin/ 2>/dev/null || true
-
-        # Write .env
-        GW_PORT=\${OPENCLAW_GATEWAY_PORT:-18789}
-        GW_URL="ws://localhost:\$GW_PORT"
-        if [ -f "${cwd}/.env" ]; then
-          CF_DOMAIN=\$(grep '^CLOUDFLARE_TUNNEL_DOMAIN=' "${cwd}/.env" 2>/dev/null | cut -d= -f2-)
-          CF_SUB=\$(grep '^CLOUDFLARE_TUNNEL_SUBDOMAIN=' "${cwd}/.env" 2>/dev/null | cut -d= -f2-)
-          if [ -n "\$CF_DOMAIN" ] && [ -n "\$CF_SUB" ]; then
-            GW_URL="wss://dashboard-\${CF_SUB}.\${CF_DOMAIN}"
-          fi
-        fi
-        GW_TOKEN=\$(python3 -c "import json; d=json.load(open('${homedir()}/.openclaw/openclaw.json')); print(d.get('gateway',{}).get('auth',{}).get('token',''))" 2>/dev/null || echo "")
-
-        cat > .env << ENVFILE
-NEXT_PUBLIC_GATEWAY_URL=\$GW_URL
-STUDIO_ACCESS_TOKEN=\$GW_TOKEN
-DEBUG=true
-PORT=3333
-HOST=0.0.0.0
-ENVFILE
-
-        # Install PM2 if needed
-        command -v pm2 >/dev/null || npm install -g pm2
-
-        # Start/restart via PM2 (dev mode — no build needed, no NODE_ENV conflict)
-        pm2 delete claw3d 2>/dev/null || true
-        unset NODE_ENV
-        pm2 start node_modules/.bin/next --name claw3d -- dev -p 3333
-        pm2 save 2>/dev/null || true
-
-        echo "Claw3D started on port 3333"
-      `;
-            await runStream('bash', ['-c', claw3dScript], cwd, send)
-                .catch(() => send('log', { line: 'Claw3D setup had errors (may still work)' }));
-            send('log', { line: 'Claw3D updated' });
-        }
-        catch {
-            send('log', { line: 'Claw3D update skipped (non-critical)' });
-        }
-        // 5. Verify dist-server exists before restarting (prevent boot loop)
+        // 4. Verify dist-server exists before restarting (prevent boot loop)
         const fs2 = await import('fs');
         if (!fs2.existsSync(`${cwd}/dist-server/index.js`)) {
             send('error', { error: 'dist-server/index.js missing after update — aborting restart' });

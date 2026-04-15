@@ -15,7 +15,6 @@ import {
   Terminal,
   ExternalLink,
   BookOpen,
-  Box,
   Bot,
   Usb,
   Clock,
@@ -125,72 +124,6 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-2 space-y-1">
-        {/* Company 3D */}
-        <button
-          onClick={async () => {
-            try {
-              const isRemote = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-
-              if (isRemote) {
-                // Remote access via tunnel — open company subdomain with gateway token
-                const host = window.location.hostname;
-                let companyUrl = `https://company-${host}`;
-
-                // Get gateway token to pass along
-                try {
-                  const settingsRes = await fetch('/api/settings');
-                  const settings = await settingsRes.json();
-                  if (settings.gatewayToken) {
-                    companyUrl += `?token=${settings.gatewayToken}`;
-                  }
-                } catch { /* open without token */ }
-
-                window.open(companyUrl, '_blank');
-                return;
-              }
-
-              // Local access — start Claw3D server
-              const statusRes = await fetch('/api/claw3d/status');
-              const status = await statusRes.json();
-
-              if (status.state === 'running' && status.url) {
-                window.open(status.url, '_blank');
-                return;
-              }
-
-              const { toast } = await import('sonner');
-              toast.info(status.installed ? 'Starting Company 3D...' : 'Setting up Company 3D (first time)...');
-
-              const startRes = await fetch('/api/claw3d/start', { method: 'POST' });
-              const startData = await startRes.json();
-
-              if (startData.success) {
-                setTimeout(() => {
-                  window.open(startData.url || 'http://localhost:3333', '_blank');
-                }, status.installed ? 3000 : 15000);
-              } else {
-                toast.error(startData.error || 'Failed to start Company 3D');
-              }
-            } catch (err) {
-              const { toast } = await import('sonner');
-              toast.error(String(err));
-            }
-          }}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full',
-            'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-            sidebarCollapsed && 'justify-center px-2'
-          )}
-        >
-          <Box className="h-5 w-5" />
-          {!sidebarCollapsed && (
-            <>
-              <span className="flex-1 text-left">{t('sidebar.company3d', 'Company 3D')}</span>
-              <span className="text-[9px] font-medium bg-primary/15 text-primary px-1 py-0.5 rounded">Beta</span>
-            </>
-          )}
-        </button>
-
         {/* Docs link */}
         <a
           href="https://docs.openclaw-box.com"
