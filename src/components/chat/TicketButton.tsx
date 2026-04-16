@@ -136,14 +136,13 @@ export function TicketButton() {
             setState('form');
           }}
           className={cn(
-            'w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg',
-            'bg-primary text-primary-foreground',
+            'w-12 h-12 md:w-14 md:h-14',
             'flex items-center justify-center',
-            'hover:scale-110 transition-transform'
+            'hover:scale-110 transition-transform drop-shadow-lg'
           )}
           title="Cần hỗ trợ?"
         >
-          <MascotIcon className="h-7 w-7 md:h-8 md:w-8" />
+          <MascotIcon className="w-full h-full" />
         </button>
       </div>
     );
