@@ -18,6 +18,7 @@ import {
   X,
   Monitor,
 } from 'lucide-react';
+import { TicketButton } from '@/components/chat/TicketButton';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -502,6 +503,9 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Support Ticket Button */}
+      <TicketButton />
     </div>
   );
 }

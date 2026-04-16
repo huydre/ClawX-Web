@@ -13,7 +13,6 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ChatToolbar } from './ChatToolbar';
-import { TicketButton } from '@/components/chat/TicketButton';
 import { extractImages, extractText, extractThinking, extractToolUse } from './message-utils';
 import { useTranslation } from 'react-i18next';
 
@@ -232,8 +231,6 @@ export function Chat() {
         sending={sending}
       />
 
-      {/* Support Ticket Button */}
-      <TicketButton />
     </div>
   );
 }
