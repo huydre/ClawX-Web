@@ -8,7 +8,7 @@ import crypto from 'crypto';
 // Types
 export interface AnalyticsEvent {
   id: string;
-  type: 'message_sent' | 'message_received' | 'tool_call' | 'channel_activity' | 'session_created';
+  type: 'message_sent' | 'message_received' | 'tool_call' | 'channel_activity' | 'session_created' | 'tokens_used';
   timestamp: number;
   channel?: string;
   sessionKey?: string;
@@ -21,10 +21,18 @@ interface DailyStat {
   tools: number;
 }
 
+interface DailyTokenStat {
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
+  requests: number;
+}
+
 interface AnalyticsDB {
   events: AnalyticsEvent[];
   dailyStats: Record<string, DailyStat>;
   hourlyActivity: Record<string, number>;
+  dailyTokenStats: Record<string, Record<string, DailyTokenStat>>; // day -> provider -> stats
 }
 
 const MAX_EVENTS = 10000;
@@ -34,6 +42,7 @@ const defaultData: AnalyticsDB = {
   events: [],
   dailyStats: {},
   hourlyActivity: {},
+  dailyTokenStats: {},
 };
 
 // Database setup
@@ -93,6 +102,21 @@ export async function trackEvent(
   if (fullEvent.type === 'message_received') dayStat.received++;
   if (fullEvent.type === 'tool_call') dayStat.tools++;
 
+  // Update token stats
+  if (fullEvent.type === 'tokens_used' && fullEvent.metadata) {
+    const provider = String(fullEvent.metadata.provider || 'unknown');
+    if (!db.data!.dailyTokenStats) db.data!.dailyTokenStats = {};
+    if (!db.data!.dailyTokenStats[dayKey]) db.data!.dailyTokenStats[dayKey] = {};
+    if (!db.data!.dailyTokenStats[dayKey][provider]) {
+      db.data!.dailyTokenStats[dayKey][provider] = { inputTokens: 0, outputTokens: 0, estimatedCost: 0, requests: 0 };
+    }
+    const ts = db.data!.dailyTokenStats[dayKey][provider];
+    ts.inputTokens += Number(fullEvent.metadata.inputTokens) || 0;
+    ts.outputTokens += Number(fullEvent.metadata.outputTokens) || 0;
+    ts.estimatedCost += Number(fullEvent.metadata.estimatedCost) || 0;
+    ts.requests += 1;
+  }
+
   // Update hourly activity
   const hourKey = getHourKey(fullEvent.timestamp);
   db.data!.hourlyActivity[hourKey] = (db.data!.hourlyActivity[hourKey] || 0) + 1;
@@ -151,4 +175,72 @@ export async function getTotalStats(): Promise<{
   ).length;
 
   return stats;
+}
+
+// Cost estimates per 1M tokens (input / output) — popular models
+const COST_TABLE: Record<string, { input: number; output: number }> = {
+  'gpt-4o': { input: 2.5, output: 10 },
+  'gpt-4o-mini': { input: 0.15, output: 0.6 },
+  'gpt-4-turbo': { input: 10, output: 30 },
+  'gpt-4': { input: 30, output: 60 },
+  'gpt-3.5-turbo': { input: 0.5, output: 1.5 },
+  'claude-opus-4': { input: 15, output: 75 },
+  'claude-sonnet-4': { input: 3, output: 15 },
+  'claude-3-5-sonnet': { input: 3, output: 15 },
+  'claude-3-5-haiku': { input: 0.8, output: 4 },
+  'claude-3-haiku': { input: 0.25, output: 1.25 },
+  'gemini-2.0-flash': { input: 0.1, output: 0.4 },
+  'gemini-1.5-pro': { input: 1.25, output: 5 },
+  'gemini-1.5-flash': { input: 0.075, output: 0.3 },
+};
+
+export function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
+  // Try exact match, then prefix match
+  const key = Object.keys(COST_TABLE).find(k => model.includes(k));
+  const rates = key ? COST_TABLE[key] : { input: 1, output: 3 }; // fallback ~GPT-3.5 tier
+  return (inputTokens * rates.input + outputTokens * rates.output) / 1_000_000;
+}
+
+// Get token stats for last N days
+export async function getTokenStats(days: number): Promise<{
+  daily: Array<{ date: string; inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }>;
+  byProvider: Record<string, { inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }>;
+  totals: { inputTokens: number; outputTokens: number; estimatedCost: number; requests: number };
+}> {
+  await db.read();
+  const tokenStats = db.data!.dailyTokenStats || {};
+
+  const daily: Array<{ date: string; inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }> = [];
+  const byProvider: Record<string, { inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }> = {};
+  const totals = { inputTokens: 0, outputTokens: 0, estimatedCost: 0, requests: 0 };
+  const now = Date.now();
+
+  for (let i = days - 1; i >= 0; i--) {
+    const dayKey = getDayKey(now - i * 86400000);
+    const providers = tokenStats[dayKey] || {};
+    let dayInput = 0, dayOutput = 0, dayCost = 0, dayReqs = 0;
+
+    for (const [provider, stats] of Object.entries(providers)) {
+      dayInput += stats.inputTokens;
+      dayOutput += stats.outputTokens;
+      dayCost += stats.estimatedCost;
+      dayReqs += stats.requests;
+
+      if (!byProvider[provider]) {
+        byProvider[provider] = { inputTokens: 0, outputTokens: 0, estimatedCost: 0, requests: 0 };
+      }
+      byProvider[provider].inputTokens += stats.inputTokens;
+      byProvider[provider].outputTokens += stats.outputTokens;
+      byProvider[provider].estimatedCost += stats.estimatedCost;
+      byProvider[provider].requests += stats.requests;
+    }
+
+    daily.push({ date: dayKey, inputTokens: dayInput, outputTokens: dayOutput, estimatedCost: dayCost, requests: dayReqs });
+    totals.inputTokens += dayInput;
+    totals.outputTokens += dayOutput;
+    totals.estimatedCost += dayCost;
+    totals.requests += dayReqs;
+  }
+
+  return { daily, byProvider, totals };
 }

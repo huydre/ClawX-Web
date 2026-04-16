@@ -25,6 +25,17 @@
     "noSkills": "Chưa có kỹ năng nào",
     "enableSome": "Bật một số kỹ năng",
     "more": "+{{count}} thêm",
+    "tokenUsage": {
+        "title": "Sử dụng Token",
+        "estimatedCost": "Chi phí (7 ngày)",
+        "inputTokens": "Token đầu vào",
+        "outputTokens": "Token đầu ra",
+        "cacheRead": "Cache đã đọc",
+        "totalTokens": "tổng token",
+        "savedFromCache": "token tiết kiệm từ cache",
+        "last7days": "7 ngày qua",
+        "noData": "Chưa có dữ liệu. Hãy chat để xem thống kê."
+    },
     "analytics": {
         "title": "Thống kê",
         "messages": "Tin nhắn",

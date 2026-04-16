@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import {
   getDailyStats,
   getHourlyActivity,
@@ -6,6 +8,8 @@ import {
   getRecentEvents,
 } from '../services/analytics.js';
 import { logger } from '../utils/logger.js';
+
+const execAsync = promisify(exec);
 
 const router = Router();
 
@@ -40,6 +44,39 @@ router.get('/totals', async (_req, res) => {
   } catch (error) {
     logger.error('Analytics totals error:', error);
     res.status(500).json({ error: String(error) });
+  }
+});
+
+// GET /api/analytics/token-stats?days=7
+router.get('/token-stats', async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(String(req.query.days)) || 7, 1), 365);
+
+    const { stdout } = await execAsync(`openclaw gateway usage-cost --days ${days} --json`, { timeout: 15000 });
+    const raw = JSON.parse(stdout.trim());
+
+    // Transform to frontend format
+    const daily = (raw.daily || []).map((d: any) => ({
+      date: d.date,
+      inputTokens: d.input || 0,
+      outputTokens: d.output || 0,
+      cacheReadTokens: d.cacheRead || 0,
+      estimatedCost: d.totalCost || 0,
+      requests: 0,
+    }));
+
+    const totals = {
+      inputTokens: raw.totals?.input || 0,
+      outputTokens: raw.totals?.output || 0,
+      cacheReadTokens: raw.totals?.cacheRead || 0,
+      estimatedCost: raw.totals?.totalCost || 0,
+      requests: 0,
+    };
+
+    res.json({ daily, byProvider: {}, totals });
+  } catch (error) {
+    logger.error('Analytics token stats error:', error);
+    res.json({ daily: [], byProvider: {}, totals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, estimatedCost: 0, requests: 0 } });
   }
 });
 
