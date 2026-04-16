@@ -6,7 +6,7 @@ import { tunnelManager } from '../services/tunnel-manager.js';
 import { updateChecker } from '../services/update-checker.js';
 import { systemMonitor } from '../services/system-monitor.js';
 import { getSettings } from '../services/storage.js';
-import { trackEvent } from '../services/analytics.js';
+import { trackEvent, estimateCost } from '../services/analytics.js';
 
 // Exported so routes can broadcast to all clients
 export let wss: WebSocketServer;
@@ -90,6 +90,29 @@ export function createWebSocketServer(server: any): WebSocketServer {
                 type: 'message_received',
                 sessionKey,
                 metadata: { method },
+              }).catch(() => {});
+            }
+
+            // Track token usage from provider response
+            const usage = message?.usage
+              || (params?.data as any)?.usage
+              || (params as any)?.usage;
+            if (usage && (usage.input_tokens || usage.prompt_tokens || usage.total_tokens)) {
+              const inputTokens = usage.input_tokens || usage.prompt_tokens || 0;
+              const outputTokens = usage.output_tokens || usage.completion_tokens || 0;
+              const model = String(message?.model || (params?.data as any)?.model || 'unknown');
+              const provider = String((params?.data as any)?.provider || message?.provider || model.split('/')[0] || 'unknown');
+              const cost = usage.cost || estimateCost(model, inputTokens, outputTokens);
+              trackEvent({
+                type: 'tokens_used',
+                sessionKey,
+                metadata: {
+                  provider,
+                  model,
+                  inputTokens,
+                  outputTokens,
+                  estimatedCost: cost,
+                },
               }).catch(() => {});
             }
           }

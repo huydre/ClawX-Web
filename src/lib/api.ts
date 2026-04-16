@@ -458,6 +458,14 @@ class ApiClient {
     return this.request<{ data: Record<string, number> }>('/analytics/hourly');
   }
 
+  async getTokenStats(days = 7) {
+    return this.request<{
+      daily: Array<{ date: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number }>;
+      byProvider: Record<string, { inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }>;
+      totals: { inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number };
+    }>('/analytics/token-stats?days=' + days);
+  }
+
   // Agents Config API
   async getCrossAgentConfig() {
     return this.request<{

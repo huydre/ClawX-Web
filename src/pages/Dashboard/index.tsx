@@ -17,6 +17,7 @@ import {
   ArrowUpRight,
   X,
   Monitor,
+  Coins,
 } from 'lucide-react';
 import { TicketButton } from '@/components/chat/TicketButton';
 import { Link } from 'react-router-dom';
@@ -60,6 +61,13 @@ export function Dashboard() {
   const [analyticsHourly, setAnalyticsHourly] = useState<Record<string, number>>({});
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
+  // Token usage stats
+  const [tokenStats, setTokenStats] = useState<{
+    daily: Array<{ date: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number }>;
+    byProvider: Record<string, { inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }>;
+    totals: { inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number };
+  } | null>(null);
+
   // System monitor
   const systemMetrics = useSystemMonitorStore((s) => s.metrics);
   const networkHistory = useSystemMonitorStore((s) => s.networkHistory);
@@ -92,10 +100,14 @@ export function Dashboard() {
     async function fetchAnalytics() {
       setAnalyticsLoading(true);
       try {
-        const [dailyRaw, hourlyRaw] = await Promise.all([
+        const [dailyRaw, hourlyRaw, tokenStatsRaw] = await Promise.all([
           api.getAnalyticsDaily(7).catch(() => ({})),
           api.getAnalyticsHourly().catch(() => ({})),
+          api.getTokenStats(7).catch(() => null),
         ]);
+        if (!cancelled && tokenStatsRaw) {
+          setTokenStats(tokenStatsRaw);
+        }
         if (!cancelled) {
           // Transform daily stats object to array for chart
           const dailyArray = Object.entries(dailyRaw as Record<string, { sent: number; received: number }>)
@@ -275,6 +287,92 @@ export function Dashboard() {
             </>
           )}
         </StatusCard>
+      </div>
+
+      {/* Token Usage */}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: '180ms', animationFillMode: 'both' }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Coins className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-muted-foreground">{t('tokenUsage.title', 'Token Usage')}</h3>
+        </div>
+        {analyticsLoading || !tokenStats ? (
+          /* Loading skeleton */
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <Skeleton variant="text" className="w-20 mb-2" />
+                  <Skeleton className="h-8 w-24 mb-1" />
+                  <Skeleton variant="text" className="w-16" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : tokenStats.totals.inputTokens === 0 && tokenStats.totals.outputTokens === 0 ? (
+          /* Empty state */
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center py-4">
+                <Coins className="h-6 w-6 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">{t('tokenUsage.noData', 'No token usage data yet. Start chatting to see stats.')}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Data cards */
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {/* Total Cost */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('tokenUsage.estimatedCost', 'Est. Cost (7d)')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight mt-1 tabular-nums">
+                  ${tokenStats.totals.estimatedCost.toFixed(4)}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {formatTokenCount(tokenStats.totals.inputTokens + tokenStats.totals.outputTokens)} {t('tokenUsage.totalTokens', 'total tokens')}
+                </p>
+              </CardContent>
+            </Card>
+            {/* Input Tokens */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('tokenUsage.inputTokens', 'Input Tokens')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight mt-1 tabular-nums">
+                  {formatTokenCount(tokenStats.totals.inputTokens)}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{t('tokenUsage.last7days', 'Last 7 days')}</p>
+              </CardContent>
+            </Card>
+            {/* Output Tokens */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('tokenUsage.outputTokens', 'Output Tokens')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight mt-1 tabular-nums">
+                  {formatTokenCount(tokenStats.totals.outputTokens)}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{t('tokenUsage.last7days', 'Last 7 days')}</p>
+              </CardContent>
+            </Card>
+            {/* Cache Read */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('tokenUsage.cacheRead', 'Cache Read')}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight mt-1 tabular-nums">
+                  {formatTokenCount(tokenStats.totals.cacheReadTokens)}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{t('tokenUsage.savedFromCache', 'tokens saved from cache')}</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -585,6 +683,12 @@ function formatUptime(seconds: number): string {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+}
+
+function formatTokenCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+  return String(count);
 }
 
 export default Dashboard;

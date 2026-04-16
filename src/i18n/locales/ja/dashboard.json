@@ -25,6 +25,17 @@
     "noSkills": "有効なスキルがありません",
     "enableSome": "スキルを有効にする",
     "more": "+{{count}} 件",
+    "tokenUsage": {
+        "title": "トークン使用量",
+        "estimatedCost": "推定コスト (7日)",
+        "inputTokens": "入力トークン",
+        "outputTokens": "出力トークン",
+        "cacheRead": "キャッシュ読取",
+        "totalTokens": "合計トークン",
+        "savedFromCache": "キャッシュ節約トークン",
+        "last7days": "過去7日間",
+        "noData": "まだデータがありません。チャットを開始すると統計が表示されます。"
+    },
     "analytics": {
         "title": "分析",
         "messages": "メッセージ",

@@ -25,6 +25,17 @@
     "noSkills": "No skills enabled",
     "enableSome": "Enable some skills",
     "more": "+{{count}} more",
+    "tokenUsage": {
+        "title": "Token Usage",
+        "estimatedCost": "Est. Cost (7d)",
+        "inputTokens": "Input Tokens",
+        "outputTokens": "Output Tokens",
+        "cacheRead": "Cache Read",
+        "totalTokens": "total tokens",
+        "savedFromCache": "tokens saved from cache",
+        "last7days": "Last 7 days",
+        "noData": "No token usage data yet. Start chatting to see stats."
+    },
     "analytics": {
         "title": "Analytics",
         "messages": "Messages",
