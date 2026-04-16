@@ -94,7 +94,7 @@ export function TicketButton() {
   // Floating button + tooltip
   if (state === 'idle') {
     return (
-      <div className="fixed bottom-20 md:bottom-6 right-4 z-40">
+      <div className="fixed bottom-36 md:bottom-6 right-4 z-40">
         {/* Tooltip bubble */}
         {showTooltip && (
           <div className="absolute bottom-14 right-0 w-56 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -119,14 +119,14 @@ export function TicketButton() {
             setState('form');
           }}
           className={cn(
-            'w-12 h-12 rounded-full shadow-lg',
+            'w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg',
             'bg-primary text-primary-foreground',
             'flex items-center justify-center',
             'hover:scale-110 transition-transform'
           )}
           title="Cần hỗ trợ?"
         >
-          <LifeBuoy className="h-6 w-6" />
+          <LifeBuoy className="h-5 w-5 md:h-6 md:w-6" />
         </button>
       </div>
     );
