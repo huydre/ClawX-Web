@@ -53,11 +53,15 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       try { unlinkSync(file.path); } catch { /* ignore */ }
     }
 
+    // Device ID from tunnel subdomain or hostname
+    const { hostname } = await import('os');
+    const deviceId = process.env.CLOUDFLARE_TUNNEL_SUBDOMAIN || hostname();
+
     // Forward to admin API as JSON
     const ticketPayload = {
       description: description.trim(),
       contact_info: contact_info || null,
-      device_id: (req.headers['x-device-id'] as string) || null,
+      device_id: deviceId,
       amount,
       files: fileList,
     };
