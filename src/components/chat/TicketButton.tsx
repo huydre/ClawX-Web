@@ -3,7 +3,7 @@
  * Shows tooltip once per session, click → form → QR payment
  */
 import { useState, useRef, useEffect } from 'react';
-import { LifeBuoy, Upload, Send, CheckCircle, X } from 'lucide-react';
+import { Upload, Send, CheckCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModalDialog } from '@/components/common/ModalDialog';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,23 @@ interface TicketResult {
 }
 
 const TOOLTIP_KEY = 'ticket_tooltip_dismissed';
+
+/** ClawX mascot icon for support button */
+function MascotIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M60 10 C30 10 15 35 15 55 C15 75 30 95 45 100 L45 110 L55 110 L55 100 C55 100 60 102 65 100 L65 110 L75 110 L75 100 C90 95 105 75 105 55 C105 35 90 10 60 10Z" fill="#e53e3e" />
+      <path d="M20 45 C5 40 0 50 5 60 C10 70 20 65 25 55 C28 48 25 45 20 45Z" fill="#e53e3e" />
+      <path d="M100 45 C115 40 120 50 115 60 C110 70 100 65 95 55 C92 48 95 45 100 45Z" fill="#e53e3e" />
+      <path d="M45 15 Q35 5 30 8" stroke="#ff6b6b" strokeWidth="2" strokeLinecap="round" />
+      <path d="M75 15 Q85 5 90 8" stroke="#ff6b6b" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="45" cy="35" r="6" fill="#050810" />
+      <circle cx="75" cy="35" r="6" fill="#050810" />
+      <circle cx="46" cy="34" r="2" fill="#00e5cc" />
+      <circle cx="76" cy="34" r="2" fill="#00e5cc" />
+    </svg>
+  );
+}
 
 export function TicketButton() {
   const [state, setState] = useState<TicketState>('idle');
@@ -126,7 +143,7 @@ export function TicketButton() {
           )}
           title="Cần hỗ trợ?"
         >
-          <LifeBuoy className="h-5 w-5 md:h-6 md:w-6" />
+          <MascotIcon className="h-7 w-7 md:h-8 md:w-8" />
         </button>
       </div>
     );
