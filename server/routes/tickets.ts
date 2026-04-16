@@ -51,12 +51,20 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       body: formData,
     });
 
-    const data = await response.json();
-
     // Cleanup temp files
     for (const file of files) {
       try { unlinkSync(file.path); } catch { /* ignore */ }
     }
+
+    // Handle non-JSON responses (admin API may return HTML errors)
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      logger.warn('Admin API returned non-JSON', { status: response.status, body: text.substring(0, 200) });
+      return res.status(502).json({ error: 'Admin API unavailable or returned invalid response' });
+    }
+
+    const data = await response.json();
 
     if (!response.ok) {
       logger.warn('Admin API ticket creation failed', { status: response.status, data });
