@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Key,
   Download,
+  Upload,
   Copy,
   FileText,
   Globe,
@@ -895,6 +896,9 @@ export function Settings() {
         <SecuritySettings />
       )}
 
+      {/* Backup & Restore */}
+      <BackupRestoreCard />
+
       {/* About */}
       <Card>
         <CardHeader>
@@ -925,6 +929,97 @@ export function Settings() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function BackupRestoreCard() {
+  const { t } = useTranslation('settings');
+  const [restoring, setRestoring] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { api } = await import('@/lib/api');
+      const url = api.getBackupDownloadUrl();
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = '';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(t('backup.exportSuccess', 'Backup download started'));
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.tar.gz,.tgz';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      const confirmed = window.confirm(
+        t('backup.restoreConfirm', 'This will overwrite your current config. Are you sure?')
+      );
+      if (!confirmed) return;
+
+      setRestoring(true);
+      try {
+        const { api } = await import('@/lib/api');
+        const result = await api.restoreBackup(file);
+        toast.success(
+          t('backup.restoreSuccess', 'Backup restored ({{count}} files). Restart gateway to apply changes.', { count: result.restored.totalFiles })
+        );
+      } catch (err) {
+        toast.error(String(err));
+      } finally {
+        setRestoring(false);
+      }
+    };
+    input.click();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          {t('backup.title', 'Backup & Restore')}
+        </CardTitle>
+        <CardDescription>
+          {t('backup.description', 'Export or import your config, agents, and chat history')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" onClick={handleExport} disabled={exporting} className="flex-1">
+            <Download className="h-4 w-4 mr-2" />
+            {exporting
+              ? t('backup.exporting', 'Exporting...')
+              : t('backup.export', 'Export Backup')}
+          </Button>
+          <Button variant="outline" onClick={handleRestore} disabled={restoring} className="flex-1">
+            {restoring ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4 mr-2" />
+            )}
+            {restoring
+              ? t('backup.restoring', 'Restoring...')
+              : t('backup.restore', 'Restore Backup')}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {t('backup.hint', 'Backup includes OpenClaw config, agents, sessions, and ClawX settings.')}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
