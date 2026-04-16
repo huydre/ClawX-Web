@@ -64,6 +64,7 @@ router.post('/', upload.array('files', 5), async (req, res) => {
 
     const response = await fetch(`${ADMIN_API}/api/tickets`, {
       method: 'POST',
+      redirect: 'follow',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': API_KEY,
