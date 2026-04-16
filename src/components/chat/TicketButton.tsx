@@ -18,19 +18,57 @@ interface TicketResult {
 
 const TOOLTIP_KEY = 'ticket_tooltip_dismissed';
 
-/** ClawX mascot icon for support button */
+/** ClawX mascot icon with CSS animations */
 function MascotIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <path d="M60 10 C30 10 15 35 15 55 C15 75 30 95 45 100 L45 110 L55 110 L55 100 C55 100 60 102 65 100 L65 110 L75 110 L75 100 C90 95 105 75 105 55 C105 35 90 10 60 10Z" fill="#e53e3e" />
-      <path d="M20 45 C5 40 0 50 5 60 C10 70 20 65 25 55 C28 48 25 45 20 45Z" fill="#e53e3e" />
-      <path d="M100 45 C115 40 120 50 115 60 C110 70 100 65 95 55 C92 48 95 45 100 45Z" fill="#e53e3e" />
-      <path d="M45 15 Q35 5 30 8" stroke="#ff6b6b" strokeWidth="2" strokeLinecap="round" />
-      <path d="M75 15 Q85 5 90 8" stroke="#ff6b6b" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="45" cy="35" r="6" fill="#050810" />
-      <circle cx="75" cy="35" r="6" fill="#050810" />
-      <circle cx="46" cy="34" r="2" fill="#00e5cc" />
-      <circle cx="76" cy="34" r="2" fill="#00e5cc" />
+      <style>{`
+        @keyframes claw-wave {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(-15deg); }
+          75% { transform: rotate(15deg); }
+        }
+        @keyframes eye-blink {
+          0%, 90%, 100% { transform: scaleY(1); }
+          95% { transform: scaleY(0.1); }
+        }
+        @keyframes body-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        @keyframes antenna-wiggle {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(5deg); }
+        }
+        .mascot-body { animation: body-bounce 2s ease-in-out infinite; }
+        .mascot-claw-l { animation: claw-wave 2.5s ease-in-out infinite; transform-origin: 25px 50px; }
+        .mascot-claw-r { animation: claw-wave 2.5s ease-in-out infinite 0.3s; transform-origin: 95px 50px; }
+        .mascot-eye { animation: eye-blink 4s ease-in-out infinite; transform-origin: center; }
+        .mascot-antenna { animation: antenna-wiggle 3s ease-in-out infinite; }
+      `}</style>
+      <g className="mascot-body">
+        <path d="M60 10 C30 10 15 35 15 55 C15 75 30 95 45 100 L45 110 L55 110 L55 100 C55 100 60 102 65 100 L65 110 L75 110 L75 100 C90 95 105 75 105 55 C105 35 90 10 60 10Z" fill="#e53e3e" />
+      </g>
+      <g className="mascot-claw-l">
+        <path d="M20 45 C5 40 0 50 5 60 C10 70 20 65 25 55 C28 48 25 45 20 45Z" fill="#e53e3e" />
+      </g>
+      <g className="mascot-claw-r">
+        <path d="M100 45 C115 40 120 50 115 60 C110 70 100 65 95 55 C92 48 95 45 100 45Z" fill="#e53e3e" />
+      </g>
+      <g className="mascot-antenna" style={{ transformOrigin: '45px 15px' }}>
+        <path d="M45 15 Q35 5 30 8" stroke="#ff6b6b" strokeWidth="2" strokeLinecap="round" />
+      </g>
+      <g className="mascot-antenna" style={{ transformOrigin: '75px 15px' }}>
+        <path d="M75 15 Q85 5 90 8" stroke="#ff6b6b" strokeWidth="2" strokeLinecap="round" />
+      </g>
+      <g className="mascot-eye" style={{ transformOrigin: '45px 35px' }}>
+        <circle cx="45" cy="35" r="6" fill="#050810" />
+        <circle cx="46" cy="34" r="2" fill="#00e5cc" />
+      </g>
+      <g className="mascot-eye" style={{ transformOrigin: '75px 35px' }}>
+        <circle cx="75" cy="35" r="6" fill="#050810" />
+        <circle cx="76" cy="34" r="2" fill="#00e5cc" />
+      </g>
     </svg>
   );
 }
@@ -112,20 +150,27 @@ export function TicketButton() {
   if (state === 'idle') {
     return (
       <div className="fixed bottom-36 md:bottom-6 right-4 z-40">
-        {/* Tooltip bubble */}
+        {/* Chat bubble from mascot */}
         {showTooltip && (
-          <div className="absolute bottom-14 right-0 w-56 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="bg-popover border rounded-lg shadow-lg p-3 relative">
+          <div className="absolute bottom-16 right-0 w-60 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-popover border rounded-2xl shadow-xl p-3 relative">
               <button
                 onClick={dismissTooltip}
-                className="absolute top-1 right-1 p-0.5 rounded hover:bg-accent"
+                className="absolute top-2 right-2 p-0.5 rounded-full hover:bg-accent transition-colors"
               >
-                <X className="h-3 w-3 text-muted-foreground" />
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <p className="text-sm pr-4">
-                Bạn cần hỗ trợ? Nhấn vào đây để gửi yêu cầu.
-              </p>
-              <div className="absolute bottom-0 right-5 translate-y-1/2 rotate-45 w-2.5 h-2.5 bg-popover border-r border-b" />
+              <div className="flex items-start gap-2 pr-5">
+                <span className="text-lg shrink-0">&#128075;</span>
+                <div>
+                  <p className="text-sm font-medium mb-0.5">Xin chào!</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Bạn đang gặp sự cố? Mình có thể giúp bạn xử lý nhanh chóng.
+                  </p>
+                </div>
+              </div>
+              {/* Chat tail pointing to mascot */}
+              <div className="absolute -bottom-2 right-6 w-4 h-4 bg-popover border-r border-b rotate-45 rounded-br-sm" />
             </div>
           </div>
         )}
