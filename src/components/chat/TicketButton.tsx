@@ -8,13 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ModalDialog } from '@/components/common/ModalDialog';
 import { cn } from '@/lib/utils';
 
-type TicketState = 'idle' | 'form' | 'submitting' | 'qr';
-
-interface TicketResult {
-  ticketId: string;
-  shortId: string;
-  qrUrl: string;
-}
+type TicketState = 'idle' | 'form' | 'submitting' | 'done';
 
 const TOOLTIP_KEY = 'ticket_tooltip_dismissed';
 
@@ -78,7 +72,7 @@ export function TicketButton() {
   const [description, setDescription] = useState('');
   const [contact, setContact] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  const [result, setResult] = useState<TicketResult | null>(null);
+  const [ticketId, setTicketId] = useState('');
   const [error, setError] = useState('');
   const [showTooltip, setShowTooltip] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -108,7 +102,7 @@ export function TicketButton() {
     setDescription('');
     setContact('');
     setFiles([]);
-    setResult(null);
+    setTicketId('');
     setError('');
   };
 
@@ -129,13 +123,9 @@ export function TicketButton() {
       const res = await fetch('/api/tickets', { method: 'POST', body: formData });
       const data = await res.json();
 
-      if (data.success) {
-        setResult({
-          ticketId: data.ticket.id,
-          shortId: data.ticket.shortId,
-          qrUrl: data.qrUrl,
-        });
-        setState('qr');
+      if (data.success || data.ok) {
+        setTicketId(data.ticket?.shortId || data.ticket_id?.substring(0, 8).toUpperCase() || '');
+        setState('done');
       } else {
         setError(data.error || 'Gửi thất bại');
         setState('form');
@@ -197,7 +187,7 @@ export function TicketButton() {
     <ModalDialog
       open={state !== 'idle'}
       onClose={reset}
-      title={state === 'qr' ? 'Thanh toán' : 'Hỗ trợ nhanh'}
+      title={state === 'done' ? 'Thành công' : 'Hỗ trợ nhanh'}
       maxWidth="sm"
     >
       {/* Form */}
@@ -253,11 +243,6 @@ export function TicketButton() {
             )}
           </div>
 
-          <div className="border-t pt-3 flex items-center justify-between">
-            <span className="text-sm font-medium">Chi phí hỗ trợ</span>
-            <span className="text-lg font-bold text-primary">500,000 VND</span>
-          </div>
-
           {error && <div className="text-sm text-destructive">{error}</div>}
 
           <Button className="w-full" onClick={handleSubmit} disabled={state === 'submitting'}>
@@ -268,31 +253,19 @@ export function TicketButton() {
         </div>
       )}
 
-      {/* QR Payment */}
-      {state === 'qr' && result && (
-        <div className="space-y-4 text-center">
-          <div className="flex items-center justify-center gap-2 text-green-500">
-            <CheckCircle className="h-5 w-5" />
-            <span className="font-medium">Ticket #{result.shortId}</span>
+      {/* Success */}
+      {state === 'done' && (
+        <div className="space-y-4 text-center py-4">
+          <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+          <div>
+            <p className="text-lg font-medium">Đã gửi yêu cầu!</p>
+            {ticketId && (
+              <p className="text-sm text-muted-foreground mt-1">Mã ticket: #{ticketId}</p>
+            )}
           </div>
-
           <p className="text-sm text-muted-foreground">
-            Quét QR để thanh toán. Sau khi thanh toán, admin sẽ xác nhận và liên hệ hỗ trợ bạn.
+            CSKH sẽ liên hệ với bạn sớm nhất khi nhận được yêu cầu. Cảm ơn bạn!
           </p>
-
-          <img
-            src={result.qrUrl}
-            alt="QR Thanh toán"
-            className="mx-auto w-64 h-64 rounded-lg border"
-          />
-
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div>Ngân hàng: Techcombank</div>
-            <div>STK: MS01T17213302551927</div>
-            <div>Nội dung: TICKET{result.shortId}</div>
-            <div>Số tiền: 500,000 VND</div>
-          </div>
-
           <Button variant="outline" onClick={reset} className="w-full">Đóng</Button>
         </div>
       )}

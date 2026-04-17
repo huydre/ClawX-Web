@@ -29,12 +29,7 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       return res.status(400).json({ error: 'Mo ta loi can it nhat 10 ky tu' });
     }
 
-    const amount = 500000;
-    const bankAccount = 'MS01T17213302551927';
-    const bankName = 'TCB';
-
-    // Build file list (convert uploaded files to base64 data URLs for now)
-    // TODO: Upload to Supabase Storage when credentials available
+    // Build file list (convert uploaded files to base64 data URLs)
     const uploadedFiles = (req.files as Express.Multer.File[]) || [];
     const fileList: Array<{ url: string; name: string; type: string; size: number }> = [];
 
@@ -62,7 +57,6 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       description: description.trim(),
       contact_info: contact_info || null,
       device_id: deviceId,
-      amount,
       files: fileList,
     };
 
@@ -91,19 +85,15 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       return res.status(response.status).json({ error: data.error || 'Ticket creation failed' });
     }
 
-    // Build QR URL from ticket_id
     const ticketId = data.ticket_id || '';
     const shortId = ticketId.substring(0, 8).toUpperCase();
-    const addInfo = `TICKET${shortId}`.replace(/[^A-Z0-9]/g, '');
-    const qrUrl = `https://img.vietqr.io/image/${bankName}-${bankAccount}-compact.png?amount=${amount}&addInfo=${addInfo}`;
 
     logger.info('Ticket created via admin API', { ticketId });
 
     res.json({
       success: true,
-      ticket: { id: ticketId, shortId, status: 'pending_payment', amount },
-      qrUrl,
-      files: fileList.map(f => ({ name: f.name, url: '' })),
+      ticket: { id: ticketId, shortId },
+      ticket_id: ticketId,
     });
   } catch (error) {
     logger.error('Create ticket failed', { error });
