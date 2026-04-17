@@ -40,12 +40,18 @@ router.get('/totals', async (_req, res) => {
     }
 });
 // GET /api/analytics/token-stats?days=7
+//
+// Runs the openclaw CLI in the user's login shell so PATH, nvm, pnpm and
+// ~/.openclaw/openclaw.json are all picked up the same way they are in an
+// interactive terminal. This keeps the server-side logic identical to what
+// the operator would run by hand.
 router.get('/token-stats', async (req, res) => {
+    const days = Math.min(Math.max(parseInt(String(req.query.days)) || 7, 1), 365);
+    const inner = `openclaw gateway usage-cost --days ${days} --json`;
+    const cmd = process.platform === 'win32' ? inner : `bash -lc "${inner}"`;
     try {
-        const days = Math.min(Math.max(parseInt(String(req.query.days)) || 7, 1), 365);
-        const { stdout } = await execAsync(`openclaw gateway usage-cost --days ${days} --json`, { timeout: 15000 });
+        const { stdout } = await execAsync(cmd, { timeout: 30000 });
         const raw = JSON.parse(stdout.trim());
-        // Transform to frontend format
         const daily = (raw.daily || []).map((d) => ({
             date: d.date,
             inputTokens: d.input || 0,
@@ -65,7 +71,19 @@ router.get('/token-stats', async (req, res) => {
     }
     catch (error) {
         logger.error('Analytics token stats error:', error);
-        res.json({ daily: [], byProvider: {}, totals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, estimatedCost: 0, requests: 0 } });
+        res.json({
+            daily: [],
+            byProvider: {},
+            totals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, estimatedCost: 0, requests: 0 },
+            error: error?.message || String(error),
+            debug: {
+                cmd,
+                stderr: (error?.stderr || '').toString().slice(0, 2000),
+                code: error?.code ?? null,
+                killed: !!error?.killed,
+                signal: error?.signal ?? null,
+            },
+        });
     }
 });
 // GET /api/analytics/recent?limit=20
