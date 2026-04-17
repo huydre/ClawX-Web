@@ -126,18 +126,34 @@ router.post('/update', async (_req, res) => {
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
+        # Find npm (try NVM, then system paths)
+        NPM_BIN=""
+        if command -v npm &>/dev/null; then
+          NPM_BIN="npm"
+        elif [ -f "$NVM_DIR/versions/node/$(ls $NVM_DIR/versions/node/ 2>/dev/null | tail -1)/bin/npm" ]; then
+          NPM_BIN="$NVM_DIR/versions/node/$(ls $NVM_DIR/versions/node/ | tail -1)/bin/npm"
+          export PATH="$(dirname $NPM_BIN):$PATH"
+        fi
+
+        if [ -z "$NPM_BIN" ]; then
+          echo "ERROR: npm not found"
+          exit 1
+        fi
+
+        echo "Using npm: $(which npm || echo $NPM_BIN)"
+
         # Install 9router globally if not installed
         if ! command -v 9router &>/dev/null; then
           echo "Installing 9router globally..."
-          npm i -g 9router
+          $NPM_BIN i -g 9router
         else
-          echo "9router already installed"
+          echo "9router already installed: $(which 9router)"
         fi
 
         # Install PM2 if needed
         if ! command -v pm2 &>/dev/null; then
           echo "Installing PM2..."
-          npm i -g pm2
+          $NPM_BIN i -g pm2
         fi
 
         # Check if 9router running in PM2
