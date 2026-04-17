@@ -66,6 +66,8 @@ export function Dashboard() {
     daily: Array<{ date: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number }>;
     byProvider: Record<string, { inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }>;
     totals: { inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number };
+    error?: string;
+    debug?: { cmd: string; stderr: string; code: number | null; killed: boolean; signal: string | null };
   } | null>(null);
 
   // System monitor
@@ -308,6 +310,36 @@ export function Dashboard() {
               </Card>
             ))}
           </div>
+        ) : tokenStats.error ? (
+          /* Error state — show what went wrong so self-hosted admin can diagnose */
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-start gap-2">
+                <Coins className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-destructive">Token stats unavailable</p>
+                  <p className="text-xs text-muted-foreground mt-1 break-words">{tokenStats.error}</p>
+                </div>
+              </div>
+              {tokenStats.debug && (
+                <details className="text-[11px] text-muted-foreground">
+                  <summary className="cursor-pointer hover:text-foreground">Diagnostic details</summary>
+                  <div className="mt-2 space-y-1 font-mono text-[10px]">
+                    <div><span className="text-muted-foreground/70">cmd:</span> {tokenStats.debug.cmd}</div>
+                    {tokenStats.debug.signal && (
+                      <div><span className="text-muted-foreground/70">signal:</span> {tokenStats.debug.signal} {tokenStats.debug.killed ? '(killed)' : ''}</div>
+                    )}
+                    {tokenStats.debug.code !== null && (
+                      <div><span className="text-muted-foreground/70">exit code:</span> {tokenStats.debug.code}</div>
+                    )}
+                    {tokenStats.debug.stderr && (
+                      <pre className="whitespace-pre-wrap bg-muted/50 p-2 rounded mt-1">{tokenStats.debug.stderr}</pre>
+                    )}
+                  </div>
+                </details>
+              )}
+            </CardContent>
+          </Card>
         ) : tokenStats.totals.inputTokens === 0 && tokenStats.totals.outputTokens === 0 ? (
           /* Empty state */
           <Card>
