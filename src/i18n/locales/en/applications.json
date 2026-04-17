@@ -1,0 +1,54 @@
+{
+  "title": "Applications",
+  "subtitle": "Connect external apps so OpenClaw can use them as tools.",
+  "search": {
+    "placeholder": "Search {{count}}+ apps...",
+    "empty": "No apps match your search."
+  },
+  "sections": {
+    "popular": "Popular Apps",
+    "all": "All Apps",
+    "permissions": "Permissions",
+    "howToUse": "How to use"
+  },
+  "status": {
+    "connected": "Connected",
+    "pending": "Pending...",
+    "connecting": "Connecting..."
+  },
+  "actions": {
+    "connect": "Connect",
+    "manage": "Manage",
+    "update": "Update",
+    "disconnect": "Disconnect",
+    "disconnecting": "Disconnecting...",
+    "copyToChat": "Copy & Go to Chat"
+  },
+  "hints": {
+    "copyPrompt": "Click any prompt below to copy and jump to chat:",
+    "aiAutoUse": "The AI agent will automatically use connected apps to complete tasks.",
+    "toolPreamble": "You have access to the tryopenclaw-connectors MCP server. Use the {{tool}} tool to"
+  },
+  "banner": {
+    "mockTitle": "Demo mode active",
+    "mockDesc": "Composio proxy is not configured. All connections are simulated so you can try the UI. Set the COMPOSIO_PROXY_URL env var to connect for real.",
+    "proxyUnreachable": "Cannot reach Composio proxy",
+    "proxyUnreachableDesc": "Check COMPOSIO_PROXY_URL and COMPOSIO_PROXY_TOKEN in the ClawX .env file."
+  },
+  "toast": {
+    "connected": "Connected {{app}}",
+    "disconnected": "Disconnected {{app}}",
+    "popupBlocked": "Popup was blocked. Please allow popups for this site.",
+    "copied": "Copied to clipboard"
+  },
+  "mock": {
+    "title": "ClawX wants to connect to your {{app}}",
+    "subtitle": "Taking you to the authentication page. Please approve to continue.",
+    "grantAccess": "Grant access:",
+    "approve": "Approve (Mock)",
+    "cancel": "Cancel",
+    "connecting": "Connecting to {{app}}...",
+    "done": "Connected successfully!",
+    "securedBy": "Secured by"
+  }
+}

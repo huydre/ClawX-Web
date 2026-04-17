@@ -42,12 +42,22 @@ interface ProviderConfig {
   updatedAt: string;
 }
 
+interface ApplicationConnection {
+  slug: string;
+  connectionId: string;
+  status: 'PENDING' | 'ACTIVE' | 'FAILED' | 'MOCK';
+  scopes: string[];
+  connectedAt: string;
+  updatedAt: string;
+}
+
 interface Database {
   settings: AppSettings;
   providers: Record<string, ProviderConfig>;
   apiKeys: Record<string, string>;
   defaultProvider: string | null;
   cloudflare: CloudflareSettings;
+  applications: Record<string, ApplicationConnection>;
 }
 
 // Default data
@@ -65,6 +75,7 @@ const defaultData: Database = {
   cloudflare: {
     enabled: false,
   },
+  applications: {},
 };
 
 // Database setup
@@ -225,3 +236,31 @@ export async function clearCloudflareSettings(): Promise<void> {
   };
   await db.write();
 }
+
+// Applications (Composio connections)
+export async function getAllApplicationConnections(): Promise<ApplicationConnection[]> {
+  await db.read();
+  return Object.values(db.data!.applications || {});
+}
+
+export async function getApplicationConnection(slug: string): Promise<ApplicationConnection | null> {
+  await db.read();
+  return db.data!.applications?.[slug] || null;
+}
+
+export async function saveApplicationConnection(conn: ApplicationConnection): Promise<void> {
+  await db.read();
+  if (!db.data!.applications) db.data!.applications = {};
+  db.data!.applications[conn.slug] = conn;
+  await db.write();
+}
+
+export async function deleteApplicationConnection(slug: string): Promise<void> {
+  await db.read();
+  if (db.data!.applications) {
+    delete db.data!.applications[slug];
+    await db.write();
+  }
+}
+
+export type { ApplicationConnection };

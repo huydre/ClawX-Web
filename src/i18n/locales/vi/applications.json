@@ -1,0 +1,54 @@
+{
+  "title": "Ứng dụng",
+  "subtitle": "Kết nối ứng dụng bên ngoài để OpenClaw sử dụng chúng như công cụ.",
+  "search": {
+    "placeholder": "Tìm kiếm {{count}}+ ứng dụng...",
+    "empty": "Không tìm thấy ứng dụng nào khớp."
+  },
+  "sections": {
+    "popular": "Phổ biến",
+    "all": "Tất cả ứng dụng",
+    "permissions": "Quyền truy cập",
+    "howToUse": "Cách sử dụng"
+  },
+  "status": {
+    "connected": "Đã kết nối",
+    "pending": "Đang kết nối...",
+    "connecting": "Đang kết nối..."
+  },
+  "actions": {
+    "connect": "Kết nối",
+    "manage": "Quản lý",
+    "update": "Cập nhật",
+    "disconnect": "Ngắt kết nối",
+    "disconnecting": "Đang ngắt...",
+    "copyToChat": "Copy & Đến Chat"
+  },
+  "hints": {
+    "copyPrompt": "Nhấn vào prompt bên dưới để copy và chuyển đến chat:",
+    "aiAutoUse": "AI agent sẽ tự động sử dụng ứng dụng đã kết nối để hoàn thành tác vụ.",
+    "toolPreamble": "Bạn có quyền truy cập tryopenclaw-connectors MCP server. Sử dụng tool {{tool}} để"
+  },
+  "banner": {
+    "mockTitle": "Đang ở chế độ demo",
+    "mockDesc": "Máy chủ Composio proxy chưa được cấu hình. Mọi kết nối sẽ là giả lập để bạn trải nghiệm UI. Đặt biến môi trường COMPOSIO_PROXY_URL để kết nối thật.",
+    "proxyUnreachable": "Không kết nối được đến Composio proxy",
+    "proxyUnreachableDesc": "Kiểm tra COMPOSIO_PROXY_URL và COMPOSIO_PROXY_TOKEN trong file .env của ClawX."
+  },
+  "toast": {
+    "connected": "Đã kết nối {{app}}",
+    "disconnected": "Đã ngắt kết nối {{app}}",
+    "popupBlocked": "Popup bị chặn, vui lòng cho phép popup cho trang này",
+    "copied": "Đã sao chép vào clipboard"
+  },
+  "mock": {
+    "title": "ClawX muốn kết nối với {{app}} của bạn",
+    "subtitle": "Đang đưa bạn đến trang xác thực. Vui lòng chấp nhận để tiếp tục.",
+    "grantAccess": "Cấp quyền:",
+    "approve": "Chấp nhận (Mock)",
+    "cancel": "Hủy",
+    "connecting": "Đang kết nối với {{app}}...",
+    "done": "Kết nối thành công!",
+    "securedBy": "Bảo mật bởi"
+  }
+}

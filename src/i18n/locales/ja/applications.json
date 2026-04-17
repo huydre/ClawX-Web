@@ -1,0 +1,54 @@
+{
+  "title": "アプリ",
+  "subtitle": "外部アプリを接続して OpenClaw のツールとして利用できます。",
+  "search": {
+    "placeholder": "{{count}}+ アプリを検索...",
+    "empty": "該当するアプリが見つかりません。"
+  },
+  "sections": {
+    "popular": "人気アプリ",
+    "all": "すべてのアプリ",
+    "permissions": "権限",
+    "howToUse": "使い方"
+  },
+  "status": {
+    "connected": "接続済み",
+    "pending": "接続中...",
+    "connecting": "接続中..."
+  },
+  "actions": {
+    "connect": "接続",
+    "manage": "管理",
+    "update": "更新",
+    "disconnect": "切断",
+    "disconnecting": "切断中...",
+    "copyToChat": "コピーしてチャットへ"
+  },
+  "hints": {
+    "copyPrompt": "下のプロンプトをクリックするとコピーしてチャットに貼り付けられます:",
+    "aiAutoUse": "AI エージェントは接続済みアプリを自動的に使用します。",
+    "toolPreamble": "tryopenclaw-connectors MCP サーバーにアクセスできます。{{tool}} ツールを使って"
+  },
+  "banner": {
+    "mockTitle": "デモモード",
+    "mockDesc": "Composio プロキシが設定されていません。UI を試せるよう、すべての接続はシミュレーションです。COMPOSIO_PROXY_URL を設定すると本番接続になります。",
+    "proxyUnreachable": "Composio プロキシに接続できません",
+    "proxyUnreachableDesc": "ClawX の .env ファイルで COMPOSIO_PROXY_URL と COMPOSIO_PROXY_TOKEN を確認してください。"
+  },
+  "toast": {
+    "connected": "{{app}} を接続しました",
+    "disconnected": "{{app}} を切断しました",
+    "popupBlocked": "ポップアップがブロックされました。ポップアップを許可してください。",
+    "copied": "クリップボードにコピーしました"
+  },
+  "mock": {
+    "title": "ClawX が {{app}} に接続しようとしています",
+    "subtitle": "認証ページに移動します。続けるには承認してください。",
+    "grantAccess": "アクセス権限:",
+    "approve": "承認 (モック)",
+    "cancel": "キャンセル",
+    "connecting": "{{app}} に接続中...",
+    "done": "接続しました!",
+    "securedBy": "Secured by"
+  }
+}

@@ -10,7 +10,8 @@
         "devConsole": "開発者コンソール",
         "docs": "ガイド",
         "usb": "USB",
-        "files": "ファイル"
+        "files": "ファイル",
+        "applications": "アプリ"
     },
     "actions": {
         "save": "保存",

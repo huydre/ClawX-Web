@@ -10,7 +10,8 @@
         "devConsole": "Console phát triển",
         "docs": "Hướng dẫn",
         "usb": "USB",
-        "files": "Quản lý File"
+        "files": "Quản lý File",
+        "applications": "Ứng dụng"
     },
     "actions": {
         "save": "Lưu",
