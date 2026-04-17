@@ -663,6 +663,55 @@ class ApiClient {
   async startUpdate() {
     return this.request<{ ok: boolean; message: string }>('/system/update', { method: 'POST' });
   }
+
+  // Applications (Composio integrations)
+  async getApplicationsStatus() {
+    return this.request<{
+      proxyConfigured: boolean;
+      proxyReachable: boolean;
+      composioConfigured: boolean;
+      mockMode: boolean;
+      error?: string;
+    }>('/applications/status');
+  }
+
+  async getApplicationConnections() {
+    return this.request<{
+      items: Array<{
+        slug: string;
+        connectionId: string;
+        status: 'PENDING' | 'ACTIVE' | 'FAILED' | 'MOCK';
+        scopes: string[];
+        connectedAt: string;
+        updatedAt: string;
+      }>;
+    }>('/applications/connections');
+  }
+
+  async connectApplication(slug: string, callbackUrl?: string) {
+    return this.request<{
+      redirectUrl: string;
+      connectionId: string;
+      mock: boolean;
+    }>(`/applications/${encodeURIComponent(slug)}/connect`, {
+      method: 'POST',
+      body: JSON.stringify({ callbackUrl }),
+    });
+  }
+
+  async finalizeApplication(slug: string) {
+    return this.request<{ status: string }>(
+      `/applications/${encodeURIComponent(slug)}/finalize`,
+      { method: 'POST' },
+    );
+  }
+
+  async disconnectApplication(slug: string) {
+    return this.request<{ success: boolean }>(
+      `/applications/${encodeURIComponent(slug)}`,
+      { method: 'DELETE' },
+    );
+  }
 }
 
 export const api = new ApiClient();

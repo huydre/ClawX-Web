@@ -10,7 +10,8 @@
         "devConsole": "Developer Console",
         "docs": "Documentation",
         "usb": "USB",
-        "files": "Files"
+        "files": "Files",
+        "applications": "Applications"
     },
     "actions": {
         "save": "Save",

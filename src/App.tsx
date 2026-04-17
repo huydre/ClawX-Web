@@ -18,6 +18,8 @@ import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
 import { USB } from './pages/USB';
 import { Files } from './pages/Files';
+import { Applications } from './pages/Applications';
+import { MockOAuthPage } from './pages/Applications/MockOAuthPage';
 
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
@@ -220,6 +222,8 @@ function App() {
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
         <Routes>
+          {/* Mock OAuth dialog — full-screen popup, rendered BEFORE MainLayout routes */}
+          <Route path="/applications/mock-oauth" element={<MockOAuthPage />} />
 
           {/* Main application routes */}
           <Route element={<MainLayout />}>
@@ -231,6 +235,7 @@ function App() {
             <Route path="/cron" element={<Cron />} />
             <Route path="/usb" element={<USB />} />
             <Route path="/files" element={<Files />} />
+            <Route path="/applications" element={<Applications />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>
         </Routes>

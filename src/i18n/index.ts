@@ -13,6 +13,7 @@ import enSetup from './locales/en/setup.json';
 import enAgents from './locales/en/agents.json';
 import enUsb from './locales/en/usb.json';
 import enFiles from './locales/en/files.json';
+import enApplications from './locales/en/applications.json';
 
 // VI
 import viCommon from './locales/vi/common.json';
@@ -26,6 +27,7 @@ import viSetup from './locales/vi/setup.json';
 import viAgents from './locales/vi/agents.json';
 import viUsb from './locales/vi/usb.json';
 import viFiles from './locales/vi/files.json';
+import viApplications from './locales/vi/applications.json';
 
 // JA
 import jaCommon from './locales/ja/common.json';
@@ -39,6 +41,7 @@ import jaSetup from './locales/ja/setup.json';
 import jaAgents from './locales/ja/agents.json';
 import jaUsb from './locales/ja/usb.json';
 import jaFiles from './locales/ja/files.json';
+import jaApplications from './locales/ja/applications.json';
 
 export const SUPPORTED_LANGUAGES = [
     { code: 'en', label: 'English' },
@@ -61,6 +64,7 @@ const resources = {
         agents: enAgents,
         usb: enUsb,
         files: enFiles,
+        applications: enApplications,
     },
     vi: {
         common: viCommon,
@@ -74,6 +78,7 @@ const resources = {
         agents: viAgents,
         usb: viUsb,
         files: viFiles,
+        applications: viApplications,
     },
     ja: {
         common: jaCommon,
@@ -87,6 +92,7 @@ const resources = {
         agents: jaAgents,
         usb: jaUsb,
         files: jaFiles,
+        applications: jaApplications,
     },
 };
 
@@ -97,7 +103,7 @@ i18n
         lng: 'en', // will be overridden by settings store
         fallbackLng: 'en',
         defaultNS: 'common',
-        ns: ['common', 'settings', 'dashboard', 'chat', 'channels', 'skills', 'cron', 'setup', 'agents', 'usb', 'files'],
+        ns: ['common', 'settings', 'dashboard', 'chat', 'channels', 'skills', 'cron', 'setup', 'agents', 'usb', 'files', 'applications'],
         interpolation: {
             escapeValue: false, // React already escapes
         },

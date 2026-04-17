@@ -20,6 +20,7 @@ import {
   Clock,
   FolderOpen,
   Route,
+  Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -98,6 +99,7 @@ export function Sidebar() {
     { to: '/cron', icon: <Clock className="h-5 w-5" />, label: t('sidebar.cronTasks') },
     { to: '/skills', icon: <Puzzle className="h-5 w-5" />, label: t('sidebar.skills') },
     { to: '/channels', icon: <Radio className="h-5 w-5" />, label: t('sidebar.channels') },
+    { to: '/applications', icon: <Plug className="h-5 w-5" />, label: t('sidebar.applications') },
     ...(usbDeviceCount > 0
       ? [{ to: '/usb', icon: <Usb className="h-5 w-5" />, label: t('sidebar.usb') }]
       : []),
