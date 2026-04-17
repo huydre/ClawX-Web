@@ -131,43 +131,32 @@ router.post('/update', async (_req, res) => {
     send('checking_9router');
     try {
       const { homedir } = await import('os');
-      const { join } = await import('path');
-      const routerDir = join(homedir(), '.clawx', '9router');
       const routerScript = `
-        set -e
         export HOME="${homedir()}"
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-        ROUTER_DIR="${routerDir}"
-        REPO="https://github.com/decolua/9router.git"
-
-        # Clone or pull
-        if [ -d "$ROUTER_DIR/.git" ]; then
-          echo "Updating 9Router..."
-          cd "$ROUTER_DIR" && git pull origin main 2>/dev/null || git pull || true
+        # Install 9router globally if not installed
+        if ! command -v 9router &>/dev/null; then
+          echo "Installing 9router globally..."
+          npm i -g 9router
         else
-          echo "Cloning 9Router..."
-          mkdir -p "$(dirname "$ROUTER_DIR")"
-          git clone --depth 1 "$REPO" "$ROUTER_DIR"
+          echo "9router already installed"
         fi
 
-        cd "$ROUTER_DIR"
-
-        # Install deps
-        echo "Installing 9Router dependencies..."
-        npm install --ignore-scripts 2>/dev/null || npm install || true
-
         # Install PM2 if needed
-        command -v pm2 &>/dev/null || npm i -g pm2
+        if ! command -v pm2 &>/dev/null; then
+          echo "Installing PM2..."
+          npm i -g pm2
+        fi
 
-        # Start/restart via PM2
+        # Check if 9router running in PM2
         if pm2 describe 9router &>/dev/null 2>&1; then
-          echo "Restarting 9Router..."
+          echo "9Router already in PM2, restarting..."
           pm2 restart 9router
         else
-          echo "Starting 9Router on port 20128..."
-          pm2 start npm --name 9router -- start
+          echo "Starting 9Router via PM2..."
+          pm2 start 9router --name 9router
           pm2 save 2>/dev/null || true
         fi
 
