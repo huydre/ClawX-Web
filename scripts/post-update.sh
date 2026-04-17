@@ -39,13 +39,13 @@ else
   echo "[post-update] 9router already installed: $(which 9router)"
 fi
 
-# Start/restart 9router in PM2
+# Start/restart 9router in PM2 on port 20128
 if pm2 describe 9router &>/dev/null 2>&1; then
   echo "[post-update] Restarting 9router in PM2..."
   pm2 restart 9router
 else
-  echo "[post-update] Starting 9router in PM2..."
-  pm2 start 9router --name 9router
+  echo "[post-update] Starting 9router in PM2 on port 20128..."
+  PORT=20128 pm2 start 9router --name 9router
   pm2 save 2>/dev/null || true
 fi
 
