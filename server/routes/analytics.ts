@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
 import {
   getDailyStats,
   getHourlyActivity,
@@ -15,26 +12,6 @@ import { logger } from '../utils/logger.js';
 const execAsync = promisify(exec);
 
 const router = Router();
-
-/**
- * Build the auth CLI flag for `openclaw gateway *` commands by reading
- * ~/.openclaw/openclaw.json. Without this, the CLI hangs during handshake
- * when the gateway is configured with token/password auth and eventually
- * times out, which makes analytics calls return empty data.
- */
-function getGatewayAuthArgs(): string {
-  try {
-    const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    const token = config?.gateway?.auth?.token;
-    const password = config?.gateway?.auth?.password;
-    if (token) return `--token "${String(token).replace(/"/g, '')}"`;
-    if (password) return `--password "${String(password).replace(/"/g, '')}"`;
-  } catch {
-    // No openclaw config or unreadable — assume gateway has no auth
-  }
-  return '';
-}
 
 // GET /api/analytics/daily?days=7
 router.get('/daily', async (req, res) => {
@@ -71,18 +48,20 @@ router.get('/totals', async (_req, res) => {
 });
 
 // GET /api/analytics/token-stats?days=7
+//
+// Runs the openclaw CLI in the user's login shell so PATH, nvm, pnpm and
+// ~/.openclaw/openclaw.json are all picked up the same way they are in an
+// interactive terminal. This keeps the server-side logic identical to what
+// the operator would run by hand.
 router.get('/token-stats', async (req, res) => {
-  try {
-    const days = Math.min(Math.max(parseInt(String(req.query.days)) || 7, 1), 365);
+  const days = Math.min(Math.max(parseInt(String(req.query.days)) || 7, 1), 365);
+  const inner = `openclaw gateway usage-cost --days ${days} --json`;
+  const cmd = process.platform === 'win32' ? inner : `bash -lc "${inner}"`;
 
-    const authArgs = getGatewayAuthArgs();
-    const { stdout } = await execAsync(
-      `openclaw gateway usage-cost --days ${days} --json ${authArgs}`.trim(),
-      { timeout: 30000 },
-    );
+  try {
+    const { stdout } = await execAsync(cmd, { timeout: 30000 });
     const raw = JSON.parse(stdout.trim());
 
-    // Transform to frontend format
     const daily = (raw.daily || []).map((d: any) => ({
       date: d.date,
       inputTokens: d.input || 0,
@@ -101,9 +80,21 @@ router.get('/token-stats', async (req, res) => {
     };
 
     res.json({ daily, byProvider: {}, totals });
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Analytics token stats error:', error);
-    res.json({ daily: [], byProvider: {}, totals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, estimatedCost: 0, requests: 0 } });
+    res.json({
+      daily: [],
+      byProvider: {},
+      totals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, estimatedCost: 0, requests: 0 },
+      error: error?.message || String(error),
+      debug: {
+        cmd,
+        stderr: (error?.stderr || '').toString().slice(0, 2000),
+        code: error?.code ?? null,
+        killed: !!error?.killed,
+        signal: error?.signal ?? null,
+      },
+    });
   }
 });
 

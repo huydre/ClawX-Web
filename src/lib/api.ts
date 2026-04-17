@@ -463,6 +463,14 @@ class ApiClient {
       daily: Array<{ date: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number }>;
       byProvider: Record<string, { inputTokens: number; outputTokens: number; estimatedCost: number; requests: number }>;
       totals: { inputTokens: number; outputTokens: number; cacheReadTokens: number; estimatedCost: number; requests: number };
+      error?: string;
+      debug?: {
+        cmd: string;
+        stderr: string;
+        code: number | null;
+        killed: boolean;
+        signal: string | null;
+      };
     }>('/analytics/token-stats?days=' + days);
   }
 
