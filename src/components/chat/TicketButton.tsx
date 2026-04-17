@@ -243,6 +243,12 @@ export function TicketButton() {
             )}
           </div>
 
+          <div className="border-t pt-3">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Yêu cầu hỗ trợ có thể phát sinh chi phí. CSKH sẽ thông báo chi tiết khi nhận được yêu cầu từ bạn.
+            </p>
+          </div>
+
           {error && <div className="text-sm text-destructive">{error}</div>}
 
           <Button className="w-full" onClick={handleSubmit} disabled={state === 'submitting'}>
