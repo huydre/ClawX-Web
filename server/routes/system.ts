@@ -127,62 +127,14 @@ router.post('/update', async (_req, res) => {
       send('log', { line: 'Pre-built dist found, skipping build' });
     }
 
-    // 4. Setup/ensure 9Router is running
-    send('checking_9router');
-    try {
-      const { homedir } = await import('os');
-      const routerScript = `
-        export HOME="${homedir()}"
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-        # Find npm (try NVM, then system paths)
-        NPM_BIN=""
-        if command -v npm &>/dev/null; then
-          NPM_BIN="npm"
-        elif [ -f "$NVM_DIR/versions/node/$(ls $NVM_DIR/versions/node/ 2>/dev/null | tail -1)/bin/npm" ]; then
-          NPM_BIN="$NVM_DIR/versions/node/$(ls $NVM_DIR/versions/node/ | tail -1)/bin/npm"
-          export PATH="$(dirname $NPM_BIN):$PATH"
-        fi
-
-        if [ -z "$NPM_BIN" ]; then
-          echo "ERROR: npm not found"
-          exit 1
-        fi
-
-        echo "Using npm: $(which npm || echo $NPM_BIN)"
-
-        # Install 9router globally if not installed
-        if ! command -v 9router &>/dev/null; then
-          echo "Installing 9router globally..."
-          $NPM_BIN i -g 9router
-        else
-          echo "9router already installed: $(which 9router)"
-        fi
-
-        # Install PM2 if needed
-        if ! command -v pm2 &>/dev/null; then
-          echo "Installing PM2..."
-          $NPM_BIN i -g pm2
-        fi
-
-        # Check if 9router running in PM2
-        if pm2 describe 9router &>/dev/null 2>&1; then
-          echo "9Router already in PM2, restarting..."
-          pm2 restart 9router
-        else
-          echo "Starting 9Router via PM2..."
-          pm2 start 9router --name 9router
-          pm2 save 2>/dev/null || true
-        fi
-
-        echo "9Router setup complete"
-      `;
-      await runStream('bash', ['-c', routerScript], cwd, send)
-        .catch(() => send('log', { line: '9Router setup had errors (may still work)' }));
-      send('log', { line: '9Router checked/started' });
-    } catch {
-      send('log', { line: '9Router setup skipped (non-critical)' });
+    // 4. Run post-update script (installs PM2, 9router, etc.)
+    // Script is pulled from git, so it always has the latest logic
+    const postUpdateScript = `${cwd}/scripts/post-update.sh`;
+    const fs3 = await import('fs');
+    if (fs3.existsSync(postUpdateScript)) {
+      send('post_update');
+      await runStream('bash', [postUpdateScript], cwd, send)
+        .catch(() => send('log', { line: 'Post-update script had errors (non-critical)' }));
     }
 
     // 5. Verify dist-server exists before restarting (prevent boot loop)
