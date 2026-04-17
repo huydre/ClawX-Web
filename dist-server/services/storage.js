@@ -19,6 +19,7 @@ const defaultData = {
     cloudflare: {
         enabled: false,
     },
+    applications: {},
 };
 // Database setup
 const dataDir = join(homedir(), '.clawx');
@@ -138,4 +139,27 @@ export async function clearCloudflareSettings() {
         enabled: false,
     };
     await db.write();
+}
+// Applications (Composio connections)
+export async function getAllApplicationConnections() {
+    await db.read();
+    return Object.values(db.data.applications || {});
+}
+export async function getApplicationConnection(slug) {
+    await db.read();
+    return db.data.applications?.[slug] || null;
+}
+export async function saveApplicationConnection(conn) {
+    await db.read();
+    if (!db.data.applications)
+        db.data.applications = {};
+    db.data.applications[conn.slug] = conn;
+    await db.write();
+}
+export async function deleteApplicationConnection(slug) {
+    await db.read();
+    if (db.data.applications) {
+        delete db.data.applications[slug];
+        await db.write();
+    }
 }
