@@ -631,6 +631,41 @@ class ApiClient {
     });
   }
 
+  // Backup & Restore API
+  getBackupDownloadUrl(): string {
+    const token = this.getToken();
+    return `${API_BASE}/backup/export${token ? '?token=' + token : ''}`;
+  }
+
+  async restoreBackup(file: File) {
+    const token = this.getToken();
+    const formData = new FormData();
+    formData.append('backup', file);
+
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE}/backup/restore`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Restore failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json() as Promise<{
+      success: boolean;
+      restored: { openclaw: boolean; clawx: boolean; totalFiles: number };
+    }>;
+  }
+
+  async getBackupInfo() {
+    return this.request<{ openclaw: boolean; clawx: boolean }>('/backup/info');
+  }
+
   // System / Update API (web-only)
   async getSystemInfo() {
     return this.request<{

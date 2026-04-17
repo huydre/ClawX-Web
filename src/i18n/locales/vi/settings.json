@@ -146,6 +146,18 @@
         "installMessage": "Cài đặt lệnh \"openclaw\"?",
         "installDetail": "Thao tác này sẽ tạo ~/.local/bin/openclaw. Đảm bảo ~/.local/bin nằm trong PATH của bạn nếu muốn chạy nó toàn cục."
     },
+    "backup": {
+        "title": "Sao lưu & Khôi phục",
+        "description": "Xuất hoặc nhập cấu hình, agents và lịch sử chat",
+        "export": "Xuất bản sao lưu",
+        "exporting": "Đang xuất...",
+        "exportSuccess": "Đã bắt đầu tải bản sao lưu",
+        "restore": "Khôi phục",
+        "restoring": "Đang khôi phục...",
+        "restoreConfirm": "Thao tác này sẽ ghi đè cấu hình hiện tại. Bạn có chắc không?",
+        "restoreSuccess": "Đã khôi phục ({{count}} tệp). Khởi động lại gateway để áp dụng.",
+        "hint": "Bản sao lưu bao gồm cấu hình OpenClaw, agents, sessions và cài đặt ClawX."
+    },
     "about": {
         "title": "Về chúng tôi",
         "appName": "ClawX",

@@ -146,6 +146,18 @@
         "installMessage": "Install the \"openclaw\" command?",
         "installDetail": "This will create ~/.local/bin/openclaw. Ensure ~/.local/bin is on your PATH if you want to run it globally."
     },
+    "backup": {
+        "title": "Backup & Restore",
+        "description": "Export or import your config, agents, and chat history",
+        "export": "Export Backup",
+        "exporting": "Exporting...",
+        "exportSuccess": "Backup download started",
+        "restore": "Restore Backup",
+        "restoring": "Restoring...",
+        "restoreConfirm": "This will overwrite your current config. Are you sure?",
+        "restoreSuccess": "Backup restored ({{count}} files). Restart gateway to apply changes.",
+        "hint": "Backup includes OpenClaw config, agents, sessions, and ClawX settings."
+    },
     "about": {
         "title": "About",
         "appName": "ClawX",

@@ -120,6 +120,8 @@ import cronRouter from './routes/cron.js';
 app.use('/api/cron', cronRouter);
 import ticketsRouter from './routes/tickets.js';
 app.use('/api/tickets', ticketsRouter);
+import backupRouter from './routes/backup.js';
+app.use('/api/backup', backupRouter);
 
 // Serve hashed assets with long-term immutable cache
 app.use('/assets', express.static(path.join('dist', 'assets'), {

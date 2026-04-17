@@ -125,6 +125,18 @@
         "installMessage": "\"openclaw\" コマンドをインストールしますか？",
         "installDetail": "~/.local/bin/openclaw が作成されます。グローバルに実行するには ~/.local/bin が PATH に含まれていることを確認してください。"
     },
+    "backup": {
+        "title": "バックアップと復元",
+        "description": "設定、エージェント、チャット履歴のエクスポート・インポート",
+        "export": "バックアップをエクスポート",
+        "exporting": "エクスポート中...",
+        "exportSuccess": "バックアップのダウンロードを開始しました",
+        "restore": "バックアップを復元",
+        "restoring": "復元中...",
+        "restoreConfirm": "現在の設定が上書きされます。よろしいですか？",
+        "restoreSuccess": "バックアップを復元しました（{{count}}ファイル）。ゲートウェイを再起動して適用してください。",
+        "hint": "バックアップにはOpenClaw設定、エージェント、セッション、ClawX設定が含まれます。"
+    },
     "about": {
         "title": "バージョン情報",
         "appName": "ClawX",
