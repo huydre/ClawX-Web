@@ -49,6 +49,19 @@ else
   pm2 save 2>/dev/null || true
 fi
 
+# Deploy plugins to ~/.openclaw/extensions/
+PLUGINS_SRC="$(dirname "$0")/../plugins"
+PLUGINS_DEST="$HOME/.openclaw/extensions"
+if [ -d "$PLUGINS_SRC" ]; then
+  mkdir -p "$PLUGINS_DEST"
+  for plugin_dir in "$PLUGINS_SRC"/*/; do
+    plugin_name=$(basename "$plugin_dir")
+    echo "[post-update] Deploying plugin: $plugin_name"
+    cp -r "$plugin_dir" "$PLUGINS_DEST/$plugin_name/"
+  done
+  echo "[post-update] Plugins deployed to $PLUGINS_DEST"
+fi
+
 # Deploy shared skills to ~/.openclaw/skills/
 SKILLS_SRC="$(dirname "$0")/../skills"
 SKILLS_DEST="$HOME/.openclaw/skills"
@@ -58,24 +71,45 @@ if [ -d "$SKILLS_SRC" ]; then
   echo "[post-update] Skills deployed to $SKILLS_DEST"
 fi
 
-# Enable inline buttons in openclaw.json if not set
+# Enable inline buttons + register clarify plugin in openclaw.json
 python3 -c "
 import json, os
 config_path = os.path.expanduser('~/.openclaw/openclaw.json')
 try:
     with open(config_path, 'r') as f:
         config = json.load(f)
+    changed = False
+
+    # Enable inlineButtons capability
     tg = config.setdefault('channels', {}).setdefault('telegram', {})
     caps = tg.setdefault('capabilities', {})
-    if 'inlineButtons' not in caps:
+    if caps.get('inlineButtons') != 'all':
         caps['inlineButtons'] = 'all'
+        changed = True
+        print('[post-update] Enabled telegram inlineButtons')
+
+    # Register clarify-buttons plugin
+    plugins = config.setdefault('plugins', {})
+    entries = plugins.setdefault('entries', {})
+    if 'telegram-clarify-buttons' not in entries:
+        entries['telegram-clarify-buttons'] = {'enabled': True}
+        changed = True
+        print('[post-update] Registered telegram-clarify-buttons plugin')
+
+    # Add to allow list
+    allow = plugins.setdefault('allow', [])
+    if 'telegram-clarify-buttons' not in allow:
+        allow.append('telegram-clarify-buttons')
+        changed = True
+
+    if changed:
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=4)
-        print('[post-update] Enabled telegram inlineButtons')
+        print('[post-update] openclaw.json updated')
     else:
-        print('[post-update] inlineButtons already configured:', caps['inlineButtons'])
+        print('[post-update] openclaw.json already configured')
 except Exception as e:
-    print(f'[post-update] Skip inlineButtons config: {e}')
+    print(f'[post-update] Skip config: {e}')
 " 2>/dev/null || true
 
 echo "[post-update] Done"
