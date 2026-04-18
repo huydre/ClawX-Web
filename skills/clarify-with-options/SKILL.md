@@ -1,75 +1,65 @@
 ---
 name: clarify-with-options
-description: Khi yeu cau cua nguoi dung khong ro rang, hoi lai bang cac lua chon cu the (hien thi dang inline buttons tren Telegram).
+description: Khi yeu cau cua nguoi dung khong ro rang, hoi lai bang inline buttons tren Telegram.
 ---
 
-# Lam ro yeu cau voi cac lua chon
+# Lam ro yeu cau voi cac lua chon (Telegram Inline Buttons)
 
-Khi nguoi dung gui tin nhan mo ho hoac co nhieu cach hieu, ban PHAI hoi lai de lam ro truoc khi xu ly. Hien thi cac lua chon de nguoi dung chon nhanh.
+Khi nguoi dung gui tin nhan mo ho, ban PHAI hoi lai bang cac nut bam (inline buttons) de ho chon nhanh.
 
 ## Khi nao can hoi lai?
 
 - Yeu cau qua chung chung (VD: "giup toi", "co van de")
-- Co nhieu cach xu ly (VD: "sua loi" — loi gi? o dau?)
-- Thieu thong tin quan trong (VD: "dat hang" — san pham nao? so luong?)
-- Nguoi dung moi bat dau hoi thoai va chua ro ngua canh
+- Co nhieu cach xu ly (VD: "sua loi" — loi gi?)
+- Thieu thong tin quan trong (VD: "dat hang" — san pham nao?)
 
-## Cach hoi lai
+## Cach gui inline buttons
 
-Su dung inline buttons bang cach viet cac dong bat dau bang `- [ ]` (checkbox markdown). OpenClaw se tu dong chuyen thanh inline buttons tren Telegram.
+Dung tool `echo` voi JSON action format. Gui tin nhan kem buttons:
 
-### Format:
-
-```
-[Cau hoi cua ban o day]
-
-- [ ] Lua chon 1
-- [ ] Lua chon 2
-- [ ] Lua chon 3
-```
-
-### Vi du 1: Phan loai yeu cau
-
-```
-Ban can ho tro ve van de gi?
-
-- [ ] Loi ky thuat (khong ket noi, loi phan mem)
-- [ ] Tra cuu don hang
-- [ ] Tu van san pham
-- [ ] Van de thanh toan
+```json
+{
+  "action": "send",
+  "message": "Ban can ho tro ve van de gi?",
+  "buttons": [
+    [
+      {"text": "Loi ky thuat", "callback_data": "loi_ky_thuat"},
+      {"text": "Tra cuu don", "callback_data": "tra_cuu_don"}
+    ],
+    [
+      {"text": "Tu van san pham", "callback_data": "tu_van"},
+      {"text": "Van de khac", "callback_data": "khac"}
+    ]
+  ]
+}
 ```
 
-### Vi du 2: Lam ro chi tiet
+## Vi du su dung
 
+Khi user gui "giup toi", tra loi:
+
+```json
+{
+  "action": "send",
+  "message": "Chao ban! Minh co the giup gi cho ban?",
+  "buttons": [
+    [
+      {"text": "Bao cao Pancake", "callback_data": "bao_cao_pancake"},
+      {"text": "Gui Gmail", "callback_data": "gui_gmail"}
+    ],
+    [
+      {"text": "Lam file Excel", "callback_data": "lam_excel"},
+      {"text": "Phan tich KH", "callback_data": "phan_tich_kh"}
+    ]
+  ]
+}
 ```
-Ban muon sua loi o phan nao?
 
-- [ ] Ket noi WiFi
-- [ ] Cai dat phan mem
-- [ ] Hien thi man hinh
-- [ ] Van de khac
-```
+## Quy tac
 
-### Vi du 3: Xac nhan hanh dong
-
-```
-Ban muon toi thuc hien hanh dong nao?
-
-- [ ] Kiem tra trang thai don hang
-- [ ] Huy don hang
-- [ ] Doi dia chi giao hang
-```
-
-## Quy tac quan trong
-
-1. **Toi da 4 lua chon** — qua nhieu se gay roi
-2. **Moi lua chon ngan gon** — duoi 30 ky tu
-3. **Luon co "Van de khac"** hoac tuong duong — de nguoi dung tu nhap
-4. **Chi hoi 1 lan** — sau khi nguoi dung chon, xu ly ngay, KHONG hoi lai
-5. **Neu nguoi dung tra loi text thay vi chon** — van xu ly binh thuong
-6. **Ngon ngu** — dung tieng Viet co dau khi giao tiep voi nguoi dung
-
-## Sau khi nguoi dung chon
-
-Khi nguoi dung click button, ban se nhan text dang: `callback_data: <gia tri>`
-Xu ly ngay dua tren lua chon do. Khong hoi lai nua.
+1. Toi da 4 nut (2x2 layout)
+2. Text nut ngan gon (duoi 20 ky tu)
+3. callback_data dung snake_case, khong dau
+4. Luon co "Van de khac" hoac tuong duong
+5. Chi hoi 1 lan — sau khi user chon, xu ly ngay
+6. Khi nhan `callback_data: <value>`, xu ly dua tren value do
