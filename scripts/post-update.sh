@@ -49,4 +49,33 @@ else
   pm2 save 2>/dev/null || true
 fi
 
+# Deploy shared skills to ~/.openclaw/skills/
+SKILLS_SRC="$(dirname "$0")/../skills"
+SKILLS_DEST="$HOME/.openclaw/skills"
+if [ -d "$SKILLS_SRC" ]; then
+  mkdir -p "$SKILLS_DEST"
+  cp -r "$SKILLS_SRC"/* "$SKILLS_DEST/" 2>/dev/null || true
+  echo "[post-update] Skills deployed to $SKILLS_DEST"
+fi
+
+# Enable inline buttons in openclaw.json if not set
+python3 -c "
+import json, os
+config_path = os.path.expanduser('~/.openclaw/openclaw.json')
+try:
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    tg = config.setdefault('channels', {}).setdefault('telegram', {})
+    caps = tg.setdefault('capabilities', {})
+    if 'inlineButtons' not in caps:
+        caps['inlineButtons'] = 'all'
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=4)
+        print('[post-update] Enabled telegram inlineButtons')
+    else:
+        print('[post-update] inlineButtons already configured:', caps['inlineButtons'])
+except Exception as e:
+    print(f'[post-update] Skip inlineButtons config: {e}')
+" 2>/dev/null || true
+
 echo "[post-update] Done"
