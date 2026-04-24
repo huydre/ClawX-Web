@@ -4,5 +4,20 @@
   "version": "0.1.0",
   "description": "Sends inline keyboard buttons on Telegram when agent needs clarification",
   "entry": "index.ts",
-  "hooks": ["message_sending"]
+  "hooks": ["message_sending"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "botToken": {
+        "type": "string",
+        "description": "Telegram bot token (auto-detected from channel config if empty)"
+      },
+      "verbose": {
+        "type": "boolean",
+        "description": "Enable debug logging",
+        "default": false
+      }
+    },
+    "required": []
+  }
 }
