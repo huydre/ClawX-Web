@@ -1,0 +1,8 @@
+{
+  "id": "telegram-clarify-buttons",
+  "name": "Telegram Clarify Buttons",
+  "version": "0.1.0",
+  "description": "Sends inline keyboard buttons on Telegram when agent needs clarification",
+  "entry": "index.ts",
+  "hooks": ["message_sending"]
+}
