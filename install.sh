@@ -131,43 +131,11 @@ else
   log "pnpm $(pnpm -v) installed"
 fi
 
-# ── Step 4: OpenClaw ───────────────────────────────────────────────────
-step "Checking OpenClaw"
-
-if command -v openclaw &>/dev/null; then
-  log "OpenClaw already installed: $(openclaw --version 2>/dev/null || echo 'unknown')"
-else
-  info "Installing OpenClaw..."
-  npm i -g openclaw@2026.3.2 >/dev/null 2>&1
-  if command -v openclaw &>/dev/null; then
-    log "OpenClaw installed: $(openclaw --version 2>/dev/null || echo '2026.3.2')"
-  else
-    warn "OpenClaw install failed. Install manually: npm i -g openclaw@2026.3.2"
-  fi
-fi
-
-# ── Step 4b: OpenClaw Gateway ──────────────────────────────────────────
-step "Setting up OpenClaw Gateway"
-
-if command -v openclaw &>/dev/null; then
-  info "Installing gateway service..."
-  openclaw gateway install 2>/dev/null || warn "Gateway install command failed"
-
-  # Enable and start the gateway systemd user service
-  if command -v systemctl &>/dev/null; then
-    # Try default profile first, then with profile suffix
-    if systemctl --user enable --now openclaw-gateway.service 2>/dev/null; then
-      log "Gateway service enabled and started"
-    else
-      warn "Could not enable gateway service via systemctl --user"
-      warn "You may need to run: systemctl --user enable --now openclaw-gateway.service"
-    fi
-  fi
-
-  openclaw gateway status 2>/dev/null && log "Gateway is running" || warn "Gateway status check returned non-zero"
-else
-  warn "OpenClaw not installed, skipping gateway setup"
-fi
+# ── Step 4: OpenClaw (skipped — install manually) ──────────────────────
+# OpenClaw is no longer installed by this script. Install it separately:
+#   npm i -g openclaw
+#   openclaw gateway install
+#   systemctl --user enable --now openclaw-gateway.service
 
 # ── Step 5: Clone repository ──────────────────────────────────────────────
 step "Setting up ClawX-Web"
