@@ -16,7 +16,27 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-CLAWX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Detect script location — fallback to PWD when piped via curl|bash
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+  CLAWX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+  CLAWX_DIR="$(pwd)"
+fi
+
+# setup.sh requires a cloned repo. Detect bad invocation (e.g. curl | bash from /).
+if [[ ! -f "$CLAWX_DIR/package.json" ]]; then
+  echo ""
+  echo "ERROR: setup.sh must be run from inside the ClawX-Web repo directory."
+  echo ""
+  echo "If installing for the first time, use install.sh instead:"
+  echo "  curl -fsSL https://raw.githubusercontent.com/huydre/ClawX-Web/main/install.sh | sudo bash"
+  echo ""
+  echo "Or clone manually:"
+  echo "  git clone https://github.com/huydre/ClawX-Web.git /opt/clawx-web"
+  echo "  cd /opt/clawx-web && bash setup.sh"
+  echo ""
+  exit 1
+fi
 
 # Auto-detect the user who installed OpenClaw
 # Priority: 1) owner of openclaw-gateway process, 2) SUDO_USER, 3) scan /home, 4) current user
